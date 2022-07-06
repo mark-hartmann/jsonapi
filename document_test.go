@@ -153,6 +153,17 @@ func TestMarshalDocument(t *testing.T) {
 				PrePath: "https://example.org",
 			},
 		}, {
+			name: "empty data with links",
+			doc: &Document{
+				PrePath: "https://example.org",
+				Links: map[string]Link{
+					"foo": {HRef: "https://example.org/bar", Meta: map[string]interface{}{
+						"last_accessed": "5 minutes ago",
+					}},
+					"bar": {HRef: "https://example.org/baz"},
+				},
+			},
+		}, {
 			name: "empty collection",
 			doc: &Document{
 				Data: &Resources{},
@@ -177,6 +188,21 @@ func TestMarshalDocument(t *testing.T) {
 					"mocktype": {"to-1", "to-x-from-1"},
 				},
 				PrePath: "https://example.org",
+			},
+			fields: []string{
+				"str", "uint64", "bool", "int", "time", "to-1", "to-x-from-1",
+			},
+		}, {
+			name: "collection with links",
+			doc: &Document{
+				Data: Range(col, nil, nil, []string{}, 10, 0),
+				RelData: map[string][]string{
+					"mocktype": {"to-1", "to-x-from-1"},
+				},
+				PrePath: "https://example.org",
+				Links: map[string]Link{
+					"foo": {HRef: "https://example.org/bar", Meta: map[string]interface{}{"foo": "bar", "bar": "baz"}},
+				},
 			},
 			fields: []string{
 				"str", "uint64", "bool", "int", "time", "to-1", "to-x-from-1",

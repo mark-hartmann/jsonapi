@@ -1,0 +1,16 @@
+{
+	"data": null,
+	"jsonapi": {
+		"version": "1.0"
+	},
+	"links": {
+		"self": "https://example.org/fake/path?fields%5Bmocktype%",
+		"foo": {
+			"href": "https://example.org/bar",
+			"meta": {
+				"last_accessed": "5 minutes ago"
+			}
+		},
+		"bar": "https://example.org/baz"
+	}
+}
