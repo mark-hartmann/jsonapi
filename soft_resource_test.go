@@ -296,6 +296,25 @@ func TestSoftResourceMeta(t *testing.T) {
 	assert.Equal(meta, sr.Meta())
 }
 
+func TestSoftResource_Links(t *testing.T) {
+	assert := assert.New(t)
+	typ, _ := BuildType(mocktype{})
+	sr := &SoftResource{}
+	sr.Type = &typ
+	sr.SetID("id")
+
+	links := map[string]Link{
+		"link1": {HRef: "https://example.org/foo"},
+		"link2": {HRef: "https://example.org/bar", Meta: map[string]interface{}{
+			"key1": true,
+			"key2": "string",
+		}},
+	}
+
+	sr.SetLinks(links)
+	assert.Equal(links, sr.Links())
+}
+
 func TestSoftResourceGetSetID(t *testing.T) {
 	assert := assert.New(t)
 
