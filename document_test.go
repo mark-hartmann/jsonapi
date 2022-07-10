@@ -90,6 +90,62 @@ func TestInclude(t *testing.T) {
 	assert.Equal(expect, ids)
 }
 
+func TestMarshalDocumentLinks(t *testing.T) {
+	tests := map[string]struct {
+		doc *Document
+		url *URL
+	}{
+		"resource with links": {
+			doc: &Document{
+				Data: &mockTypeImpl{
+					ID:  "id1",
+					Str: "str",
+					Int: 12,
+					ToX: []string{
+						"id2",
+						"id3",
+					},
+					To1: "id5",
+					links: map[string]Link{
+						"test": {HRef: "https://example.org/test"},
+					},
+					meta: map[string]interface{}{
+						"foo": "bar",
+					},
+				},
+				RelData: map[string][]string{
+					"mockTypeImpl": {"to-x", "to-1"},
+				},
+			},
+			url: &URL{
+				Fragments: []string{"fake", "path"},
+				Params: &Params{
+					Fields: map[string][]string{"mockTypeImpl": {"str", "int", "to-x", "to-1"}},
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert := assert.New(t)
+
+			// Marshaling
+			payload, err := MarshalDocument(test.doc, test.url)
+			assert.NoError(err)
+
+			// Golden file
+			filename := strings.ReplaceAll(name, " ", "_") + ".json"
+			path := filepath.Join("testdata", "goldenfiles", "marshaling", filename)
+
+			// Retrieve the expected result from file
+			expected, _ := ioutil.ReadFile(path)
+			assert.NoError(err, name)
+			assert.JSONEq(string(expected), string(payload))
+		})
+	}
+}
+
 func TestMarshalDocument(t *testing.T) {
 	// TODO Describe how this test suite works
 	// Setup

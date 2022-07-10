@@ -48,6 +48,25 @@ func TestUnmarshalIdentifiers(t *testing.T) {
 		assert.Equal(iden, iden2)
 	})
 
+	t.Run("identifier with metadata", func(t *testing.T) {
+		assert := assert.New(t)
+
+		iden := Identifier{
+			ID:   "id2",
+			Type: "mocktype",
+			Meta: map[string]interface{}{
+				"key1": "value1",
+			},
+		}
+
+		payload, err := json.Marshal(iden)
+		assert.NoError(err)
+
+		iden2, err := UnmarshalIdentifier(payload, schema)
+		assert.NoError(err)
+		assert.Equal(iden, iden2)
+	})
+
 	t.Run("identifier without ID", func(t *testing.T) {
 		assert := assert.New(t)
 

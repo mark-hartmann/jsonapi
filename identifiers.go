@@ -36,10 +36,25 @@ func (i Identifiers) IDs() []string {
 	return ids
 }
 
-// Identifier represents a resource's type and ID.
+// Identifier represents the type, ID and metadata of a resource.
 type Identifier struct {
 	ID   string `json:"id"`
 	Type string `json:"type"`
+	Meta Meta   `json:"meta,omitempty"`
+}
+
+// RelData contains information about a to-one relationship, including links and metadata.
+type RelData struct {
+	Res   Identifier
+	Links map[string]Link
+	Meta  Meta
+}
+
+// RelDataMany contains information about a to-many relationship, including links and metadata.
+type RelDataMany struct {
+	Res   Identifiers
+	Links map[string]Link
+	Meta  Meta
 }
 
 // UnmarshalIdentifier reads a payload where the main data is one identifier to

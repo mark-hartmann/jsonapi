@@ -44,7 +44,8 @@ type mocktype struct {
 	ToXFrom1 []string `json:"to-x-from-1" api:"rel,mocktype,to-1-from-x"`
 	ToXFromX []string `json:"to-x-from-x" api:"rel,mocktype,to-x-from-x"`
 
-	meta Meta
+	meta  Meta
+	links map[string]Link
 }
 
 func (mt *mocktype) Meta() Meta {
@@ -53,4 +54,127 @@ func (mt *mocktype) Meta() Meta {
 
 func (mt *mocktype) SetMeta(m Meta) {
 	mt.meta = m
+}
+
+type mockTypeImpl struct {
+	ID string `json:"id" api:"mockTypeImpl"`
+
+	// Attributes
+	Str string `json:"str" api:"attr"`
+	Int int    `json:"int" api:"attr"`
+
+	To1 string   `json:"to-1" api:"rel,mockTypeImpl"`
+	ToX []string `json:"to-x" api:"rel,mockTypeImpl"`
+
+	meta  Meta
+	links map[string]Link
+}
+
+func (mt mockTypeImpl) Attrs() map[string]Attr {
+	return map[string]Attr{
+		"str": {
+			Name: "str",
+			Type: AttrTypeString,
+		},
+		"int": {
+			Name: "int",
+			Type: AttrTypeInt,
+		},
+	}
+}
+
+func (mt mockTypeImpl) Rels() map[string]Rel {
+	return map[string]Rel{
+		"to-x": {
+			FromName: "to-x",
+			ToType:   "mockTypeImpl",
+			FromType: "mockTypeImpl",
+		},
+		"to-1": {
+			FromName: "to-1",
+			ToType:   "mockTypeImpl",
+			ToOne:    true,
+			FromType: "mockTypeImpl",
+		},
+	}
+}
+
+func (mt mockTypeImpl) GetType() Type {
+	return Type{
+		Name:  "mockTypeImpl",
+		Attrs: mt.Attrs(),
+		Rels:  mt.Rels(),
+		NewFunc: func() Resource {
+			return &mockTypeImpl{}
+		},
+	}
+}
+
+func (mt mockTypeImpl) Get(key string) interface{} {
+	switch key {
+	case "id":
+		return mt.ID
+	case "str":
+		return mt.Str
+	case "int":
+		return mt.Int
+	// rels
+	case "to-x":
+		return RelDataMany{
+			Res: Identifiers{
+				{ID: mt.ToX[1], Meta: Meta{"key1": "value1"}},
+				{ID: mt.ToX[0]},
+			},
+			Links: map[string]Link{
+				"example": {HRef: "https://example.org"},
+			},
+			Meta: Meta{
+				"test": "ok",
+			},
+		}
+	case "to-1":
+		return RelData{
+			Res: Identifier{ID: mt.To1, Meta: map[string]interface{}{
+				"k2": "v2",
+			}},
+			Links: map[string]Link{
+				"l1": {HRef: "https://example.org/l1"},
+			},
+			Meta: Meta{
+				"k1": "v1",
+			},
+		}
+	}
+	return nil
+}
+
+func (mt *mockTypeImpl) Set(key string, val interface{}) {
+	switch key {
+	case "id":
+		mt.ID = val.(string)
+	case "str":
+		mt.Str = val.(string)
+	case "int":
+		mt.Int = val.(int)
+	case "to-x":
+		mt.ToX = val.([]string)
+	case "to-1":
+		mt.To1 = val.(string)
+	}
+}
+
+func (mt *mockTypeImpl) Meta() Meta {
+	return mt.meta
+}
+
+func (mt *mockTypeImpl) SetMeta(meta Meta) {
+	mt.meta = meta
+}
+
+func (mt *mockTypeImpl) Links() map[string]Link {
+	return mt.links
+}
+
+func (mt *mockTypeImpl) SetLinks(links map[string]Link) {
+	mt.links = links
 }
