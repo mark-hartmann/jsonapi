@@ -3,7 +3,6 @@ package jsonapi
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/url"
 	"sort"
 	"strconv"
@@ -204,8 +203,7 @@ func (s *SimpleURL) String() string {
 }
 
 func (s *SimpleURL) UnescapedString() string {
-	str, err := url.PathUnescape(s.String())
-	fmt.Println(err)
+	str, _ := url.PathUnescape(s.String())
 	return str
 }
 
