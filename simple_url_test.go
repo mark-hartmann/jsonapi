@@ -294,3 +294,44 @@ func TestSimpleURLPath(t *testing.T) {
 	su = &SimpleURL{Fragments: []string{"a", "b", "c"}}
 	assert.Equal("a/b/c", su.Path())
 }
+
+func TestSimpleURL_String(t *testing.T) {
+	// Simple test
+	raw := `
+		/mocktypes1
+		?fields[foo]=bar,baz
+		&include=
+			to-many-from-one%2C
+			to-one-from-one.to-many-from-many
+		&sort=to-many%2Cstr,%2C%2C-bool
+		&page[number]=3
+		&sort=uint8
+		&include=
+			to-many-from-one
+		&page[size]=50
+		&filter={"f":"str","o":"=","v":"abc"}
+	`
+	expected := `
+		/mocktypes1
+		?include=to-many-from-one,to-one-from-one.to-many-from-many,to-many-from-one
+		&fields[foo]=bar,baz
+		&filter={"f":"str","o":"=","v":"abc","c":""}
+		&page[number]=3
+		&page[size]=50
+		&sort=to-many,str,-bool,uint8
+		`
+
+	u, err := url.Parse(makeOneLineNoSpaces(raw))
+	assert.NoError(t, err)
+
+	su, err := NewSimpleURL(u)
+	assert.NoError(t, err)
+
+	assert.Equal(t, makeOneLineNoSpaces(expected), su.UnescapedString())
+
+	// Invalid filter
+	su.Filter.Val = func() {}
+	assert.Panics(t, func() {
+		_ = su.String()
+	})
+}

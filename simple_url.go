@@ -3,7 +3,9 @@ package jsonapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -115,6 +117,96 @@ func NewSimpleURL(u *url.URL) (SimpleURL, error) {
 // parameters.
 func (s *SimpleURL) Path() string {
 	return strings.Join(s.Fragments, "/")
+}
+
+// String returns a string representation of the SimpleURL where special characters are escaped. The SimpleURL is
+// normalized, so it always returns exactly the same string given the same SimpleURL.
+func (s *SimpleURL) String() string {
+	path := "/"
+	for _, p := range s.Fragments {
+		path += p + "/"
+	}
+
+	path = path[:len(path)-1]
+	urlParams := []string{}
+
+	// Includes
+	if len(s.Include) > 0 {
+		param := "include="
+		for _, include := range s.Include {
+			param += include + "%2C"
+		}
+
+		param = param[:len(param)-3]
+		urlParams = append(urlParams, param)
+	}
+
+	// Fields
+	fields := make([]string, 0, len(s.Fields))
+	for key := range s.Fields {
+		fields = append(fields, key)
+	}
+
+	sort.Strings(fields)
+	for _, typ := range fields {
+		sort.Strings(s.Fields[typ])
+		param := "fields%5B" + typ + "%5D="
+		for _, f := range s.Fields[typ] {
+			param += f + "%2C"
+		}
+
+		param = param[:len(param)-3] // Remove the last %2C
+		urlParams = append(urlParams, param)
+	}
+
+	// Filter.
+	if s.Filter != nil {
+		mf, err := json.Marshal(s.Filter)
+		if err != nil {
+			// This should not happen since Filter should be validated
+			// at this point.
+			panic(err)
+		}
+
+		param := "filter=" + string(mf)
+		urlParams = append(urlParams, param)
+	} else if s.FilterLabel != "" {
+		urlParams = append(urlParams, "filter="+s.FilterLabel)
+	}
+
+	// Pagination
+	if s.PageNumber != 0 {
+		urlParams = append(urlParams, "page%5Bnumber%5D="+strconv.Itoa(int(s.PageNumber)))
+	}
+
+	if s.PageSize != 0 {
+		urlParams = append(urlParams, "page%5Bsize%5D="+strconv.Itoa(int(s.PageSize)))
+	}
+
+	// Sorting
+	if len(s.SortingRules) > 0 {
+		param := "sort="
+		for _, attr := range s.SortingRules {
+			param += attr + "%2C"
+		}
+
+		param = param[:len(param)-3] // Remove the last %2C
+		urlParams = append(urlParams, param)
+	}
+
+	params := "?"
+	for _, param := range urlParams {
+		params += param + "&"
+	}
+
+	params = params[:len(params)-1] // Remove the last &
+	return path + params
+}
+
+func (s *SimpleURL) UnescapedString() string {
+	str, err := url.PathUnescape(s.String())
+	fmt.Println(err)
+	return str
 }
 
 func parseCommaList(path string) []string {
