@@ -601,7 +601,11 @@ func TestURLString(t *testing.T) {
 	`
 	expected := `
 		/mocktypes1
-		?fields[mocktypes1]=bool,int,int16,int32,int64,int8,str,time,to-many,
+		?include=
+		to-many-from-many,
+		to-many-from-one.to-one-from-many.to-one.to-many-from-many,
+		to-one-from-one.to-many-from-many
+		&fields[mocktypes1]=bool,int,int16,int32,int64,int8,str,time,to-many,
 			to-many-from-many,to-many-from-one,to-one,to-one-from-many,
 			to-one-from-one,uint,uint16,uint32,uint64,uint8
 		&fields[mocktypes2]=boolptr,int16ptr,int32ptr,int64ptr,int8ptr,intptr,

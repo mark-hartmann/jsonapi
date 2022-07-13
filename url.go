@@ -7,6 +7,12 @@ import (
 	"strconv"
 )
 
+type URLOptions struct {
+	Prefix              string
+	SupplementFields    bool
+	SupplementSortRules bool
+}
+
 // NewURL builds a URL from a SimpleURL and a schema for validating and
 // supplementing the object with extra information.
 func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
@@ -135,6 +141,22 @@ func (u *URL) String() string {
 
 	// Params
 	urlParams := []string{}
+
+	// Includes
+	if len(u.Params.Include) > 0 {
+		param := "include="
+		for _, rels := range u.Params.Include {
+			relPath := ""
+			for _, rel := range rels {
+				relPath += rel.FromName + "."
+			}
+
+			param += relPath[:len(relPath)-1] + "%2C"
+		}
+
+		param = param[:len(param)-3]
+		urlParams = append(urlParams, param)
+	}
 
 	// Fields
 	fields := make([]string, 0, len(u.Params.Fields))
