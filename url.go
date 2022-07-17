@@ -7,12 +7,6 @@ import (
 	"strconv"
 )
 
-type URLOptions struct {
-	Prefix              string
-	SupplementFields    bool
-	SupplementSortRules bool
-}
-
 // NewURL builds a URL from a SimpleURL and a schema for validating and
 // supplementing the object with extra information.
 func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
