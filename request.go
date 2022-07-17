@@ -7,15 +7,15 @@ import (
 
 // NewRequest builds and returns a *Request based on r and schema.
 //
-// schema can be nil, in which case no checks will be done to insure that the
+// schema can be nil, in which case no checks will be done to ensure that the
 // request respects a specific schema.
-func NewRequest(r *http.Request, schema *Schema) (*Request, error) {
+func NewRequest(r *http.Request, schema *Schema, opts URLOptions) (*Request, error) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	su, err := NewSimpleURL(r.URL)
+	su, err := NewSimpleURL(r.URL, opts)
 	if err != nil {
 		return nil, err
 	}

@@ -60,7 +60,7 @@ func ExampleMarshalDocument() {
 	// parameters are also properly handled.
 	// A schema is given for validation. For example, it makes
 	// sure the type mentioned in the path exists.
-	url, _ := jsonapi.NewURLFromRaw(schema, `/users/user1?include=articles`)
+	url, _ := jsonapi.NewURLFromRaw(schema, `/users/user1?include=articles`, jsonapi.URLOptions{})
 
 	// MarhsalDocument marshals the document into a JSON:API
 	// compliant payload and uses the given URL to add links

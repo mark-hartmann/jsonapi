@@ -23,7 +23,7 @@ func TestSimpleURL(t *testing.T) {
 			name: "empty url",
 			url:  ``,
 			expectedURL: func() SimpleURL {
-				sURL, _ := NewSimpleURL(nil)
+				sURL, _ := NewSimpleURL(nil, URLOptions{})
 				return sURL
 			}(),
 			expectedError: nil,
@@ -39,8 +39,7 @@ func TestSimpleURL(t *testing.T) {
 				Fields:       map[string][]string{},
 				Filter:       nil,
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      []string{},
 			},
 			expectedError: nil,
@@ -56,8 +55,7 @@ func TestSimpleURL(t *testing.T) {
 				Fields:       map[string][]string{},
 				Filter:       nil,
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      []string{},
 			},
 			expectedError: nil,
@@ -73,8 +71,7 @@ func TestSimpleURL(t *testing.T) {
 				Fields:       map[string][]string{},
 				Filter:       nil,
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      []string{},
 			},
 			expectedError: nil,
@@ -90,8 +87,7 @@ func TestSimpleURL(t *testing.T) {
 				Fields:       map[string][]string{},
 				Filter:       nil,
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      []string{},
 			},
 			expectedError: nil,
@@ -107,8 +103,7 @@ func TestSimpleURL(t *testing.T) {
 				Fields:       map[string][]string{},
 				Filter:       nil,
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      []string{},
 			},
 			expectedError: nil,
@@ -137,8 +132,7 @@ func TestSimpleURL(t *testing.T) {
 				},
 				Filter:       nil,
 				SortingRules: []string{"attr2", "-attr1"},
-				PageSize:     20,
-				PageNumber:   1,
+				Page:         &BasicPaginator{Size: 20, Number: 1},
 				Include:      []string{"type2.type3", "type4"},
 			},
 			expectedError: nil,
@@ -156,11 +150,27 @@ func TestSimpleURL(t *testing.T) {
 				FilterLabel:  "label",
 				Filter:       nil,
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      []string{},
 			},
 			expectedError: nil,
+		}, {
+			name: "unknown page size parameter",
+			url: `
+				http://api.example.com/type/id/rel
+				?page[size]=10
+			`,
+			expectedURL: SimpleURL{
+				Fragments: []string{"type", "id", "rel"},
+				Route:     "/type/:id/rel",
+
+				Fields:       map[string][]string{},
+				Filter:       nil,
+				SortingRules: []string{},
+				Page:         nil,
+				Include:      []string{},
+			},
+			expectedError: NewErrUnknownParameter("page[size]"),
 		}, {
 			name: "negative page size",
 			url: `
@@ -174,8 +184,7 @@ func TestSimpleURL(t *testing.T) {
 				Fields:       map[string][]string{},
 				Filter:       nil,
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         &BasicPaginator{},
 				Include:      []string{},
 			},
 			expectedError: NewErrInvalidPageSizeParameter("-1"),
@@ -192,8 +201,7 @@ func TestSimpleURL(t *testing.T) {
 				Fields:       map[string][]string{},
 				Filter:       nil,
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         &BasicPaginator{},
 				Include:      []string{},
 			},
 			expectedError: NewErrInvalidPageNumberParameter("-1"),
@@ -210,8 +218,7 @@ func TestSimpleURL(t *testing.T) {
 				Fields:       map[string][]string{},
 				Filter:       nil,
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      []string{},
 			},
 			expectedError: NewErrUnknownParameter("unknownparam"),
@@ -236,8 +243,7 @@ func TestSimpleURL(t *testing.T) {
 					Val:   "abc",
 				},
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      []string{},
 			},
 			expectedError: nil,
@@ -254,8 +260,7 @@ func TestSimpleURL(t *testing.T) {
 				Fields:       map[string][]string{},
 				Filter:       nil,
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      []string{},
 			},
 			expectedError: NewErrMalformedFilterParameter(`{"thisis:invalid"}`),
@@ -266,7 +271,12 @@ func TestSimpleURL(t *testing.T) {
 		u, err := url.Parse(makeOneLineNoSpaces(test.url))
 		assert.NoError(err, test.name)
 
-		url, err := NewSimpleURL(u)
+		opts := URLOptions{}
+		if test.expectedURL.Page != nil {
+			opts.Paginator = &BasicPaginator{}
+		}
+
+		url, err := NewSimpleURL(u, opts)
 
 		if test.expectedError != nil {
 			jaErr := test.expectedError.(Error)

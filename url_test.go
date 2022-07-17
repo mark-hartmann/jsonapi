@@ -9,14 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseURLPOC(t *testing.T) {
-	assert := assert.New(t)
-
-	// path := "/"
-
-	assert.Equal(true, true, "obviously")
-}
-
 func TestParseURL(t *testing.T) {
 	assert := assert.New(t)
 
@@ -212,7 +204,7 @@ func TestParseURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		url, err := NewURLFromRaw(schema, makeOneLineNoSpaces(test.url))
+		url, err := NewURLFromRaw(schema, makeOneLineNoSpaces(test.url), URLOptions{})
 
 		if test.expectedError {
 			assert.Error(err)
@@ -248,8 +240,6 @@ func TestParseParams(t *testing.T) {
 				Rels:         map[string][]Rel{},
 				RelData:      map[string][]string{},
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
 				Include:      [][]Rel{},
 			},
 			expectedError: false,
@@ -262,8 +252,6 @@ func TestParseParams(t *testing.T) {
 				Rels:         map[string][]Rel{},
 				RelData:      map[string][]string{},
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
 				Include:      [][]Rel{},
 			},
 			expectedError: false,
@@ -291,8 +279,7 @@ func TestParseParams(t *testing.T) {
 				Rels:         map[string][]Rel{},
 				RelData:      map[string][]string{},
 				SortingRules: []string{},
-				PageSize:     50,
-				PageNumber:   3,
+				Page:         &BasicPaginator{Size: 50, Number: 3},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-many"],
@@ -334,8 +321,7 @@ func TestParseParams(t *testing.T) {
 				Rels:         map[string][]Rel{},
 				RelData:      map[string][]string{},
 				SortingRules: []string{},
-				PageSize:     50,
-				PageNumber:   3,
+				Page:         &BasicPaginator{Size: 50, Number: 3},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-many"],
@@ -375,8 +361,7 @@ func TestParseParams(t *testing.T) {
 				Rels:         map[string][]Rel{},
 				RelData:      map[string][]string{},
 				SortingRules: []string{},
-				PageSize:     90,
-				PageNumber:   110,
+				Page:         &BasicPaginator{Size: 90, Number: 110},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-one"],
@@ -493,7 +478,12 @@ func TestParseParams(t *testing.T) {
 		u, err := url.Parse(makeOneLineNoSpaces(test.url))
 		assert.NoError(err, test.name)
 
-		su, err := NewSimpleURL(u)
+		opts := URLOptions{}
+		if test.expectedParams.Page != nil {
+			opts.Paginator = &BasicPaginator{}
+		}
+
+		su, err := NewSimpleURL(u, opts)
 		assert.NoError(err, test.name)
 
 		params, err := NewParams(schema, su, test.colType)
@@ -568,7 +558,7 @@ func TestURLEscaping(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		url, err := NewURLFromRaw(schema, makeOneLineNoSpaces(test.url))
+		url, err := NewURLFromRaw(schema, makeOneLineNoSpaces(test.url), URLOptions{Paginator: &BasicPaginator{}})
 		assert.NoError(err)
 		assert.Equal(
 			makeOneLineNoSpaces(test.escaped),
@@ -614,7 +604,7 @@ func TestURLString(t *testing.T) {
 			uint32,uint64,id
 		`
 
-	url, err := NewURLFromRaw(newMockSchema(), makeOneLineNoSpaces(raw))
+	url, err := NewURLFromRaw(newMockSchema(), makeOneLineNoSpaces(raw), URLOptions{Paginator: &BasicPaginator{}})
 
 	assert.NoError(err)
 	assert.Equal(makeOneLineNoSpaces(expected), url.UnescapedString())

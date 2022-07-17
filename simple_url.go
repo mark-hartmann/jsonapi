@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
@@ -23,13 +22,12 @@ type SimpleURL struct {
 	FilterLabel  string
 	Filter       *Filter
 	SortingRules []string
-	PageSize     uint
-	PageNumber   uint
+	Page         Paginator
 	Include      []string
 }
 
 // NewSimpleURL takes and parses a *url.URL and returns a SimpleURL.
-func NewSimpleURL(u *url.URL) (SimpleURL, error) {
+func NewSimpleURL(u *url.URL, opts URLOptions) (SimpleURL, error) {
 	sURL := SimpleURL{
 		Fragments: []string{},
 		Route:     "",
@@ -44,10 +42,23 @@ func NewSimpleURL(u *url.URL) (SimpleURL, error) {
 		return sURL, errors.New("jsonapi: pointer to url.URL is nil")
 	}
 
-	sURL.Fragments = parseFragments(u.Path)
+	sURL.Fragments = parseFragments(opts.Path(u.Path))
 	sURL.Route = deduceRoute(sURL.Fragments)
+	sURL.Page = opts.Paginator
 
 	values := u.Query()
+	if sURL.Page != nil {
+		for _, s := range sURL.Page.Params() {
+			name := "page[" + s + "]"
+			if values.Has(name) {
+				if err := sURL.Page.Set(s, values.Get(name)); err != nil {
+					return sURL, err
+				}
+				values.Del(name)
+			}
+		}
+	}
+
 	for name := range values {
 		if strings.HasPrefix(name, "fields[") && strings.HasSuffix(name, "]") && len(name) > 8 {
 			// Fields
@@ -80,29 +91,13 @@ func NewSimpleURL(u *url.URL) (SimpleURL, error) {
 				for _, rules := range values[name] {
 					sURL.SortingRules = append(sURL.SortingRules, parseCommaList(rules)...)
 				}
-			case "page[size]":
-				// Page size
-				size, err := strconv.ParseUint(values.Get(name), 10, 64)
-				if err != nil {
-					return sURL, NewErrInvalidPageSizeParameter(values.Get(name))
-				}
-
-				sURL.PageSize = uint(size)
-			case "page[number]":
-				// Page number
-				num, err := strconv.ParseUint(values.Get(name), 10, 64)
-				if err != nil {
-					return sURL, NewErrInvalidPageNumberParameter(values.Get(name))
-				}
-
-				sURL.PageNumber = uint(num)
 			case "include":
 				// Include
 				for _, include := range values[name] {
 					sURL.Include = append(sURL.Include, parseCommaList(include)...)
 				}
 			default:
-				// Unkmown parameter
+				// Unknown parameter
 				return sURL, NewErrUnknownParameter(name)
 			}
 		}

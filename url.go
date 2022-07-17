@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/url"
 	"sort"
-	"strconv"
 )
 
 // NewURL builds a URL from a SimpleURL and a schema for validating and
@@ -84,13 +83,13 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 
 // NewURLFromRaw parses rawurl to make a *url.URL before making and returning a
 // *URL.
-func NewURLFromRaw(schema *Schema, rawurl string) (*URL, error) {
+func NewURLFromRaw(schema *Schema, rawurl string, opts URLOptions) (*URL, error) {
 	url, err := url.Parse(rawurl)
 	if err != nil {
 		return nil, err
 	}
 
-	su, err := NewSimpleURL(url)
+	su, err := NewSimpleURL(url, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -173,20 +172,8 @@ func (u *URL) String() string {
 	}
 
 	// Pagination
-	if u.IsCol {
-		if u.Params.PageNumber != 0 {
-			urlParams = append(
-				urlParams,
-				"page%5Bnumber%5D="+strconv.Itoa(int(u.Params.PageNumber)),
-			)
-		}
-
-		if u.Params.PageSize != 0 {
-			urlParams = append(
-				urlParams,
-				"page%5Bsize%5D="+strconv.Itoa(int(u.Params.PageSize)),
-			)
-		}
+	if u.IsCol && u.Params.Page != nil {
+		urlParams = append(urlParams, u.Params.Page.Encode())
 	}
 
 	// Sorting

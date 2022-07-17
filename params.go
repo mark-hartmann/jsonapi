@@ -26,7 +26,8 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	copy(incs, su.Include)
 	sort.Strings(incs)
 
-	// Remove duplicates and uncessary includes
+	// Remove duplicates and unnecessary includes. Includes are considered unnecessary if they are already included as
+	// root via another relationship path.
 	for i := len(incs) - 1; i >= 0; i-- {
 		if i > 0 {
 			if strings.HasPrefix(incs[i], incs[i-1]) {
@@ -240,8 +241,7 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	}
 
 	// Pagination
-	params.PageSize = su.PageSize
-	params.PageNumber = su.PageNumber
+	params.Page = su.Page
 
 	return params, nil
 }
@@ -262,8 +262,7 @@ type Params struct {
 	SortingRules []string
 
 	// Pagination
-	PageSize   uint
-	PageNumber uint
+	Page Paginator
 
 	// Include
 	Include [][]Rel

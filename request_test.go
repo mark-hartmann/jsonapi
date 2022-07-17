@@ -50,7 +50,7 @@ func TestNewRequest(t *testing.T) {
 		body := bytes.NewBufferString("")
 		req := httptest.NewRequest(test.method, test.url, body)
 
-		doc, err := NewRequest(req, test.schema)
+		doc, err := NewRequest(req, test.schema, URLOptions{})
 
 		if test.expectedError == "" {
 			assert.NoError(err)
@@ -71,7 +71,7 @@ func TestNewRequestInvalidBody(t *testing.T) {
 	// Nil body
 	req := httptest.NewRequest("POST", "/mocktypes1", badReader{})
 
-	doc, err := NewRequest(req, schema)
+	doc, err := NewRequest(req, schema, URLOptions{})
 	assert.EqualError(err, "bad reader")
 	assert.Nil(doc)
 
@@ -79,7 +79,7 @@ func TestNewRequestInvalidBody(t *testing.T) {
 	body := bytes.NewBufferString("{invalidjson}")
 	req = httptest.NewRequest("POST", "/mocktypes1", body)
 
-	doc, err = NewRequest(req, schema)
+	doc, err = NewRequest(req, schema, URLOptions{})
 	assert.EqualError(
 		err,
 		"invalid character 'i' looking for beginning of object key string",
