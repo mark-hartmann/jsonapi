@@ -58,48 +58,87 @@ func nilptr(t string) interface{} {
 	case "string":
 		var p *string
 		return p
+	case "[]string":
+		var p *[]string
+		return p
 	// Integers
 	case "int":
 		var p *int
 		return p
+	case "[]int":
+		var p *[]int
+		return p
 	case "int8":
 		var p *int8
+		return p
+	case "[]int8":
+		var p *[]int8
 		return p
 	case "int16":
 		var p *int16
 		return p
+	case "[]int16":
+		var p *[]int16
+		return p
 	case "int32":
 		var p *int32
+		return p
+	case "[]int32":
+		var p *[]int32
 		return p
 	case "int64":
 		var p *int64
 		return p
+	case "[]int64":
+		var p *[]int64
+		return p
 	case "uint":
 		var p *uint
+		return p
+	case "[]uint":
+		var p *[]uint
 		return p
 	case "uint8":
 		var p *uint8
 		return p
+	case "[]uint8":
+		var p *[]uint8
+		return p
 	case "uint16":
 		var p *uint16
+		return p
+	case "[]uint16":
+		var p *[]uint16
 		return p
 	case "uint32":
 		var p *uint32
 		return p
+	case "[]uint32":
+		var p *[]uint32
+		return p
 	case "uint64":
 		var p *uint64
+		return p
+	case "[]uint64":
+		var p *[]uint64
 		return p
 	// Bool
 	case "bool":
 		var p *bool
 		return p
+	case "[]bool":
+		var p *[]bool
+		return p
 	// time.Time
 	case "time.Time":
 		var p *time.Time
 		return p
+	case "[]time.Time":
+		var p *[]time.Time
+		return p
 	// []byte
 	case "[]byte":
-		var p *[]byte
+		var p *[]uint8
 		return p
 	default:
 		return nil

@@ -151,11 +151,11 @@ func (sr *SoftResource) Set(key string, v interface{}) {
 	}
 
 	if attr, ok := sr.Type.Attrs[key]; ok {
-		typ, nullable := GetAttrType(fmt.Sprintf("%T", v))
+		typ, _, nullable := GetAttrType(fmt.Sprintf("%T", v))
 		if attr.Type == typ && attr.Nullable == nullable {
 			sr.data[key] = v
 		} else if v == nil && attr.Nullable {
-			sr.data[key] = GetZeroValue(attr.Type, attr.Nullable)
+			sr.data[key] = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
 		}
 	} else if rel, ok := sr.Type.Rels[key]; ok {
 		if _, ok := v.(string); ok && rel.ToOne {
@@ -222,7 +222,7 @@ func (sr *SoftResource) check() {
 	for i := range sr.Type.Attrs {
 		n := sr.Type.Attrs[i].Name
 		if _, ok := sr.data[n]; !ok {
-			sr.data[n] = GetZeroValue(sr.Type.Attrs[i].Type, sr.Type.Attrs[i].Nullable)
+			sr.data[n] = GetZeroValue(sr.Type.Attrs[i].Type, sr.Type.Attrs[i].Array, sr.Type.Attrs[i].Nullable)
 		}
 	}
 

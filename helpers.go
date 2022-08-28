@@ -133,10 +133,11 @@ func BuildType(v interface{}) (Type, error) {
 		apiTag := fs.Tag.Get("api")
 
 		if apiTag == "attr" {
-			fieldType, null := GetAttrType(fs.Type.String())
+			fieldType, arr, null := GetAttrType(fs.Type.String())
 			typ.Attrs[jsonTag] = Attr{
 				Name:     jsonTag,
 				Type:     fieldType,
+				Array:    arr,
 				Nullable: null,
 			}
 		}

@@ -264,10 +264,11 @@ func TestSortResources(t *testing.T) {
 	typ := &Type{Name: "type"}
 
 	for i, t := range attrs {
-		ti, null := GetAttrType(fmt.Sprintf("%T", t.vals[0]))
+		ti, arr, null := GetAttrType(fmt.Sprintf("%T", t.vals[0]))
 		_ = typ.AddAttr(Attr{
 			Name:     "attr" + strconv.Itoa(i),
 			Type:     ti,
+			Array:    arr,
 			Nullable: null,
 		})
 	}

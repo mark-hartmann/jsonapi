@@ -236,25 +236,17 @@ func TestSoftResourceCopy(t *testing.T) {
 	}
 
 	for t, v := range attrs {
-		typ, null := GetAttrType(t)
+		typ, arr, null := GetAttrType(t)
 
 		sr.AddAttr(Attr{
 			Name:     t,
 			Type:     typ,
+			Array:    arr,
 			Nullable: null,
 		})
 
 		sr.Set(t, v)
 	}
-
-	// Special cases
-	sr.AddAttr(Attr{
-		Name:     "nil-*[]byte",
-		Type:     AttrTypeBytes,
-		Nullable: true,
-	})
-
-	sr.Set("nil-*[]byte", (*[]byte)(nil))
 
 	// Relationships
 	sr.AddRel(Rel{

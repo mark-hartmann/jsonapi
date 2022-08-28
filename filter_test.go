@@ -781,11 +781,12 @@ func TestFilterResource(t *testing.T) {
 
 	for _, test := range attrTests {
 		typ := &Type{Name: "type"}
-		ty, n := GetAttrType(fmt.Sprintf("%T", test.rval))
+		ty, a, n := GetAttrType(fmt.Sprintf("%T", test.rval))
 		typ.Attrs = map[string]Attr{
 			"attr": {
 				Name:     "attr",
 				Type:     ty,
+				Array:    a,
 				Nullable: n,
 			},
 		}
@@ -924,11 +925,12 @@ func TestFilterResource(t *testing.T) {
 
 		for j := range test.rvals {
 			attrName := "attr" + strconv.Itoa(j)
-			ty, n := GetAttrType(fmt.Sprintf("%T", test.rvals[j]))
+			ty, a, n := GetAttrType(fmt.Sprintf("%T", test.rvals[j]))
 			_ = typ.AddAttr(
 				Attr{
 					Name:     attrName,
 					Type:     ty,
+					Array:    a,
 					Nullable: n,
 				},
 			)
