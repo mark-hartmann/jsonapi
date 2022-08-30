@@ -141,21 +141,34 @@ func TestMarshalDocument(t *testing.T) {
 	})
 	col.Add(Wrap(r4))
 
+	// The collection is ordered by id within the Range function, so this resource
+	// will be second in the resource array (0=id1, 1=id1 (this), 2=id2).
+	col.Add(Wrap(&mockType1{
+		ID:  "id1",
+		Str: "str with <html> chars",
+	}))
+
 	// Test struct
 	tests := []struct {
 		name   string
 		doc    *Document
-		fields []string
+		fields map[string][]string
 	}{
 		{
 			name: "empty data",
 			doc: &Document{
 				PrePath: "https://example.org",
 			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
+			},
 		}, {
 			name: "empty collection",
 			doc: &Document{
 				Data: &Resources{},
+			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
 			},
 		}, {
 			name: "resource",
@@ -165,9 +178,8 @@ func TestMarshalDocument(t *testing.T) {
 					"mocktype": {"to-1", "to-x-from-1"},
 				},
 			},
-			fields: []string{
-				"str", "uint64", "bool", "int", "time", "bytes", "to-1",
-				"to-x-from-1",
+			fields: map[string][]string{
+				"mocktype": {"str", "uint64", "bool", "int", "time", "bytes", "to-1", "to-x-from-1"},
 			},
 		}, {
 			name: "collection",
@@ -178,8 +190,9 @@ func TestMarshalDocument(t *testing.T) {
 				},
 				PrePath: "https://example.org",
 			},
-			fields: []string{
-				"str", "uint64", "bool", "int", "time", "to-1", "to-x-from-1",
+			fields: map[string][]string{
+				"mocktype":   {"str", "uint64", "bool", "int", "time", "to-1", "to-x-from-1"},
+				"mocktypes1": {"str"},
 			},
 		}, {
 			name: "meta",
@@ -190,6 +203,9 @@ func TestMarshalDocument(t *testing.T) {
 					"f2": 42,
 					"f3": true,
 				},
+			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
 			},
 		}, {
 			name: "collection with inclusions",
@@ -212,6 +228,9 @@ func TestMarshalDocument(t *testing.T) {
 					}),
 				},
 			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
+			},
 		}, {
 			name: "identifier",
 			doc: &Document{
@@ -219,6 +238,9 @@ func TestMarshalDocument(t *testing.T) {
 					ID:   "id1",
 					Type: "mocktype",
 				},
+			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
 			},
 		}, {
 			name: "identifiers",
@@ -236,6 +258,9 @@ func TestMarshalDocument(t *testing.T) {
 					},
 				},
 			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
+			},
 		}, {
 			name: "error",
 			doc: &Document{
@@ -244,6 +269,9 @@ func TestMarshalDocument(t *testing.T) {
 					err.ID = "00000000-0000-0000-0000-000000000000"
 					return []Error{err}
 				}(),
+			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
 			},
 		}, {
 			name: "errors",
@@ -256,20 +284,19 @@ func TestMarshalDocument(t *testing.T) {
 					return []Error{err1, err2}
 				}(),
 			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
+			},
 		},
 	}
 
-	for i := range tests {
-		i := i
-		test := tests[i]
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert := assert.New(t)
-
 			// URL
 			url := &URL{
 				Fragments: []string{"fake", "path"},
 				Params: &Params{
-					Fields: map[string][]string{"mocktype": test.fields},
+					Fields: test.fields,
 				},
 			}
 			if _, ok := test.doc.Data.(Collection); ok {
@@ -278,7 +305,7 @@ func TestMarshalDocument(t *testing.T) {
 
 			// Marshaling
 			payload, err := MarshalDocument(test.doc, url)
-			assert.NoError(err)
+			assert.NoError(t, err)
 
 			// Golden file
 			filename := strings.ReplaceAll(test.name, " ", "_") + ".json"
@@ -286,15 +313,15 @@ func TestMarshalDocument(t *testing.T) {
 			if !*update {
 				// Retrieve the expected result from file
 				expected, _ := ioutil.ReadFile(path)
-				assert.NoError(err, test.name)
-				assert.JSONEq(string(expected), string(payload))
+				assert.NoError(t, err, test.name)
+				assert.JSONEq(t, string(expected), string(payload))
 			} else {
 				dst := &bytes.Buffer{}
 				err = json.Indent(dst, payload, "", "\t")
-				assert.NoError(err)
+				assert.NoError(t, err)
 				// TODO Figure out whether 0600 is okay or not.
 				err = ioutil.WriteFile(path, dst.Bytes(), 0600)
-				assert.NoError(err)
+				assert.NoError(t, err)
 			}
 		})
 	}

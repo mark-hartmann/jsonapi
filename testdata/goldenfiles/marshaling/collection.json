@@ -40,6 +40,16 @@
 		},
 		{
 			"attributes": {
+				"str": "str with \u003chtml\u003e chars"
+			},
+			"id": "id1",
+			"links": {
+				"self": "https://example.org/mocktypes1/id1"
+			},
+			"type": "mocktypes1"
+		},
+		{
+			"attributes": {
 				"bool": false,
 				"int": -42,
 				"str": "漢語",
@@ -139,6 +149,6 @@
 		"version": "1.0"
 	},
 	"links": {
-		"self": "https://example.org/fake/path?fields%5Bmocktype%5D=bool%2Cint%2Cstr%2Ctime%2Cto-1%2Cto-x-from-1%2Cuint64"
+		"self": "https://example.org/fake/path?fields%5Bmocktype%5D=bool%2Cint%2Cstr%2Ctime%2Cto-1%2Cto-x-from-1%2Cuint64\u0026fields%5Bmocktypes1%5D=str"
 	}
 }
