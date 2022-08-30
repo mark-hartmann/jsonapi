@@ -34,6 +34,12 @@ func TestCheck(t *testing.T) {
 		err,
 		"jsonapi: relationship \"Rel\" of type \"typename\" is not string or []string",
 	)
+
+	err = Check(mockType4{})
+	assert.NoError(err)
+
+	err = Check(mockType5{})
+	assert.NoError(err)
 }
 
 func TestBuildType(t *testing.T) {
