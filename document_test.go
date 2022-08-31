@@ -148,6 +148,30 @@ func TestMarshalDocument(t *testing.T) {
 		Str: "str with <html> chars",
 	}))
 
+	var (
+		strarr   = []string{"foo", "bar", "baz"}
+		int8arr  = []int8{-100, -50, 0, 50, 100}
+		int32arr = []int32{-10000000, 123456, -45, 333333333}
+		bytearr  = []byte("hello world")
+		boolarr  = []bool{true, false, true, true}
+	)
+
+	cres1 := Wrap(mockType4{
+		ID:       "id1",
+		StrArr:   strarr,
+		Int8Arr:  int8arr,
+		Int32Arr: int32arr,
+		Uint8Arr: bytearr,
+		BoolArr:  boolarr,
+	})
+
+	cres2 := Wrap(mockType5{
+		ID:         "id1",
+		StrArrPtr:  &strarr,
+		Int8ArrPtr: &int8arr,
+		BoolArrPtr: &boolarr,
+	})
+
 	// Test struct
 	tests := []struct {
 		name   string
@@ -180,6 +204,22 @@ func TestMarshalDocument(t *testing.T) {
 			},
 			fields: map[string][]string{
 				"mocktype": {"str", "uint64", "bool", "int", "time", "bytes", "to-1", "to-x-from-1"},
+			},
+		}, {
+			name: "resource array attributes",
+			doc: &Document{
+				Data: cres1,
+			},
+			fields: map[string][]string{
+				"mocktype4": {"strarr", "int8arr", "int32arr", "uint8arr", "boolarr", "int16arr"},
+			},
+		}, {
+			name: "resource nullable array attributes",
+			doc: &Document{
+				Data: cres2,
+			},
+			fields: map[string][]string{
+				"mocktype5": {"strarrptr", "int8arrptr", "int32arrptr", "uint8arrptr", "boolarrptr", "int16arrptr"},
 			},
 		}, {
 			name: "collection",
