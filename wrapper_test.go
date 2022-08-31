@@ -206,20 +206,11 @@ func TestWrapper(t *testing.T) {
 	assert.Equal(&newInt, wrap2.Get("intptr"), "set int pointer attribute")
 
 	wrap2.Set("uintptr", nil)
+	assert.Equal((*uint)(nil), wrap2.Get("uintptr"))
+	assert.NotEqual(nil, wrap2.Get("uintptr"))
 
-	if wrap2.Get("uintptr") != nil {
-		// We first do a != nil check because that's what we are really
-		// checking and reflect.DeepEqual doesn't work exactly work the same
-		// way. If the nil check fails, then the next line will fail too.
-		assert.Equal("nil pointer", nil, wrap2.Get("uintptr"))
-	}
-
-	if res2.UintPtr != nil {
-		// We first do a != nil check because that's what we are really
-		// checking and reflect.DeepEqual doesn't work exactly work the same
-		// way. If the nil check fails, then the next line will fail too.
-		assert.Equal("nil pointer 2", nil, res2.UintPtr)
-	}
+	assert.Equal((*uint)(nil), res2.UintPtr)
+	assert.NotEqual(nil, res2.UintPtr)
 
 	// New
 	wrap3 := wrap1.New()
@@ -250,6 +241,37 @@ func TestWrapper(t *testing.T) {
 		wrap3.Get("str"),
 		"modified value does not affect original",
 	)
+
+	res4 := &mockType4{
+		BoolArr: []bool{true, false},
+	}
+	wrap4 := Wrap(res4)
+
+	assert.Equal([]bool{true, false}, wrap4.Get("boolarr"))
+	assert.Equal([]uint{}, wrap4.Get("uintarr"))
+
+	res5 := &mockType5{
+		BoolArrPtr: &[]bool{true, false},
+	}
+	wrap5 := Wrap(res5)
+
+	assert.Equal(&[]bool{true, false}, res5.BoolArrPtr)
+	assert.Equal(res5.BoolArrPtr, wrap5.Get("boolarrptr"))
+
+	assert.Equal((*[]uint)(nil), res5.UintArrPtr)
+	assert.Equal(res5.UintArrPtr, wrap5.Get("uintarrptr"))
+
+	wrap5.Set("boolarrptr", nil)
+	assert.Equal((*[]bool)(nil), res5.BoolArrPtr)
+	assert.Equal(res5.BoolArrPtr, wrap5.Get("boolarrptr"))
+
+	wrap5.Set("strarrptr", &[]string{"foo", "bar"})
+	assert.Equal(&[]string{"foo", "bar"}, res5.StrArrPtr)
+	assert.Equal(res5.StrArrPtr, wrap5.Get("strarrptr"))
+
+	wrap5.Set("strarrptr", (*[]string)(nil))
+	assert.Equal((*[]string)(nil), res5.StrArrPtr)
+	assert.Equal(res5.StrArrPtr, wrap5.Get("strarrptr"))
 }
 
 func TestWrapperSet(t *testing.T) {

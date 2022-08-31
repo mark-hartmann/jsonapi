@@ -250,11 +250,14 @@ func (w *Wrapper) getField(key string) interface{} {
 		sf := w.val.Type().Field(i)
 
 		if key == sf.Tag.Get("json") && sf.Tag.Get("api") != "" {
-			if strings.HasPrefix(field.Type().String(), "*") && field.IsNil() {
-				return nil
+			typ, arr, null := GetAttrType(field.Type().String())
+			if typ != AttrTypeInvalid {
+				if (arr || null) && field.IsNil() {
+					zv := GetZeroValue(typ, arr, null)
+					return zv
+				}
+				return field.Interface()
 			}
-
-			return field.Interface()
 		}
 	}
 
