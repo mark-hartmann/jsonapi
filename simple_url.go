@@ -26,6 +26,8 @@ type SimpleURL struct {
 	PageSize     uint
 	PageNumber   uint
 	Include      []string
+	// Params contains all off-spec query parameters.
+	Params map[string][]string
 }
 
 // NewSimpleURL takes and parses a *url.URL and returns a SimpleURL.
@@ -38,6 +40,7 @@ func NewSimpleURL(u *url.URL) (SimpleURL, error) {
 		Filter:       nil,
 		SortingRules: []string{},
 		Include:      []string{},
+		Params:       map[string][]string{},
 	}
 
 	if u == nil {
@@ -102,8 +105,7 @@ func NewSimpleURL(u *url.URL) (SimpleURL, error) {
 					sURL.Include = append(sURL.Include, parseCommaList(include)...)
 				}
 			default:
-				// Unkmown parameter
-				return sURL, NewErrUnknownParameter(name)
+				sURL.Params[name] = values[name]
 			}
 		}
 	}
