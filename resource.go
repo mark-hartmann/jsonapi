@@ -34,6 +34,24 @@ func MarshalResource(r Resource, prepath string, fields []string, relData map[st
 	for _, attr := range r.Attrs() {
 		for _, field := range fields {
 			if field == attr.Name {
+				// AttrTypeUint8(Array=true) is handled like any other array.
+				// todo: check if there's a better way to do this
+				if attr.Type == AttrTypeUint8 && attr.Array {
+					v := r.Get(attr.Name)
+					var d *[]uint8
+					if attr.Nullable {
+						d = v.(*[]uint8)
+					} else {
+						a := v.([]uint8)
+						d = &a
+					}
+					attrs[attr.Name] = uint8Array{
+						Data:     d,
+						Nullable: attr.Nullable,
+					}
+					break
+				}
+
 				attrs[attr.Name] = r.Get(attr.Name)
 				break
 			}

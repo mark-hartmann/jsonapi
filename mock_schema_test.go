@@ -112,7 +112,7 @@ type mockType4 struct {
 	Int32Arr  []int32     `json:"int32arr" api:"attr"`
 	Int64Arr  []int64     `json:"int64arr" api:"attr"`
 	UintArr   []uint      `json:"uintarr" api:"attr"`
-	Uint8Arr  []uint8     `json:"uint8arr" api:"attr"`
+	Uint8Arr  []uint8     `json:"uint8arr" api:"attr" bytes:"true"`
 	Uint16Arr []uint16    `json:"uint16arr" api:"attr"`
 	Uint32Arr []uint32    `json:"uint32arr" api:"attr"`
 	Uint64Arr []uint64    `json:"uint64arr" api:"attr"`
@@ -131,7 +131,7 @@ type mockType5 struct {
 	Int32ArrPtr  *[]int32     `json:"int32arrptr" api:"attr"`
 	Int64ArrPtr  *[]int64     `json:"int64arrptr" api:"attr"`
 	UintArrPtr   *[]uint      `json:"uintarrptr" api:"attr"`
-	Uint8ArrPtr  *[]uint8     `json:"uint8arrptr" api:"attr"`
+	Uint8ArrPtr  *[]uint8     `json:"uint8arrptr" api:"attr" bytes:"true"`
 	Uint16ArrPtr *[]uint16    `json:"uint16arrptr" api:"attr"`
 	Uint32ArrPtr *[]uint32    `json:"uint32arrptr" api:"attr"`
 	Uint64ArrPtr *[]uint64    `json:"uint64arrptr" api:"attr"`

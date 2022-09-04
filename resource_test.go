@@ -15,7 +15,8 @@ func TestUnmarshalPartialResource(t *testing.T) {
 	typ.NewFunc = func() Resource {
 		return Wrap(&mocktype{})
 	}
-	schema := &Schema{Types: []Type{typ}}
+	typ4, _ := BuildType(mockType4{})
+	schema := &Schema{Types: []Type{typ, typ4}}
 
 	// Tests
 	t.Run("partial resource", func(t *testing.T) {
@@ -56,6 +57,30 @@ func TestUnmarshalPartialResource(t *testing.T) {
 		assert.Equal("mocktype", res.GetType().Name)
 		assert.Len(res.Attrs(), 1)
 		assert.Len(res.Rels(), 2)
+	})
+
+	t.Run("partial resource arrays", func(t *testing.T) {
+		assert := assert.New(t)
+
+		payload := `{
+			"id": "id1",
+			"type": "mocktype4",
+			"attributes": {
+				"int8arr": [-32,-16, 0, 16, 32, 64, 127],
+				"intarr": []
+			}
+		}`
+
+		res, err := UnmarshalPartialResource([]byte(payload), schema)
+		assert.NoError(err)
+
+		assert.Equal("id1", res.GetID())
+		assert.Equal("mocktype4", res.GetType().Name)
+		assert.Len(res.Attrs(), 2)
+		assert.Len(res.Rels(), 0)
+
+		assert.Equal([]int{}, res.Get("intarr"))
+		assert.Equal([]int8{-32, -16, 0, 16, 32, 64, 127}, res.Get("int8arr"))
 	})
 
 	t.Run("partial resource (invalid attribute)", func(t *testing.T) {

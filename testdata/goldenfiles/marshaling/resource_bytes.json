@@ -1,0 +1,26 @@
+{
+	"data": {
+		"attributes": {
+			"uint8arr": [1, 2, 4, 8, 16, 32],
+			"uint8arrptr": [1, 2, 4, 8, 16, 32],
+			"uint8arrempty": [],
+			"uint8arrptrnull": null,
+			"bytes": "AQIECBAg",
+			"bytesptr": "AQIECBAg",
+			"nullbytes": "",
+			"nullbytesptr": null
+		},
+		"id": "id1",
+		"links": {
+			"self": "/bytestest/id1"
+		},
+
+		"type": "bytestest"
+	},
+	"jsonapi": {
+		"version": "1.0"
+	},
+	"links": {
+		"self": "/fake/path?fields%5Bbytestest%5D=bytes%2Cbytesptr%2Cnullbytes%2Cnullbytesptr%2Cuint8arr%2Cuint8arrempty%2Cuint8arrptr%2Cuint8arrptrnull"
+	}
+}

@@ -24,10 +24,11 @@ import (
 //  - uint, uint8, uint16, uint32, uint64
 //  - bool
 //  - time (Go type is time.Time)
+//  - []byte
 //
 // An asterisk is present as a prefix if the type is nullable (like *string), brackets
 // if it is an array (e.g. []string). Nullable arrays combine asterisk and
-// brackets (e.g. *[]string). Byte arrays are represented using []uint8 (or *[]uint8)
+// brackets (e.g. *[]string). Byte arrays are represented using []uint8 (or *[]uint8).
 //
 // Developers are encouraged to use the constants, the Type struct, and other
 // tools to handle attribute types instead of dealing with strings.
@@ -46,7 +47,25 @@ const (
 	AttrTypeUint64
 	AttrTypeBool
 	AttrTypeTime
+	AttrTypeBytes
 )
+
+// uint8Array is used to marshal *[]uint8 or []byte as literal array instead of
+// a base64 encoded string value.
+type uint8Array struct {
+	Data     *[]uint8
+	Nullable bool
+}
+
+func (u uint8Array) MarshalJSON() ([]byte, error) {
+	var result string
+	if u.Data == nil {
+		result = "null"
+	} else {
+		result = strings.Join(strings.Fields(fmt.Sprintf("%d", *u.Data)), ",")
+	}
+	return []byte(result), nil
+}
 
 // A Type stores all the necessary information about a type as represented in
 // the JSON:API specification.
@@ -205,9 +224,13 @@ type Attr struct {
 	Array    bool
 }
 
-// UnmarshalToType unmarshals the data into a value of the type represented by
+// UnmarshalToType unmarshalls the data into a value of the type represented by
 // the attribute and returns it.
 func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
+	if data == nil || (!a.Nullable && string(data) == "null") {
+		return nil, NewErrInvalidFieldValueInBody(a.Name, string(data), GetAttrTypeString(a.Type, a.Array, a.Nullable))
+	}
+
 	if a.Nullable && string(data) == "null" {
 		return GetZeroValue(a.Type, a.Array, a.Nullable), nil
 	}
@@ -217,6 +240,7 @@ func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 		err error
 	)
 
+	// wenn data invalid ist, z.B. []byte("test") && AttrTypeInt16 => nil, error
 	switch a.Type {
 	case AttrTypeString:
 		if a.Array {
@@ -228,7 +252,7 @@ func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 			} else {
 				v = sa
 			}
-		} else {
+		} else if string(data) != "null" {
 			var s string
 			err = json.Unmarshal(data, &s)
 
@@ -482,6 +506,19 @@ func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 				v = t
 			}
 		}
+	case AttrTypeBytes:
+		s := make([]byte, len(data))
+		err := json.Unmarshal(data, &s)
+
+		if err != nil {
+			panic(err)
+		}
+
+		if a.Nullable {
+			v = &s
+		} else {
+			v = s
+		}
 	default:
 		err = errors.New("attribute is of invalid or unknown type")
 	}
@@ -617,6 +654,9 @@ func GetAttrTypeString(t int, array, nullable bool) string {
 		str = "uint"
 	case AttrTypeUint8:
 		str = "uint8"
+	case AttrTypeBytes:
+		array = true
+		str = "uint8"
 	case AttrTypeUint16:
 		str = "uint16"
 	case AttrTypeUint32:
@@ -719,7 +759,11 @@ func GetZeroValue(t int, array, nullable bool) interface{} {
 		}
 
 		return uint(0)
-	case AttrTypeUint8:
+	case AttrTypeUint8, AttrTypeBytes:
+		if t == AttrTypeBytes {
+			array = true
+		}
+
 		if array && nullable {
 			return (*[]uint8)(nil)
 		} else if array {

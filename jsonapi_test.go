@@ -34,7 +34,7 @@ type mocktype struct {
 	Uint64 uint64    `json:"uint64" api:"attr"`
 	Bool   bool      `json:"bool" api:"attr"`
 	Time   time.Time `json:"time" api:"attr"`
-	Bytes  []byte    `json:"bytes" api:"attr"`
+	Bytes  []byte    `json:"bytes" api:"attr" bytes:"true"`
 
 	// Relationships
 	To1      string   `json:"to-1" api:"rel,mocktype"`

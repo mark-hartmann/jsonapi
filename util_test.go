@@ -101,7 +101,7 @@ func nilptr(t string) interface{} {
 	case "uint8":
 		var p *uint8
 		return p
-	case "[]uint8":
+	case "[]uint8", "[]byte":
 		var p *[]uint8
 		return p
 	case "uint16":
@@ -135,10 +135,6 @@ func nilptr(t string) interface{} {
 		return p
 	case "[]time.Time":
 		var p *[]time.Time
-		return p
-	// []byte
-	case "[]byte":
-		var p *[]uint8
 		return p
 	default:
 		return nil

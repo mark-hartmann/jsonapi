@@ -172,6 +172,62 @@ func TestMarshalDocument(t *testing.T) {
 		BoolArrPtr: &boolarr,
 	})
 
+	// uint8
+	cres3 := &SoftResource{Type: &Type{
+		Name: "bytestest",
+		Attrs: map[string]Attr{
+			"uint8arr": {
+				Name:  "uint8arr",
+				Type:  AttrTypeUint8,
+				Array: true,
+			},
+			"uint8arrptr": {
+				Name:     "uint8arrptr",
+				Type:     AttrTypeUint8,
+				Array:    true,
+				Nullable: true,
+			},
+			"uint8arrempty": {
+				Name:  "uint8arrempty",
+				Type:  AttrTypeUint8,
+				Array: true,
+			},
+			"uint8arrptrnull": {
+				Name:     "uint8arrptrnull",
+				Type:     AttrTypeUint8,
+				Array:    true,
+				Nullable: true,
+			},
+			"bytes": {
+				Name: "bytes",
+				Type: AttrTypeBytes,
+			},
+			"bytesptr": {
+				Name:     "bytesptr",
+				Type:     AttrTypeBytes,
+				Nullable: true,
+			},
+			"nullbytes": {
+				Name: "nullbytes",
+				Type: AttrTypeBytes,
+			},
+			"nullbytesptr": {
+				Name:     "nullbytesptr",
+				Type:     AttrTypeBytes,
+				Nullable: true,
+			},
+		},
+	}}
+
+	arr := []uint8{1, 2, 4, 8, 16, 32}
+	cres3.SetID("id1")
+	cres3.Set("uint8arr", arr)
+	cres3.Set("uint8arrptr", &arr)
+	cres3.Set("uint8arrempty", nil)
+	cres3.Set("uint8arrptrnull", nil)
+	cres3.Set("bytes", arr)
+	cres3.Set("bytesptr", &arr)
+
 	// Test struct
 	tests := []struct {
 		name   string
@@ -220,6 +276,14 @@ func TestMarshalDocument(t *testing.T) {
 			},
 			fields: map[string][]string{
 				"mocktype5": {"strarrptr", "int8arrptr", "int32arrptr", "uint8arrptr", "boolarrptr", "int16arrptr"},
+			},
+		}, {
+			name: "resource bytes",
+			doc: &Document{
+				Data: cres3,
+			},
+			fields: map[string][]string{
+				"bytestest": {"uint8arr", "uint8arrptr", "bytes", "bytesptr", "nullbytes", "nullbytesptr", "uint8arrempty", "uint8arrptrnull"},
 			},
 		}, {
 			name: "collection",
@@ -451,7 +515,18 @@ func TestUnmarshalDocument(t *testing.T) {
 	typ.NewFunc = func() Resource {
 		return Wrap(&mocktype{})
 	}
-	schema := &Schema{Types: []Type{typ}}
+
+	typ4, _ := BuildType(mockType4{})
+	typ4.NewFunc = func() Resource {
+		return Wrap(&mockType4{})
+	}
+
+	typ5, _ := BuildType(mockType5{})
+	typ5.NewFunc = func() Resource {
+		return Wrap(&mockType5{})
+	}
+
+	schema := &Schema{Types: []Type{typ, typ4, typ5}}
 	col := Resources{}
 	col.Add(Wrap(&mocktype{
 		ID:       "id1",
@@ -478,6 +553,34 @@ func TestUnmarshalDocument(t *testing.T) {
 	}))
 	col.Add(Wrap(&mocktype{ID: "id2"}))
 	col.Add(Wrap(&mocktype{ID: "id3"}))
+	col.Add(Wrap(&mockType4{
+		ID:      "id1",
+		BoolArr: []bool{true, false},
+		StrArr:  []string{"a", "b", "c"},
+	}))
+	col.Add(Wrap(&mockType5{
+		ID:          "id123",
+		BoolArrPtr:  &[]bool{true, false},
+		StrArrPtr:   &[]string{"a", "b", "c"},
+		Uint8ArrPtr: &[]byte{1, 2, 4, 8, 16},
+	}))
+
+	uint8arrRes := &SoftResource{}
+	uint8arrRes.SetType(&Type{
+		Name: "uint8arrtest",
+		Attrs: map[string]Attr{
+			"uint8arr": {Name: "uint8arr", Type: AttrTypeUint8, Array: true},
+			"bytes":    {Name: "bytes", Type: AttrTypeBytes},
+		},
+	})
+
+	schema.AddType(*uint8arrRes.Type)
+
+	uint8arrRes.SetID("id1")
+	uint8arrRes.Set("uint8arr", []uint8{0, 1, 2, 4, 8, 16, 32, 64, 128, 255})
+	uint8arrRes.Set("bytes", []uint8{0, 1, 2, 4, 8, 16, 32, 64, 128, 255})
+
+	col.Add(uint8arrRes)
 
 	r4 := &mocktype{
 		ID: "id4",
@@ -520,6 +623,9 @@ func TestUnmarshalDocument(t *testing.T) {
 		assert := assert.New(t)
 
 		url, _ := NewURLFromRaw(schema, "/mocktype/id1")
+		url.Params.Fields["mocktype4"] = typ4.Fields()
+		url.Params.Fields["mocktype5"] = typ5.Fields()
+		url.Params.Fields["uint8arrtest"] = uint8arrRes.Type.Fields()
 
 		doc := &Document{
 			Data: &col,
@@ -543,6 +649,16 @@ func TestUnmarshalDocument(t *testing.T) {
 				}
 			}
 		}
+
+		col2, ok := doc.Data.(Collection)
+		assert.True(ok)
+		
+		// A few assertions to make sure some edge cases work.
+		arrRes := col2.At(5)
+		assert.Equal("uint8arrtest", arrRes.GetType().Name)
+		assert.Equal([]byte{0, 1, 2, 4, 8, 16, 32, 64, 128, 255}, arrRes.Get("uint8arr"))
+		assert.Equal(arrRes.Get("uint8arr"), arrRes.Get("bytes"))
+
 		// TODO Make all the necessary assertions.
 	})
 

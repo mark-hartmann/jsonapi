@@ -38,6 +38,14 @@ func TestType_AddAttr(t *testing.T) {
 				Nullable: true,
 			},
 		},
+		// AttrTypeBytes is implicitly Array=true
+		"attr bytes (non-array)": {
+			attr: Attr{
+				Name:     "attr",
+				Type:     AttrTypeBytes,
+				Nullable: true,
+			},
+		},
 		"attr (invalid type)": {
 			attr: Attr{Name: "invalid"},
 			err:  true,
@@ -202,7 +210,6 @@ func TestAttrUnmarshalToType(t *testing.T) {
 		vuint64arr = []uint64{64}
 		vboolarr   = []bool{true}
 		vtimearr   = []time.Time{{}}
-		vbytearr   = []byte{1, 2, 3}
 	)
 
 	tests := []struct {
@@ -276,36 +283,11 @@ func TestAttrUnmarshalToType(t *testing.T) {
 		assert.Equal(fmt.Sprintf("%T", test.val), fmt.Sprintf("%T", val))
 	}
 
-	byteArrayTests := []struct {
-		typ string
-		val interface{}
-	}{
-		{"[]byte", vbytearr},
-		{"*[]byte", &vbytearr},
-	}
-
-	for _, test := range byteArrayTests {
-		attr.Type, attr.Array, attr.Nullable = GetAttrType(test.typ)
-		p, _ := json.Marshal(test.val)
-		val, err := attr.UnmarshalToType(p)
-		assert.NoError(err)
-		assert.Equal(test.val, val)
-	}
-
-	// Null value
-	attr.Array = false
-	attr.Nullable = true
-	attr.Type = AttrTypeUint
-	val, err := attr.UnmarshalToType([]byte("null"))
-	assert.NoError(err)
-	var ui *uint
-	assert.Equal(ui, val)
-
 	// boolean not-true value
 	attr.Array = false
 	attr.Nullable = false
 	attr.Type = AttrTypeBool
-	val, err = attr.UnmarshalToType([]byte("nottrue"))
+	val, err := attr.UnmarshalToType([]byte("nottrue"))
 	assert.Error(err)
 	assert.Nil(val)
 
@@ -316,6 +298,153 @@ func TestAttrUnmarshalToType(t *testing.T) {
 	assert.True(ok)
 	assert.IsType(Error{}, err2)
 	assert.Nil(val)
+}
+
+func TestAttrUnmarshalToType_Nil(t *testing.T) {
+	attr := Attr{Type: AttrTypeString}
+	v, err := attr.UnmarshalToType(nil)
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeString, Nullable: true}
+	v, err = attr.UnmarshalToType(nil)
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeString, Array: true}
+	v, err = attr.UnmarshalToType(nil)
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeString, Nullable: true, Array: true}
+	v, err = attr.UnmarshalToType(nil)
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	// The compiler is smart enough, but better safe than sorry.
+	attr = Attr{Type: AttrTypeString, Nullable: true, Array: true}
+	v, err = attr.UnmarshalToType(([]byte)(nil))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+}
+
+func TestAttrUnmarshalToType_Null(t *testing.T) {
+	attr := Attr{Type: AttrTypeString}
+	v, err := attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeString, Nullable: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*string)(nil), v)
+
+	attr = Attr{Type: AttrTypeString, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeString, Nullable: true, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*[]string)(nil), v)
+
+	attr = Attr{Type: AttrTypeUint8}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeUint8, Nullable: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*uint8)(nil), v)
+
+	attr = Attr{Type: AttrTypeUint8, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeUint8, Nullable: true, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*[]uint8)(nil), v)
+
+	// AttrTypeBytes is implicitly Array=true
+	attr = Attr{Type: AttrTypeBytes}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeBytes, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeBytes, Nullable: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*[]uint8)(nil), v)
+
+	attr = Attr{Type: AttrTypeBytes, Nullable: true, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*[]uint8)(nil), v)
+}
+
+func TestAttrUnmarshalToType_Bytes(t *testing.T) {
+	t.Run("bytes", func(t *testing.T) {
+		bytes := []byte("hello world")
+		attr := Attr{Name: "bytes", Type: AttrTypeBytes, Array: true}
+		p, _ := json.Marshal(bytes)
+		assert.Equal(t, `"aGVsbG8gd29ybGQ="`, string(p))
+
+		val, err := attr.UnmarshalToType(p)
+		assert.NoError(t, err)
+		assert.Equal(t, bytes, val)
+	})
+
+	t.Run("nullable bytes", func(t *testing.T) {
+		bytes := []byte("hello world")
+		attr := Attr{Name: "bytes", Type: AttrTypeBytes, Array: true, Nullable: true}
+		p, _ := json.Marshal(bytes)
+		assert.Equal(t, `"aGVsbG8gd29ybGQ="`, string(p))
+
+		val, err := attr.UnmarshalToType(p)
+		assert.NoError(t, err)
+		assert.Equal(t, &bytes, val)
+	})
+
+	t.Run("[]uint8", func(t *testing.T) {
+		bytes := []uint8{1, 2, 4, 8, 16, 32}
+		attr := Attr{Name: "uint8arr", Type: AttrTypeUint8, Array: true, Nullable: false}
+
+		val, err := attr.UnmarshalToType([]byte("[1,2,4,8,16,32]"))
+		assert.NoError(t, err)
+		assert.Equal(t, bytes, val)
+
+		val, err = attr.UnmarshalToType([]byte("[]"))
+		assert.NoError(t, err)
+		assert.Equal(t, []byte{}, val)
+	})
+
+	t.Run("nullable []uint8", func(t *testing.T) {
+		attr := Attr{Name: "uint8arr", Type: AttrTypeUint8, Array: true, Nullable: true}
+
+		val, err := attr.UnmarshalToType([]byte("[1,2,4,8,16,32]"))
+		assert.NoError(t, err)
+		assert.Equal(t, &[]uint8{1, 2, 4, 8, 16, 32}, val)
+
+		val, err = attr.UnmarshalToType([]byte("[]"))
+		assert.NoError(t, err)
+		assert.Equal(t, &[]byte{}, val)
+	})
+
+	// Invalid slide of bytes
+	attr := Attr{Type: AttrTypeBytes}
+
+	assert.Panics(t, func() {
+		_, _ = attr.UnmarshalToType([]byte("invalid"))
+	})
 }
 
 func TestRelInvert(t *testing.T) {
@@ -805,6 +934,11 @@ func TestGetAttrTypeString(t *testing.T) {
 	assert.Equal("*[]bool", GetAttrTypeString(AttrTypeBool, true, true))
 	assert.Equal("*[]time.Time", GetAttrTypeString(AttrTypeTime, true, true))
 
+	assert.Equal("[]uint8", GetAttrTypeString(AttrTypeBytes, true, false))
+	assert.Equal("[]uint8", GetAttrTypeString(AttrTypeBytes, false, false))
+	assert.Equal("*[]uint8", GetAttrTypeString(AttrTypeBytes, true, true))
+	assert.Equal("*[]uint8", GetAttrTypeString(AttrTypeBytes, false, true))
+
 	assert.Equal("", GetAttrTypeString(AttrTypeInvalid, false, false))
 	assert.Equal("", GetAttrTypeString(999, false, false))
 }
@@ -867,6 +1001,12 @@ func TestGetZeroValue(t *testing.T) {
 	assert.Equal(nilptr("[]uint64"), GetZeroValue(AttrTypeUint64, true, true))
 	assert.Equal(nilptr("[]bool"), GetZeroValue(AttrTypeBool, true, true))
 	assert.Equal(nilptr("[]time.Time"), GetZeroValue(AttrTypeTime, true, true))
+
+	// AttrTypeBytes is handled as array even if array=false.
+	assert.Equal([]uint8{}, GetZeroValue(AttrTypeBytes, true, false))
+	assert.Equal([]uint8{}, GetZeroValue(AttrTypeBytes, false, false))
+	assert.Equal((*[]uint8)(nil), GetZeroValue(AttrTypeBytes, true, true))
+	assert.Equal((*[]uint8)(nil), GetZeroValue(AttrTypeBytes, false, true))
 
 	assert.Equal(nil, GetZeroValue(AttrTypeInvalid, false, false))
 	assert.Equal(nil, GetZeroValue(999, false, false))
