@@ -26,7 +26,13 @@
 				true,
 				true
 			],
-			"int16arr": []
+			"int16arr": [],
+			"float32arr": [
+				3.4028235e+38
+			],
+			"float64arr": [
+				1.7976931348623157e+308
+			]
 		},
 		"id": "id1",
 		"links": {
@@ -39,6 +45,6 @@
 		"version": "1.0"
 	},
 	"links": {
-		"self": "/fake/path?fields%5Bmocktype4%5D=boolarr%2Cint16arr%2Cint32arr%2Cint8arr%2Cstrarr%2Cuint8arr"
+		"self": "/fake/path?fields%5Bmocktype4%5D=boolarr%2Cfloat32arr%2Cfloat64arr%2Cint16arr%2Cint32arr%2Cint8arr%2Cstrarr%2Cuint8arr"
 	}
 }

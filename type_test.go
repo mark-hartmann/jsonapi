@@ -3,6 +3,7 @@ package jsonapi_test
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -184,32 +185,36 @@ func TestAttrUnmarshalToType(t *testing.T) {
 	assert := assert.New(t)
 
 	var (
-		vstr    = "str"
-		vint    = int(1)
-		vint8   = int8(8)
-		vint16  = int16(16)
-		vint32  = int32(32)
-		vint64  = int64(64)
-		vuint   = uint(1)
-		vuint8  = uint8(8)
-		vuint16 = uint16(16)
-		vuint32 = uint32(32)
-		vuint64 = uint64(64)
-		vbool   = true
+		vstr     = "str"
+		vint     = int(1)
+		vint8    = int8(8)
+		vint16   = int16(16)
+		vint32   = int32(32)
+		vint64   = int64(64)
+		vuint    = uint(1)
+		vuint8   = uint8(8)
+		vuint16  = uint16(16)
+		vuint32  = uint32(32)
+		vuint64  = uint64(64)
+		vfloat32 = float32(math.MaxFloat32)
+		vfloat64 = math.MaxFloat64
+		vbool    = true
 
-		vstrarr    = []string{"str"}
-		vintarr    = []int{1}
-		vint8arr   = []int8{8}
-		vint16arr  = []int16{16}
-		vint32arr  = []int32{32}
-		vint64arr  = []int64{64}
-		vuintarr   = []uint{1}
-		vuint8arr  = []uint8{8}
-		vuint16arr = []uint16{16}
-		vuint32arr = []uint32{32}
-		vuint64arr = []uint64{64}
-		vboolarr   = []bool{true}
-		vtimearr   = []time.Time{{}}
+		vstrarr     = []string{"str"}
+		vintarr     = []int{1}
+		vint8arr    = []int8{8}
+		vint16arr   = []int16{16}
+		vint32arr   = []int32{32}
+		vint64arr   = []int64{64}
+		vuintarr    = []uint{1}
+		vuint8arr   = []uint8{8}
+		vuint16arr  = []uint16{16}
+		vuint32arr  = []uint32{32}
+		vuint64arr  = []uint64{64}
+		vfloat32arr = []float32{math.MaxFloat32}
+		vfloat64arr = []float64{math.MaxFloat64}
+		vboolarr    = []bool{true}
+		vtimearr    = []time.Time{{}}
 	)
 
 	tests := []struct {
@@ -240,36 +245,42 @@ func TestAttrUnmarshalToType(t *testing.T) {
 		{val: &vuint16},     // *uint16
 		{val: &vuint32},     // *uint32
 		{val: &vuint64},     // *uint64
+		{val: &vfloat32},    // *float32
+		{val: &vfloat64},    // *float64
 		{val: &vbool},       // *bool
 		{val: &time.Time{}}, // *time
 
-		{val: vstrarr},    // []string
-		{val: vintarr},    // []int
-		{val: vint8arr},   // []int8
-		{val: vint16arr},  // []int16
-		{val: vint32arr},  // []int32
-		{val: vint64arr},  // []int64
-		{val: vuintarr},   // []uint
-		{val: vuint8arr},  // []uint8
-		{val: vuint16arr}, // []uint16
-		{val: vuint32arr}, // []uint32
-		{val: vuint64arr}, // []uint64
-		{val: vboolarr},   // []bool
-		{val: vtimearr},   // []time.Time
+		{val: vstrarr},     // []string
+		{val: vintarr},     // []int
+		{val: vint8arr},    // []int8
+		{val: vint16arr},   // []int16
+		{val: vint32arr},   // []int32
+		{val: vint64arr},   // []int64
+		{val: vuintarr},    // []uint
+		{val: vuint8arr},   // []uint8
+		{val: vuint16arr},  // []uint16
+		{val: vuint32arr},  // []uint32
+		{val: vuint64arr},  // []uint64
+		{val: vfloat32arr}, // []float32
+		{val: vfloat64arr}, // []float64
+		{val: vboolarr},    // []bool
+		{val: vtimearr},    // []time.Time
 
-		{val: &vstrarr},    // *[]string
-		{val: &vintarr},    // *[]int
-		{val: &vint8arr},   // *[]int8
-		{val: &vint16arr},  // *[]int16
-		{val: &vint32arr},  // *[]int32
-		{val: &vint64arr},  // *[]int64
-		{val: &vuintarr},   // *[]uint
-		{val: &vuint8arr},  // *[]uint8
-		{val: &vuint16arr}, // *[]uint16
-		{val: &vuint32arr}, // *[]uint32
-		{val: &vuint64arr}, // *[]uint64
-		{val: &vboolarr},   // *[]bool
-		{val: &vtimearr},   // *[]time.Time
+		{val: &vstrarr},     // *[]string
+		{val: &vintarr},     // *[]int
+		{val: &vint8arr},    // *[]int8
+		{val: &vint16arr},   // *[]int16
+		{val: &vint32arr},   // *[]int32
+		{val: &vint64arr},   // *[]int64
+		{val: &vuintarr},    // *[]uint
+		{val: &vuint8arr},   // *[]uint8
+		{val: &vuint16arr},  // *[]uint16
+		{val: &vuint32arr},  // *[]uint32
+		{val: &vuint64arr},  // *[]uint64
+		{val: &vfloat32arr}, // *[]float32
+		{val: &vfloat64arr}, // *[]float64
+		{val: &vboolarr},    // *[]bool
+		{val: &vtimearr},    // *[]time.Time
 	}
 
 	attr := Attr{}
@@ -669,6 +680,54 @@ func TestGetAttrType(t *testing.T) {
 			nullable: true,
 		},
 		{
+			str:      "float32",
+			typ:      AttrTypeFloat32,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]float32",
+			typ:      AttrTypeFloat32,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*float32",
+			typ:      AttrTypeFloat32,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]float32",
+			typ:      AttrTypeFloat32,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "float64",
+			typ:      AttrTypeFloat64,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]float64",
+			typ:      AttrTypeFloat64,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*float64",
+			typ:      AttrTypeFloat64,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]float64",
+			typ:      AttrTypeFloat64,
+			array:    true,
+			nullable: true,
+		},
+		{
 			str:      "uint",
 			typ:      AttrTypeUint,
 			array:    false,
@@ -889,6 +948,8 @@ func TestGetAttrTypeString(t *testing.T) {
 	assert.Equal("uint16", GetAttrTypeString(AttrTypeUint16, false, false))
 	assert.Equal("uint32", GetAttrTypeString(AttrTypeUint32, false, false))
 	assert.Equal("uint64", GetAttrTypeString(AttrTypeUint64, false, false))
+	assert.Equal("float32", GetAttrTypeString(AttrTypeFloat32, false, false))
+	assert.Equal("float64", GetAttrTypeString(AttrTypeFloat64, false, false))
 	assert.Equal("bool", GetAttrTypeString(AttrTypeBool, false, false))
 	assert.Equal("time.Time", GetAttrTypeString(AttrTypeTime, false, false))
 
@@ -903,6 +964,8 @@ func TestGetAttrTypeString(t *testing.T) {
 	assert.Equal("*uint16", GetAttrTypeString(AttrTypeUint16, false, true))
 	assert.Equal("*uint32", GetAttrTypeString(AttrTypeUint32, false, true))
 	assert.Equal("*uint64", GetAttrTypeString(AttrTypeUint64, false, true))
+	assert.Equal("*float32", GetAttrTypeString(AttrTypeFloat32, false, true))
+	assert.Equal("*float64", GetAttrTypeString(AttrTypeFloat64, false, true))
 	assert.Equal("*bool", GetAttrTypeString(AttrTypeBool, false, true))
 	assert.Equal("*time.Time", GetAttrTypeString(AttrTypeTime, false, true))
 
@@ -917,6 +980,8 @@ func TestGetAttrTypeString(t *testing.T) {
 	assert.Equal("[]uint16", GetAttrTypeString(AttrTypeUint16, true, false))
 	assert.Equal("[]uint32", GetAttrTypeString(AttrTypeUint32, true, false))
 	assert.Equal("[]uint64", GetAttrTypeString(AttrTypeUint64, true, false))
+	assert.Equal("[]float32", GetAttrTypeString(AttrTypeFloat32, true, false))
+	assert.Equal("[]float64", GetAttrTypeString(AttrTypeFloat64, true, false))
 	assert.Equal("[]bool", GetAttrTypeString(AttrTypeBool, true, false))
 	assert.Equal("[]time.Time", GetAttrTypeString(AttrTypeTime, true, false))
 
@@ -931,6 +996,8 @@ func TestGetAttrTypeString(t *testing.T) {
 	assert.Equal("*[]uint16", GetAttrTypeString(AttrTypeUint16, true, true))
 	assert.Equal("*[]uint32", GetAttrTypeString(AttrTypeUint32, true, true))
 	assert.Equal("*[]uint64", GetAttrTypeString(AttrTypeUint64, true, true))
+	assert.Equal("*[]float32", GetAttrTypeString(AttrTypeFloat32, true, true))
+	assert.Equal("*[]float64", GetAttrTypeString(AttrTypeFloat64, true, true))
 	assert.Equal("*[]bool", GetAttrTypeString(AttrTypeBool, true, true))
 	assert.Equal("*[]time.Time", GetAttrTypeString(AttrTypeTime, true, true))
 
@@ -957,6 +1024,8 @@ func TestGetZeroValue(t *testing.T) {
 	assert.Equal(uint16(0), GetZeroValue(AttrTypeUint16, false, false))
 	assert.Equal(uint32(0), GetZeroValue(AttrTypeUint32, false, false))
 	assert.Equal(uint64(0), GetZeroValue(AttrTypeUint64, false, false))
+	assert.Equal(float32(0), GetZeroValue(AttrTypeFloat32, false, false))
+	assert.Equal(float64(0), GetZeroValue(AttrTypeFloat64, false, false))
 	assert.Equal(false, GetZeroValue(AttrTypeBool, false, false))
 	assert.Equal(time.Time{}, GetZeroValue(AttrTypeTime, false, false))
 
@@ -971,6 +1040,8 @@ func TestGetZeroValue(t *testing.T) {
 	assert.Equal([]uint16{}, GetZeroValue(AttrTypeUint16, true, false))
 	assert.Equal([]uint32{}, GetZeroValue(AttrTypeUint32, true, false))
 	assert.Equal([]uint64{}, GetZeroValue(AttrTypeUint64, true, false))
+	assert.Equal([]float32{}, GetZeroValue(AttrTypeFloat32, true, false))
+	assert.Equal([]float64{}, GetZeroValue(AttrTypeFloat64, true, false))
 	assert.Equal([]bool{}, GetZeroValue(AttrTypeBool, true, false))
 	assert.Equal([]time.Time{}, GetZeroValue(AttrTypeTime, true, false))
 
@@ -985,6 +1056,8 @@ func TestGetZeroValue(t *testing.T) {
 	assert.Equal(nilptr("uint16"), GetZeroValue(AttrTypeUint16, false, true))
 	assert.Equal(nilptr("uint32"), GetZeroValue(AttrTypeUint32, false, true))
 	assert.Equal(nilptr("uint64"), GetZeroValue(AttrTypeUint64, false, true))
+	assert.Equal(nilptr("float32"), GetZeroValue(AttrTypeFloat32, false, true))
+	assert.Equal(nilptr("float64"), GetZeroValue(AttrTypeFloat64, false, true))
 	assert.Equal(nilptr("bool"), GetZeroValue(AttrTypeBool, false, true))
 	assert.Equal(nilptr("time.Time"), GetZeroValue(AttrTypeTime, false, true))
 
@@ -999,6 +1072,8 @@ func TestGetZeroValue(t *testing.T) {
 	assert.Equal(nilptr("[]uint16"), GetZeroValue(AttrTypeUint16, true, true))
 	assert.Equal(nilptr("[]uint32"), GetZeroValue(AttrTypeUint32, true, true))
 	assert.Equal(nilptr("[]uint64"), GetZeroValue(AttrTypeUint64, true, true))
+	assert.Equal(nilptr("[]float32"), GetZeroValue(AttrTypeFloat32, true, true))
+	assert.Equal(nilptr("[]float64"), GetZeroValue(AttrTypeFloat64, true, true))
 	assert.Equal(nilptr("[]bool"), GetZeroValue(AttrTypeBool, true, true))
 	assert.Equal(nilptr("[]time.Time"), GetZeroValue(AttrTypeTime, true, true))
 

@@ -21,20 +21,22 @@ type mocktype struct {
 	ID string `json:"id" api:"mocktype"`
 
 	// Attributes
-	Str    string    `json:"str" api:"attr"`
-	Int    int       `json:"int" api:"attr"`
-	Int8   int8      `json:"int8" api:"attr"`
-	Int16  int16     `json:"int16" api:"attr"`
-	Int32  int32     `json:"int32" api:"attr"`
-	Int64  int64     `json:"int64" api:"attr"`
-	Uint   uint      `json:"uint" api:"attr"`
-	Uint8  uint8     `json:"uint8" api:"attr"`
-	Uint16 uint16    `json:"uint16" api:"attr"`
-	Uint32 uint32    `json:"uint32" api:"attr"`
-	Uint64 uint64    `json:"uint64" api:"attr"`
-	Bool   bool      `json:"bool" api:"attr"`
-	Time   time.Time `json:"time" api:"attr"`
-	Bytes  []byte    `json:"bytes" api:"attr" bytes:"true"`
+	Str     string    `json:"str" api:"attr"`
+	Int     int       `json:"int" api:"attr"`
+	Int8    int8      `json:"int8" api:"attr"`
+	Int16   int16     `json:"int16" api:"attr"`
+	Int32   int32     `json:"int32" api:"attr"`
+	Int64   int64     `json:"int64" api:"attr"`
+	Uint    uint      `json:"uint" api:"attr"`
+	Uint8   uint8     `json:"uint8" api:"attr"`
+	Uint16  uint16    `json:"uint16" api:"attr"`
+	Uint32  uint32    `json:"uint32" api:"attr"`
+	Uint64  uint64    `json:"uint64" api:"attr"`
+	Float32 float32   `json:"float32" api:"attr"`
+	Float64 float64   `json:"float64" api:"attr"`
+	Bool    bool      `json:"bool" api:"attr"`
+	Time    time.Time `json:"time" api:"attr"`
+	Bytes   []byte    `json:"bytes" api:"attr" bytes:"true"`
 
 	// Relationships
 	To1      string   `json:"to-1" api:"rel,mocktype"`

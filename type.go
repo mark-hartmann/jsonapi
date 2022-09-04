@@ -22,6 +22,7 @@ import (
 //  - string
 //  - int, int8, int16, int32, int64
 //  - uint, uint8, uint16, uint32, uint64
+//  - float32, float64
 //  - bool
 //  - time (Go type is time.Time)
 //  - []byte
@@ -45,6 +46,8 @@ const (
 	AttrTypeUint16
 	AttrTypeUint32
 	AttrTypeUint64
+	AttrTypeFloat32
+	AttrTypeFloat64
 	AttrTypeBool
 	AttrTypeTime
 	AttrTypeBytes
@@ -462,6 +465,44 @@ func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 				v = v.(uint64)
 			}
 		}
+	case AttrTypeFloat32:
+		if a.Array {
+			var fa []float32
+			err = json.Unmarshal(data, &fa)
+			if a.Nullable {
+				v = &fa
+			} else {
+				v = fa
+			}
+		} else {
+			var f64 float64
+			f64, err = strconv.ParseFloat(string(data), 32)
+			if a.Nullable {
+				n := float32(f64)
+				v = &n
+			} else {
+				v = float32(f64)
+			}
+		}
+	case AttrTypeFloat64:
+		if a.Array {
+			var fa []float64
+			err = json.Unmarshal(data, &fa)
+			if a.Nullable {
+				v = &fa
+			} else {
+				v = fa
+			}
+		} else {
+			var f64 float64
+			f64, err = strconv.ParseFloat(string(data), 64)
+			if a.Nullable {
+				n := f64
+				v = &n
+			} else {
+				v = f64
+			}
+		}
 	case AttrTypeBool:
 		if a.Array {
 			var ba []bool
@@ -623,6 +664,10 @@ func GetAttrType(t string) (typ int, array bool, nullable bool) {
 		return AttrTypeUint32, array, nullable
 	case "uint64":
 		return AttrTypeUint64, array, nullable
+	case "float32":
+		return AttrTypeFloat32, array, nullable
+	case "float64":
+		return AttrTypeFloat64, array, nullable
 	case "bool":
 		return AttrTypeBool, array, nullable
 	case "time.Time":
@@ -663,6 +708,10 @@ func GetAttrTypeString(t int, array, nullable bool) string {
 		str = "uint32"
 	case AttrTypeUint64:
 		str = "uint64"
+	case AttrTypeFloat32:
+		str = "float32"
+	case AttrTypeFloat64:
+		str = "float64"
 	case AttrTypeBool:
 		str = "bool"
 	case AttrTypeTime:
@@ -803,6 +852,26 @@ func GetZeroValue(t int, array, nullable bool) interface{} {
 		}
 
 		return uint64(0)
+	case AttrTypeFloat32:
+		if array && nullable {
+			return (*[]float32)(nil)
+		} else if array {
+			return []float32{}
+		} else if nullable {
+			return (*float32)(nil)
+		}
+
+		return float32(0)
+	case AttrTypeFloat64:
+		if array && nullable {
+			return (*[]float64)(nil)
+		} else if array {
+			return []float64{}
+		} else if nullable {
+			return (*float64)(nil)
+		}
+
+		return float64(0)
 	case AttrTypeBool:
 		if array && nullable {
 			return (*[]bool)(nil)

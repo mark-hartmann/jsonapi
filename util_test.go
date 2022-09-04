@@ -122,6 +122,18 @@ func nilptr(t string) interface{} {
 	case "[]uint64":
 		var p *[]uint64
 		return p
+	case "float32":
+		var p *float32
+		return p
+	case "[]float32":
+		var p *[]float32
+		return p
+	case "float64":
+		var p *float64
+		return p
+	case "[]float64":
+		var p *[]float64
+		return p
 	// Bool
 	case "bool":
 		var p *bool

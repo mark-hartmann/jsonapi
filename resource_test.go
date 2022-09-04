@@ -26,7 +26,8 @@ func TestUnmarshalPartialResource(t *testing.T) {
 			"id": "abc123",
 			"type": "mocktype",
 			"attributes": {
-				"str": "abc"
+				"str": "abc",
+				"float64": 123.456789
 			},
 			"relationships": {
 				"to-1": {
@@ -55,8 +56,11 @@ func TestUnmarshalPartialResource(t *testing.T) {
 
 		assert.Equal("abc123", res.GetID())
 		assert.Equal("mocktype", res.GetType().Name)
-		assert.Len(res.Attrs(), 1)
+		assert.Len(res.Attrs(), 2)
 		assert.Len(res.Rels(), 2)
+
+		assert.Equal("abc", res.Get("str"))
+		assert.Equal(123.456789, res.Get("float64"))
 	})
 
 	t.Run("partial resource arrays", func(t *testing.T) {

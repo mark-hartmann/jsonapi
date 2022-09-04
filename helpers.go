@@ -57,6 +57,9 @@ func Check(v interface{}) error {
 				"[]uint", "[]uint8", "[]uint16", "[]uint32", "[]uint64",
 				"*[]uint", "*[]uint8", "*[]uint16", "*[]uint32", "*[]uint64",
 
+				"float32", "*float32", "[]float32", "*[]float32",
+				"float64", "*float64", "[]float64", "*[]float64",
+
 				"string", "*string", "[]string", "*[]string",
 				"bool", "*bool", "[]bool", "*[]bool",
 				"time.Time", "*time.Time", "[]time.Time", "*[]time.Time":

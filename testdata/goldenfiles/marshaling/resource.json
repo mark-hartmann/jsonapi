@@ -5,6 +5,8 @@
 			"bytes": "AQID",
 			"int": 10,
 			"str": "str",
+			"float32": 3.4028235e+38,
+			"float64": 1.7976931348623157e+308,
 			"time": "2013-06-24T22:03:34.8276Z",
 			"uint64": 1064
 		},
@@ -42,6 +44,6 @@
 		"version": "1.0"
 	},
 	"links": {
-		"self": "/fake/path?fields%5Bmocktype%5D=bool%2Cbytes%2Cint%2Cstr%2Ctime%2Cto-1%2Cto-x-from-1%2Cuint64"
+		"self": "/fake/path?fields%5Bmocktype%5D=bool%2Cbytes%2Cfloat32%2Cfloat64%2Cint%2Cstr%2Ctime%2Cto-1%2Cto-x-from-1%2Cuint64"
 	}
 }

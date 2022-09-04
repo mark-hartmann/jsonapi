@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"math"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -111,6 +112,8 @@ func TestMarshalDocument(t *testing.T) {
 		Uint16:   1016,
 		Uint32:   1032,
 		Uint64:   1064,
+		Float32:  math.MaxFloat32,
+		Float64:  math.MaxFloat64,
 		Bool:     true,
 		Time:     getTime(),
 		Bytes:    []byte{1, 2, 3},
@@ -157,19 +160,22 @@ func TestMarshalDocument(t *testing.T) {
 	)
 
 	cres1 := Wrap(mockType4{
-		ID:       "id1",
-		StrArr:   strarr,
-		Int8Arr:  int8arr,
-		Int32Arr: int32arr,
-		Uint8Arr: bytearr,
-		BoolArr:  boolarr,
+		ID:         "id1",
+		StrArr:     strarr,
+		Int8Arr:    int8arr,
+		Int32Arr:   int32arr,
+		Uint8Arr:   bytearr,
+		BoolArr:    boolarr,
+		Float32Arr: []float32{math.MaxFloat32},
+		Float64Arr: []float64{math.MaxFloat64},
 	})
 
 	cres2 := Wrap(mockType5{
-		ID:         "id1",
-		StrArrPtr:  &strarr,
-		Int8ArrPtr: &int8arr,
-		BoolArrPtr: &boolarr,
+		ID:            "id1",
+		StrArrPtr:     &strarr,
+		Int8ArrPtr:    &int8arr,
+		BoolArrPtr:    &boolarr,
+		Float32ArrPtr: &[]float32{3.4028235e+38},
 	})
 
 	// uint8
@@ -259,7 +265,7 @@ func TestMarshalDocument(t *testing.T) {
 				},
 			},
 			fields: map[string][]string{
-				"mocktype": {"str", "uint64", "bool", "int", "time", "bytes", "to-1", "to-x-from-1"},
+				"mocktype": {"str", "uint64", "bool", "int", "time", "bytes", "float32", "float64", "to-1", "to-x-from-1"},
 			},
 		}, {
 			name: "resource array attributes",
@@ -267,7 +273,7 @@ func TestMarshalDocument(t *testing.T) {
 				Data: cres1,
 			},
 			fields: map[string][]string{
-				"mocktype4": {"strarr", "int8arr", "int32arr", "uint8arr", "boolarr", "int16arr"},
+				"mocktype4": {"strarr", "int8arr", "int32arr", "uint8arr", "boolarr", "int16arr", "float32arr", "float64arr"},
 			},
 		}, {
 			name: "resource nullable array attributes",
@@ -275,7 +281,7 @@ func TestMarshalDocument(t *testing.T) {
 				Data: cres2,
 			},
 			fields: map[string][]string{
-				"mocktype5": {"strarrptr", "int8arrptr", "int32arrptr", "uint8arrptr", "boolarrptr", "int16arrptr"},
+				"mocktype5": {"strarrptr", "int8arrptr", "int32arrptr", "uint8arrptr", "boolarrptr", "int16arrptr", "float32arrptr", "float64arrptr"},
 			},
 		}, {
 			name: "resource bytes",
@@ -541,6 +547,8 @@ func TestUnmarshalDocument(t *testing.T) {
 		Uint16:   1016,
 		Uint32:   1032,
 		Uint64:   1064,
+		Float32:  math.MaxFloat32,
+		Float64:  math.MaxFloat64,
 		Bool:     true,
 		Time:     getTime(),
 		Bytes:    []byte{1, 2, 3},
@@ -652,7 +660,7 @@ func TestUnmarshalDocument(t *testing.T) {
 
 		col2, ok := doc.Data.(Collection)
 		assert.True(ok)
-		
+
 		// A few assertions to make sure some edge cases work.
 		arrRes := col2.At(5)
 		assert.Equal("uint8arrtest", arrRes.GetType().Name)

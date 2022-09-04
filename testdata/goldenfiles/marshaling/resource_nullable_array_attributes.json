@@ -21,7 +21,9 @@
 				true,
 				true
 			],
-			"int16arrptr": null
+			"int16arrptr": null,
+			"float32arrptr": [3.4028235e+38],
+			"float64arrptr": null
 		},
 		"id": "id1",
 		"links": {
@@ -34,6 +36,6 @@
 		"version": "1.0"
 	},
 	"links": {
-		"self": "/fake/path?fields%5Bmocktype5%5D=boolarrptr%2Cint16arrptr%2Cint32arrptr%2Cint8arrptr%2Cstrarrptr%2Cuint8arrptr"
+		"self": "/fake/path?fields%5Bmocktype5%5D=boolarrptr%2Cfloat32arrptr%2Cfloat64arrptr%2Cint16arrptr%2Cint32arrptr%2Cint8arrptr%2Cstrarrptr%2Cuint8arrptr"
 	}
 }

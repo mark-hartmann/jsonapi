@@ -105,36 +105,40 @@ type mockType4 struct {
 	ID string `json:"id" api:"mocktype4"`
 
 	// Attributes
-	StrArr    []string    `json:"strarr" api:"attr"`
-	IntArr    []int       `json:"intarr" api:"attr"`
-	Int8Arr   []int8      `json:"int8arr" api:"attr"`
-	Int16Arr  []int16     `json:"int16arr" api:"attr"`
-	Int32Arr  []int32     `json:"int32arr" api:"attr"`
-	Int64Arr  []int64     `json:"int64arr" api:"attr"`
-	UintArr   []uint      `json:"uintarr" api:"attr"`
-	Uint8Arr  []uint8     `json:"uint8arr" api:"attr" bytes:"true"`
-	Uint16Arr []uint16    `json:"uint16arr" api:"attr"`
-	Uint32Arr []uint32    `json:"uint32arr" api:"attr"`
-	Uint64Arr []uint64    `json:"uint64arr" api:"attr"`
-	BoolArr   []bool      `json:"boolarr" api:"attr"`
-	TimeArr   []time.Time `json:"timearr" api:"attr"`
+	StrArr     []string    `json:"strarr" api:"attr"`
+	IntArr     []int       `json:"intarr" api:"attr"`
+	Int8Arr    []int8      `json:"int8arr" api:"attr"`
+	Int16Arr   []int16     `json:"int16arr" api:"attr"`
+	Int32Arr   []int32     `json:"int32arr" api:"attr"`
+	Int64Arr   []int64     `json:"int64arr" api:"attr"`
+	UintArr    []uint      `json:"uintarr" api:"attr"`
+	Uint8Arr   []uint8     `json:"uint8arr" api:"attr" bytes:"true"`
+	Uint16Arr  []uint16    `json:"uint16arr" api:"attr"`
+	Uint32Arr  []uint32    `json:"uint32arr" api:"attr"`
+	Uint64Arr  []uint64    `json:"uint64arr" api:"attr"`
+	Float32Arr []float32   `json:"float32arr" api:"attr"`
+	Float64Arr []float64   `json:"float64arr" api:"attr"`
+	BoolArr    []bool      `json:"boolarr" api:"attr"`
+	TimeArr    []time.Time `json:"timearr" api:"attr"`
 }
 
 type mockType5 struct {
 	ID string `json:"id" api:"mocktype5"`
 
 	// Attributes
-	StrArrPtr    *[]string    `json:"strarrptr" api:"attr"`
-	IntArrPtr    *[]int       `json:"intarrptr" api:"attr"`
-	Int8ArrPtr   *[]int8      `json:"int8arrptr" api:"attr"`
-	Int16ArrPtr  *[]int16     `json:"int16arrptr" api:"attr"`
-	Int32ArrPtr  *[]int32     `json:"int32arrptr" api:"attr"`
-	Int64ArrPtr  *[]int64     `json:"int64arrptr" api:"attr"`
-	UintArrPtr   *[]uint      `json:"uintarrptr" api:"attr"`
-	Uint8ArrPtr  *[]uint8     `json:"uint8arrptr" api:"attr" bytes:"true"`
-	Uint16ArrPtr *[]uint16    `json:"uint16arrptr" api:"attr"`
-	Uint32ArrPtr *[]uint32    `json:"uint32arrptr" api:"attr"`
-	Uint64ArrPtr *[]uint64    `json:"uint64arrptr" api:"attr"`
-	BoolArrPtr   *[]bool      `json:"boolarrptr" api:"attr"`
-	TimeArrPtr   *[]time.Time `json:"timearrptr" api:"attr"`
+	StrArrPtr     *[]string    `json:"strarrptr" api:"attr"`
+	IntArrPtr     *[]int       `json:"intarrptr" api:"attr"`
+	Int8ArrPtr    *[]int8      `json:"int8arrptr" api:"attr"`
+	Int16ArrPtr   *[]int16     `json:"int16arrptr" api:"attr"`
+	Int32ArrPtr   *[]int32     `json:"int32arrptr" api:"attr"`
+	Int64ArrPtr   *[]int64     `json:"int64arrptr" api:"attr"`
+	UintArrPtr    *[]uint      `json:"uintarrptr" api:"attr"`
+	Uint8ArrPtr   *[]uint8     `json:"uint8arrptr" api:"attr" bytes:"true"`
+	Uint16ArrPtr  *[]uint16    `json:"uint16arrptr" api:"attr"`
+	Uint32ArrPtr  *[]uint32    `json:"uint32arrptr" api:"attr"`
+	Uint64ArrPtr  *[]uint64    `json:"uint64arrptr" api:"attr"`
+	Float32ArrPtr *[]float32   `json:"float32arrptr" api:"attr"`
+	Float64ArrPtr *[]float64   `json:"float64arrptr" api:"attr"`
+	BoolArrPtr    *[]bool      `json:"boolarrptr" api:"attr"`
+	TimeArrPtr    *[]time.Time `json:"timearrptr" api:"attr"`
 }
