@@ -29,7 +29,8 @@ import (
 //
 // An asterisk is present as a prefix if the type is nullable (like *string), brackets
 // if it is an array (e.g. []string). Nullable arrays combine asterisk and
-// brackets (e.g. *[]string). Byte arrays are represented using []uint8 (or *[]uint8).
+// brackets (e.g. *[]string). Byte arrays are represented by []uint8, which are output
+// as a base64 encoded string if the attribute type is equal to AttrTypeBytes.
 //
 // Developers are encouraged to use the constants, the Type struct, and other
 // tools to handle attribute types instead of dealing with strings.
@@ -243,7 +244,6 @@ func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 		err error
 	)
 
-	// wenn data invalid ist, z.B. []byte("test") && AttrTypeInt16 => nil, error
 	switch a.Type {
 	case AttrTypeString:
 		if a.Array {
