@@ -76,7 +76,7 @@ func Wrap(v interface{}) *Wrapper {
 
 		if apiTag == "attr" {
 			typ, arr, null := GetAttrType(fs.Type.String())
-			if typ == AttrTypeUint8 && arr == true && byteTag == "true" {
+			if typ == AttrTypeUint8 && arr && byteTag == "true" {
 				typ = AttrTypeBytes
 			}
 
@@ -261,6 +261,7 @@ func (w *Wrapper) getField(key string) interface{} {
 					zv := GetZeroValue(typ, arr, null)
 					return zv
 				}
+
 				return field.Interface()
 			}
 		}

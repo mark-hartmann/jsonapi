@@ -19,13 +19,13 @@ import (
 // even if it potentially can break existing code.
 //
 // The names are as follow:
-//  - string
-//  - int, int8, int16, int32, int64
-//  - uint, uint8, uint16, uint32, uint64
-//  - float32, float64
-//  - bool
-//  - time (Go type is time.Time)
-//  - []byte
+//   - string
+//   - int, int8, int16, int32, int64
+//   - uint, uint8, uint16, uint32, uint64
+//   - float32, float64
+//   - bool
+//   - time (Go type is time.Time)
+//   - []byte
 //
 // An asterisk is present as a prefix if the type is nullable (like *string), brackets
 // if it is an array (e.g. []string). Nullable arrays combine asterisk and
@@ -68,6 +68,7 @@ func (u uint8Array) MarshalJSON() ([]byte, error) {
 	} else {
 		result = strings.Join(strings.Fields(fmt.Sprintf("%d", *u.Data)), ",")
 	}
+
 	return []byte(result), nil
 }
 
@@ -232,7 +233,11 @@ type Attr struct {
 // the attribute and returns it.
 func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 	if data == nil || (!a.Nullable && string(data) == "null") {
-		return nil, NewErrInvalidFieldValueInBody(a.Name, string(data), GetAttrTypeString(a.Type, a.Array, a.Nullable))
+		return nil, NewErrInvalidFieldValueInBody(
+			a.Name,
+			string(data),
+			GetAttrTypeString(a.Type, a.Array, a.Nullable),
+		)
 	}
 
 	if a.Nullable && string(data) == "null" {
@@ -469,6 +474,7 @@ func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 		if a.Array {
 			var fa []float32
 			err = json.Unmarshal(data, &fa)
+
 			if a.Nullable {
 				v = &fa
 			} else {
@@ -488,6 +494,7 @@ func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 		if a.Array {
 			var fa []float64
 			err = json.Unmarshal(data, &fa)
+
 			if a.Nullable {
 				v = &fa
 			} else {
@@ -633,11 +640,12 @@ func GetAttrType(t string) (typ int, array bool, nullable bool) {
 	array = bi == 0 || bi == 1
 	nullable = strings.HasPrefix(t, "*")
 
-	if nullable && array {
+	switch {
+	case nullable && array:
 		t = t[3:]
-	} else if array {
+	case array:
 		t = t[2:]
-	} else if nullable {
+	case nullable:
 		t = t[1:]
 	}
 
@@ -739,71 +747,78 @@ func GetAttrTypeString(t int, array, nullable bool) string {
 func GetZeroValue(t int, array, nullable bool) interface{} {
 	switch t {
 	case AttrTypeString:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]string)(nil)
-		} else if array {
+		case array:
 			return []string{}
-		} else if nullable {
+		case nullable:
 			return (*string)(nil)
 		}
 
 		return ""
 	case AttrTypeInt:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]int)(nil)
-		} else if array {
+		case array:
 			return []int{}
-		} else if nullable {
+		case nullable:
 			return (*int)(nil)
 		}
 
 		return 0
 	case AttrTypeInt8:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]int8)(nil)
-		} else if array {
+		case array:
 			return []int8{}
-		} else if nullable {
+		case nullable:
 			return (*int8)(nil)
 		}
 
 		return int8(0)
 	case AttrTypeInt16:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]int16)(nil)
-		} else if array {
+		case array:
 			return []int16{}
-		} else if nullable {
+		case nullable:
 			return (*int16)(nil)
 		}
 
 		return int16(0)
 	case AttrTypeInt32:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]int32)(nil)
-		} else if array {
+		case array:
 			return []int32{}
-		} else if nullable {
+		case nullable:
 			return (*int32)(nil)
 		}
 
 		return int32(0)
 	case AttrTypeInt64:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]int64)(nil)
-		} else if array {
+		case array:
 			return []int64{}
-		} else if nullable {
+		case nullable:
 			return (*int64)(nil)
 		}
 
 		return int64(0)
 	case AttrTypeUint:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]uint)(nil)
-		} else if array {
+		case array:
 			return []uint{}
-		} else if nullable {
+		case nullable:
 			return (*uint)(nil)
 		}
 
@@ -813,81 +828,89 @@ func GetZeroValue(t int, array, nullable bool) interface{} {
 			array = true
 		}
 
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]uint8)(nil)
-		} else if array {
+		case array:
 			return []uint8{}
-		} else if nullable {
+		case nullable:
 			return (*uint8)(nil)
 		}
 
 		return uint8(0)
 	case AttrTypeUint16:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]uint16)(nil)
-		} else if array {
+		case array:
 			return []uint16{}
-		} else if nullable {
+		case nullable:
 			return (*uint16)(nil)
 		}
 
 		return uint16(0)
 	case AttrTypeUint32:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]uint32)(nil)
-		} else if array {
+		case array:
 			return []uint32{}
-		} else if nullable {
+		case nullable:
 			return (*uint32)(nil)
 		}
 
 		return uint32(0)
 	case AttrTypeUint64:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]uint64)(nil)
-		} else if array {
+		case array:
 			return []uint64{}
-		} else if nullable {
+		case nullable:
 			return (*uint64)(nil)
 		}
 
 		return uint64(0)
 	case AttrTypeFloat32:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]float32)(nil)
-		} else if array {
+		case array:
 			return []float32{}
-		} else if nullable {
+		case nullable:
 			return (*float32)(nil)
 		}
 
 		return float32(0)
 	case AttrTypeFloat64:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]float64)(nil)
-		} else if array {
+		case array:
 			return []float64{}
-		} else if nullable {
+		case nullable:
 			return (*float64)(nil)
 		}
 
 		return float64(0)
 	case AttrTypeBool:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]bool)(nil)
-		} else if array {
+		case array:
 			return []bool{}
-		} else if nullable {
+		case nullable:
 			return (*bool)(nil)
 		}
 
 		return false
 	case AttrTypeTime:
-		if array && nullable {
+		switch {
+		case nullable && array:
 			return (*[]time.Time)(nil)
-		} else if array {
+		case array:
 			return []time.Time{}
-		} else if nullable {
+		case nullable:
 			return (*time.Time)(nil)
 		}
 

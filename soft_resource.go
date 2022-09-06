@@ -155,7 +155,9 @@ func (sr *SoftResource) Set(key string, v interface{}) {
 	if attr, ok := sr.Type.Attrs[key]; ok {
 		// Make sure the zero-value of arrays is not being overwritten by (typed) nil-values.
 		ref := reflect.ValueOf(v)
-		nilVal := v == nil || ((ref.Kind() == reflect.Ptr || ref.Kind() == reflect.Slice) && ref.IsNil())
+		ptrOrSlice := ref.Kind() == reflect.Ptr || ref.Kind() == reflect.Slice
+		nilVal := v == nil || (ptrOrSlice && ref.IsNil())
+
 		if nilVal && (attr.Nullable || attr.Array) {
 			sr.data[key] = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
 			return
@@ -235,12 +237,13 @@ func (sr *SoftResource) check() {
 	}
 
 	for i := range sr.Type.Attrs {
-		n := sr.Type.Attrs[i].Name
-		if _, ok := sr.data[n]; !ok {
-			if sr.Type.Attrs[i].Type == AttrTypeBytes {
-				sr.data[n] = GetZeroValue(sr.Type.Attrs[i].Type, true, sr.Type.Attrs[i].Nullable)
+		attr := sr.Type.Attrs[i]
+
+		if _, ok := sr.data[attr.Name]; !ok {
+			if attr.Type == AttrTypeBytes {
+				sr.data[attr.Name] = GetZeroValue(attr.Type, true, attr.Nullable)
 			} else {
-				sr.data[n] = GetZeroValue(sr.Type.Attrs[i].Type, sr.Type.Attrs[i].Array, sr.Type.Attrs[i].Nullable)
+				sr.data[attr.Name] = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
 			}
 		}
 	}

@@ -226,6 +226,7 @@ func TestMarshalDocument(t *testing.T) {
 	}}
 
 	arr := []uint8{1, 2, 4, 8, 16, 32}
+
 	cres3.SetID("id1")
 	cres3.Set("uint8arr", arr)
 	cres3.Set("uint8arrptr", &arr)
@@ -265,7 +266,18 @@ func TestMarshalDocument(t *testing.T) {
 				},
 			},
 			fields: map[string][]string{
-				"mocktype": {"str", "uint64", "bool", "int", "time", "bytes", "float32", "float64", "to-1", "to-x-from-1"},
+				"mocktype": {
+					"str",
+					"uint64",
+					"bool",
+					"int",
+					"time",
+					"bytes",
+					"float32",
+					"float64",
+					"to-1",
+					"to-x-from-1",
+				},
 			},
 		}, {
 			name: "resource array attributes",
@@ -273,7 +285,16 @@ func TestMarshalDocument(t *testing.T) {
 				Data: cres1,
 			},
 			fields: map[string][]string{
-				"mocktype4": {"strarr", "int8arr", "int32arr", "uint8arr", "boolarr", "int16arr", "float32arr", "float64arr"},
+				"mocktype4": {
+					"strarr",
+					"int8arr",
+					"int32arr",
+					"uint8arr",
+					"boolarr",
+					"int16arr",
+					"float32arr",
+					"float64arr",
+				},
 			},
 		}, {
 			name: "resource nullable array attributes",
@@ -281,7 +302,16 @@ func TestMarshalDocument(t *testing.T) {
 				Data: cres2,
 			},
 			fields: map[string][]string{
-				"mocktype5": {"strarrptr", "int8arrptr", "int32arrptr", "uint8arrptr", "boolarrptr", "int16arrptr", "float32arrptr", "float64arrptr"},
+				"mocktype5": {
+					"strarrptr",
+					"int8arrptr",
+					"int32arrptr",
+					"uint8arrptr",
+					"boolarrptr",
+					"int16arrptr",
+					"float32arrptr",
+					"float64arrptr",
+				},
 			},
 		}, {
 			name: "resource bytes",
@@ -289,7 +319,16 @@ func TestMarshalDocument(t *testing.T) {
 				Data: cres3,
 			},
 			fields: map[string][]string{
-				"bytestest": {"uint8arr", "uint8arrptr", "bytes", "bytesptr", "nullbytes", "nullbytesptr", "uint8arrempty", "uint8arrptrnull"},
+				"bytestest": {
+					"uint8arr",
+					"uint8arrptr",
+					"bytes",
+					"bytesptr",
+					"nullbytes",
+					"nullbytesptr",
+					"uint8arrempty",
+					"uint8arrptrnull",
+				},
 			},
 		}, {
 			name: "collection",
@@ -582,7 +621,7 @@ func TestUnmarshalDocument(t *testing.T) {
 		},
 	})
 
-	schema.AddType(*uint8arrRes.Type)
+	_ = schema.AddType(*uint8arrRes.Type)
 
 	uint8arrRes.SetID("id1")
 	uint8arrRes.Set("uint8arr", []uint8{0, 1, 2, 4, 8, 16, 32, 64, 128, 255})
