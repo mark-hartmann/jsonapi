@@ -1,7 +1,9 @@
 package jsonapi_test
 
 import (
+	"encoding/json"
 	"flag"
+	"strings"
 	"time"
 
 	. "github.com/mfcochauxlaberge/jsonapi"
@@ -55,4 +57,83 @@ func (mt *mocktype) Meta() Meta {
 
 func (mt *mocktype) SetMeta(m Meta) {
 	mt.meta = m
+}
+
+// testObjType is a simple struct used as an attribute type.
+type testObjType struct {
+	Prop1 string `json:"prop1"`
+	Prop2 string `json:"prop2"`
+	Prop3 string `json:"prop3"`
+}
+
+func (t testObjType) PublicTypeName() string {
+	return "test-object#123"
+}
+
+func (t testObjType) GetZeroValue(array, nullable bool) interface{} {
+	switch {
+	case array && nullable:
+		return (*[]testObjType)(nil)
+	case array:
+		return []testObjType{}
+	case nullable:
+		return (*testObjType)(nil)
+	default:
+		return testObjType{}
+	}
+}
+
+func (t testObjType) CheckAttrType(typ string) (ok, array, nullable bool) {
+	bi := strings.Index(typ, "[]")
+	array = bi == 0 || bi == 1
+	nullable = strings.HasPrefix(typ, "*")
+
+	switch {
+	case nullable && array:
+		typ = typ[3:]
+	case array:
+		typ = typ[2:]
+	case nullable:
+		typ = typ[1:]
+	}
+
+	// %T includes the package name for any non-builtin type.
+	return typ == "jsonapi_test.testObjType", array, nullable
+}
+
+func (t testObjType) UnmarshalToType(data []byte, array, nullable bool) (interface{}, error) {
+	if nullable && string(data) == "null" {
+		return t.GetZeroValue(array, nullable), nil
+	}
+
+	var (
+		val interface{}
+		err error
+	)
+
+	if array {
+		var ta []testObjType
+		err = json.Unmarshal(data, &ta)
+
+		if nullable {
+			val = &ta
+		} else {
+			val = ta
+		}
+	} else {
+		var tObj testObjType
+		err = json.Unmarshal(data, &tObj)
+
+		if nullable {
+			val = &tObj
+		} else {
+			val = tObj
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return val, nil
 }

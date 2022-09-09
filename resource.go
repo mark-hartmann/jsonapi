@@ -174,9 +174,24 @@ func UnmarshalResource(data []byte, schema *Schema) (Resource, error) {
 
 	for a, v := range rske.Attributes {
 		if attr, ok := typ.Attrs[a]; ok {
-			val, err := attr.UnmarshalToType(v)
+			var val interface{}
+			if attr.Unmarshaler != nil {
+				val, err = attr.Unmarshaler.UnmarshalToType(v, attr.Array, attr.Nullable)
+			} else {
+				val, err = attr.UnmarshalToType(v)
+			}
+
 			if err != nil {
-				return nil, err
+				var ts string
+				// Prevent implementation details (in this case the underlying data type) from
+				// being leaked.
+				if tExp, ok := attr.Unmarshaler.(TypeNameExposer); ok {
+					ts = tExp.PublicTypeName()
+				} else {
+					ts = GetAttrTypeString(attr.Type, attr.Array, attr.Nullable)
+				}
+
+				return nil, NewErrInvalidFieldValueInBody(attr.Name, string(data), ts)
 			}
 
 			res.Set(attr.Name, val)
@@ -256,9 +271,24 @@ func UnmarshalPartialResource(data []byte, schema *Schema) (*SoftResource, error
 
 	for a, v := range rske.Attributes {
 		if attr, ok := typ.Attrs[a]; ok {
-			val, err := attr.UnmarshalToType(v)
+			var val interface{}
+			if attr.Unmarshaler != nil {
+				val, err = attr.Unmarshaler.UnmarshalToType(v, attr.Array, attr.Nullable)
+			} else {
+				val, err = attr.UnmarshalToType(v)
+			}
+
 			if err != nil {
-				return nil, err
+				var ts string
+				// Prevent implementation details (in this case the underlying data type) from
+				// being leaked.
+				if tExp, ok := attr.Unmarshaler.(TypeNameExposer); ok {
+					ts = tExp.PublicTypeName()
+				} else {
+					ts = GetAttrTypeString(attr.Type, attr.Array, attr.Nullable)
+				}
+
+				return nil, NewErrInvalidFieldValueInBody(attr.Name, string(v), ts)
 			}
 
 			_ = newType.AddAttr(attr)

@@ -16,7 +16,19 @@ func TestUnmarshalPartialResource(t *testing.T) {
 		return Wrap(&mocktype{})
 	}
 	typ4, _ := BuildType(mockType4{})
-	schema := &Schema{Types: []Type{typ, typ4}}
+
+	objType := Type{
+		Name: "objtest",
+		Attrs: map[string]Attr{
+			"obj": {
+				Name:        "obj",
+				Type:        AttrTypeOther,
+				Unmarshaler: testObjType{},
+			},
+		},
+	}
+
+	schema := &Schema{Types: []Type{typ, typ4, objType}}
 
 	// Tests
 	t.Run("partial resource", func(t *testing.T) {
@@ -87,6 +99,28 @@ func TestUnmarshalPartialResource(t *testing.T) {
 		assert.Equal([]int8{-32, -16, 0, 16, 32, 64, 127}, res.Get("int8arr"))
 	})
 
+	t.Run("partial resource objects", func(t *testing.T) {
+		assert := assert.New(t)
+
+		payload := `{
+			"id": "id1",
+			"type": "objtest",
+			"attributes": {
+				"obj": {"prop1":"foo", "prop2":"bar", "prop3":"baz"}
+			}
+		}`
+
+		res, err := UnmarshalPartialResource([]byte(payload), schema)
+		assert.NoError(err)
+
+		assert.Equal("id1", res.GetID())
+		assert.Equal("objtest", res.GetType().Name)
+		assert.Len(res.Attrs(), 1)
+		assert.Len(res.Rels(), 0)
+
+		assert.Equal(testObjType{Prop1: "foo", Prop2: "bar", Prop3: "baz"}, res.Get("obj"))
+	})
+
 	t.Run("partial resource (invalid attribute)", func(t *testing.T) {
 		assert := assert.New(t)
 
@@ -99,10 +133,32 @@ func TestUnmarshalPartialResource(t *testing.T) {
 		}`
 
 		_, err := UnmarshalPartialResource([]byte(payload), schema)
-		assert.EqualError(
-			err,
+		assert.EqualError(err,
 			"400 Bad Request: The field value is invalid for the expected type.",
 		)
+
+		jErr := err.(Error)
+		assert.Equal("int", jErr.Meta["field"])
+		assert.Equal("\"not an int\"", jErr.Meta["bad-value"])
+		assert.Equal("int", jErr.Meta["type"])
+
+		payload = `{
+			"id": "abc123",
+			"type": "objtest",
+			"attributes": {
+				"obj": 123456789
+			}
+		}`
+
+		_, err = UnmarshalPartialResource([]byte(payload), schema)
+		assert.EqualError(err,
+			"400 Bad Request: The field value is invalid for the expected type.",
+		)
+
+		jErr = err.(Error)
+		assert.Equal("obj", jErr.Meta["field"])
+		assert.Equal("123456789", jErr.Meta["bad-value"])
+		assert.Equal("test-object#123", jErr.Meta["type"])
 	})
 
 	t.Run("partial resource (unknown attribute)", func(t *testing.T) {

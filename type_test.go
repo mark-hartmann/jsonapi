@@ -305,9 +305,7 @@ func TestAttrUnmarshalToType(t *testing.T) {
 	// Invalid attribute type
 	attr.Type = AttrTypeInvalid
 	val, err = attr.UnmarshalToType([]byte("invalid"))
-	err2, ok := err.(Error)
-	assert.True(ok)
-	assert.IsType(Error{}, err2)
+	assert.Error(err)
 	assert.Nil(val)
 }
 

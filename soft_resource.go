@@ -159,7 +159,12 @@ func (sr *SoftResource) Set(key string, v interface{}) {
 		nilVal := v == nil || (ptrOrSlice && ref.IsNil())
 
 		if nilVal && (attr.Nullable || attr.Array) {
-			sr.data[key] = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
+			if attr.Unmarshaler != nil {
+				sr.data[key] = attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
+			} else {
+				sr.data[key] = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
+			}
+
 			return
 		}
 
@@ -169,10 +174,17 @@ func (sr *SoftResource) Set(key string, v interface{}) {
 			t = strings.Replace(t, "uint8", "byte", 1)
 		}
 
-		typ, arr, null := GetAttrType(t)
-		if (attr.Type == typ && attr.Array == arr && attr.Nullable == null) ||
-			(attr.Type == AttrTypeBytes && arr && attr.Nullable == null) {
-			sr.data[key] = v
+		if attr.Unmarshaler != nil {
+			ok, arr, null := attr.Unmarshaler.CheckAttrType(t)
+			if ok && attr.Array == arr && attr.Nullable == null {
+				sr.data[key] = v
+			}
+		} else {
+			typ, arr, null := GetAttrType(t)
+			if (attr.Type == typ && attr.Array == arr && attr.Nullable == null) ||
+				(attr.Type == AttrTypeBytes && arr && attr.Nullable == null) {
+				sr.data[key] = v
+			}
 		}
 	} else if rel, ok := sr.Type.Rels[key]; ok {
 		if _, ok := v.(string); ok && rel.ToOne {
@@ -279,6 +291,7 @@ func (sr *SoftResource) check() {
 }
 
 func copyData(d map[string]interface{}) map[string]interface{} {
+	// todo: handle AttrTypeOther
 	d2 := map[string]interface{}{}
 
 	for k, v := range d {

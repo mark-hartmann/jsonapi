@@ -235,6 +235,48 @@ func TestMarshalDocument(t *testing.T) {
 	cres3.Set("bytes", arr)
 	cres3.Set("bytesptr", &arr)
 
+	cres4 := &SoftResource{Type: &Type{
+		Name: "objtest",
+		Attrs: map[string]Attr{
+			"obj": {
+				Name:        "obj",
+				Type:        AttrTypeOther,
+				Unmarshaler: testObjType{},
+			},
+			"objarr": {
+				Name:        "objarr",
+				Type:        AttrTypeOther,
+				Array:       true,
+				Unmarshaler: testObjType{},
+			},
+			"objptr": {
+				Name:        "objptr",
+				Type:        AttrTypeOther,
+				Nullable:    true,
+				Unmarshaler: testObjType{},
+			},
+		},
+	}}
+	cres4.SetID("id1")
+	cres4.Set("obj", testObjType{
+		Prop1: "foo",
+		Prop2: "bar",
+		Prop3: "baz",
+	})
+	cres4.Set("objarr", []testObjType{
+		{
+			Prop1: "a",
+			Prop2: "b",
+			Prop3: "c",
+		},
+		{
+			Prop1: "d",
+			Prop2: "e",
+			Prop3: "f",
+		},
+	})
+	cres4.Set("objptr", nil)
+
 	// Test struct
 	tests := []struct {
 		name   string
@@ -329,6 +371,14 @@ func TestMarshalDocument(t *testing.T) {
 					"uint8arrempty",
 					"uint8arrptrnull",
 				},
+			},
+		}, {
+			name: "resource object property",
+			doc: &Document{
+				Data: cres4,
+			},
+			fields: map[string][]string{
+				"objtest": {"obj", "objarr", "objptr", "objptrarr"},
 			},
 		}, {
 			name: "collection",
@@ -629,6 +679,65 @@ func TestUnmarshalDocument(t *testing.T) {
 
 	col.Add(uint8arrRes)
 
+	objRes := &SoftResource{}
+	objRes.SetType(&Type{
+		Name: "objtest",
+		Attrs: map[string]Attr{
+			"obj": {
+				Name:        "obj",
+				Type:        AttrTypeOther,
+				Unmarshaler: testObjType{},
+			},
+			"objarr": {
+				Name:        "objarr",
+				Type:        AttrTypeOther,
+				Array:       true,
+				Unmarshaler: testObjType{},
+			},
+			"objptr": {
+				Name:        "objptr",
+				Type:        AttrTypeOther,
+				Nullable:    true,
+				Unmarshaler: testObjType{},
+			},
+			"objptrarr": {
+				Name:        "objptrarr",
+				Type:        AttrTypeOther,
+				Array:       true,
+				Nullable:    true,
+				Unmarshaler: testObjType{},
+			},
+		},
+	})
+	objRes.SetID("id1")
+	objRes.Set("obj", testObjType{
+		Prop1: "foo",
+		Prop2: "bar",
+		Prop3: "baz",
+	})
+	objRes.Set("objarr", []testObjType{
+		{
+			Prop1: "a",
+			Prop2: "b",
+			Prop3: "c",
+		},
+		{
+			Prop1: "c",
+			Prop2: "d",
+			Prop3: "e",
+		},
+	})
+	objRes.Set("objptr", nil)
+	objRes.Set("objptrarr", []testObjType{
+		{
+			Prop1: "1",
+			Prop2: "2",
+			Prop3: "3",
+		},
+	})
+
+	_ = schema.AddType(*objRes.Type)
+
 	r4 := &mocktype{
 		ID: "id4",
 	}
@@ -664,6 +773,18 @@ func TestUnmarshalDocument(t *testing.T) {
 		assert.NoError(err)
 		assert.True(Equal(doc.Data.(Resource), doc2.Data.(Resource)))
 		// TODO Make all the necessary assertions.
+	})
+
+	t.Run("resource with object property", func(t *testing.T) {
+		url, _ := NewURLFromRaw(schema, "/objtest/id1")
+		doc := &Document{Data: objRes}
+
+		payload, err := MarshalDocument(doc, url)
+		assert.NoError(t, err)
+
+		doc2, err := UnmarshalDocument(payload, schema)
+		assert.NoError(t, err)
+		assert.True(t, Equal(doc.Data.(Resource), doc2.Data.(Resource)))
 	})
 
 	t.Run("collection with inclusions", func(t *testing.T) {
@@ -771,6 +892,17 @@ func TestUnmarshalDocument(t *testing.T) {
 							"to-x": {
 								"data": "wrong"
 							}
+						}
+					}
+				}`,
+				expected: "400 Bad Request: The field value is invalid for the expected type.",
+			}, {
+				payload: `{
+					"data": {
+						"id": "1",
+						"type": "objtest",
+						"attributes": {
+							"obj": 123
 						}
 					}
 				}`,

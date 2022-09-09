@@ -146,7 +146,8 @@ func NewErrInvalidPageSizeParameter(badPageSize string) Error {
 	return e
 }
 
-// NewErrInvalidFieldValueInBody (400) returns the corresponding error.
+// NewErrInvalidFieldValueInBody (400) returns the corresponding error. If typ is empty, it will
+// not be included in the metadata.
 func NewErrInvalidFieldValueInBody(field string, badValue string, typ string) Error {
 	e := NewError()
 
@@ -155,7 +156,10 @@ func NewErrInvalidFieldValueInBody(field string, badValue string, typ string) Er
 	e.Detail = "The field value is invalid for the expected type."
 	e.Meta["field"] = field
 	e.Meta["bad-value"] = badValue
-	e.Meta["type"] = typ
+
+	if typ != "" {
+		e.Meta["type"] = typ
+	}
 
 	return e
 }

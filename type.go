@@ -52,6 +52,7 @@ const (
 	AttrTypeBool
 	AttrTypeTime
 	AttrTypeBytes
+	AttrTypeOther
 )
 
 // uint8Array is used to marshal *[]uint8 or []byte as literal array instead of
@@ -97,7 +98,7 @@ func (t *Type) AddAttr(attr Attr) error {
 		return fmt.Errorf("jsonapi: attribute name is empty")
 	}
 
-	if GetAttrTypeString(attr.Type, attr.Array, attr.Nullable) == "" {
+	if attr.Unmarshaler == nil && GetAttrTypeString(attr.Type, attr.Array, attr.Nullable) == "" {
 		return fmt.Errorf("jsonapi: attribute type is invalid")
 	}
 
@@ -221,23 +222,35 @@ func (t Type) Copy() Type {
 	return ctyp
 }
 
+// TypeUnmarshaler is a custom type unmarshaler that is used instead of Attr.UnmarshalToType for
+// types that are not supported by default.
+type TypeUnmarshaler interface {
+	GetZeroValue(array, nullable bool) interface{}
+	// CheckAttrType checks if the provided %T value is valid and if it's nullable and/or an array.
+	CheckAttrType(t string) (ok, array, nullable bool)
+	UnmarshalToType(data []byte, array, nullable bool) (interface{}, error)
+}
+
+// TypeNameExposer allows a custom unmarshaler to specify the real type name or referenceable alias
+// in the error metadata if the value cannot be unmarshalled correctly.
+type TypeNameExposer interface {
+	PublicTypeName() string
+}
+
 // Attr represents a resource attribute.
 type Attr struct {
-	Name     string
-	Type     int
-	Nullable bool
-	Array    bool
+	Name        string
+	Type        int
+	Nullable    bool
+	Array       bool
+	Unmarshaler TypeUnmarshaler
 }
 
 // UnmarshalToType unmarshalls the data into a value of the type represented by
 // the attribute and returns it.
 func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 	if data == nil || (!a.Nullable && string(data) == "null") {
-		return nil, NewErrInvalidFieldValueInBody(
-			a.Name,
-			string(data),
-			GetAttrTypeString(a.Type, a.Array, a.Nullable),
-		)
+		return nil, fmt.Errorf("%s is not nullable", a.Name)
 	}
 
 	if a.Nullable && string(data) == "null" {
@@ -572,11 +585,7 @@ func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 	}
 
 	if err != nil {
-		return nil, NewErrInvalidFieldValueInBody(
-			a.Name,
-			string(data),
-			GetAttrTypeString(a.Type, a.Array, a.Nullable),
-		)
+		return nil, err
 	}
 
 	return v, nil
