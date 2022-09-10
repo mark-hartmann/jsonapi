@@ -164,6 +164,13 @@ func TestSoftResource(t *testing.T) {
 	assert.Equal(t, []string{"id1", "id2"}, sr.Get("rel2").([]string))
 
 	// test setting nil values
+	sr.Set("attr1", "test")
+	sr.Set("attr1", nil)
+	assert.Equal(t, "", sr.Get("attr1"))
+	sr.Set("attr1", "test")
+	sr.Set("attr1", (*map[int]string)(nil))
+	assert.Equal(t, "", sr.Get("attr1"))
+
 	sr.Set("attr3", []string{"foo", "bar"})
 	sr.Set("attr3", nil)
 	assert.Equal(t, []string{}, sr.Get("attr3"))

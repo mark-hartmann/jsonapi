@@ -928,3 +928,16 @@ func GetZeroValue(t int, array, nullable bool) interface{} {
 		return nil
 	}
 }
+
+func isNil(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice:
+		return reflect.ValueOf(v).IsNil()
+	}
+
+	return false
+}

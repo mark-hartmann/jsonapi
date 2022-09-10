@@ -2,7 +2,6 @@ package jsonapi
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 )
@@ -153,12 +152,7 @@ func (sr *SoftResource) Set(key string, v interface{}) {
 	}
 
 	if attr, ok := sr.Type.Attrs[key]; ok {
-		// Make sure the zero-value of arrays is not being overwritten by (typed) nil-values.
-		ref := reflect.ValueOf(v)
-		ptrOrSlice := ref.Kind() == reflect.Ptr || ref.Kind() == reflect.Slice
-		nilVal := v == nil || (ptrOrSlice && ref.IsNil())
-
-		if nilVal && (attr.Nullable || attr.Array) {
+		if isNil(v) {
 			if attr.Unmarshaler != nil {
 				sr.data[key] = attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
 			} else {
