@@ -1,8 +1,7 @@
 package jsonapi
 
 import (
-	"fmt"
-	"strings"
+	"reflect"
 	"time"
 )
 
@@ -162,23 +161,15 @@ func (sr *SoftResource) Set(key string, v interface{}) {
 			return
 		}
 
-		// byte is an alias for uint8, so %T will return uint8.
-		t := fmt.Sprintf("%T", v)
-		if attr.Type == AttrTypeBytes && strings.HasSuffix(t, "uint8") {
-			t = strings.Replace(t, "uint8", "byte", 1)
+		var zv interface{}
+		if attr.Unmarshaler != nil {
+			zv = attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
+		} else {
+			zv = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
 		}
 
-		if attr.Unmarshaler != nil {
-			ok, arr, null := attr.Unmarshaler.CheckAttrType(t)
-			if ok && attr.Array == arr && attr.Nullable == null {
-				sr.data[key] = v
-			}
-		} else {
-			typ, arr, null := GetAttrType(t)
-			if (attr.Type == typ && attr.Array == arr && attr.Nullable == null) ||
-				(attr.Type == AttrTypeBytes && arr && attr.Nullable == null) {
-				sr.data[key] = v
-			}
+		if reflect.TypeOf(v) == reflect.TypeOf(zv) {
+			sr.data[key] = v
 		}
 	} else if rel, ok := sr.Type.Rels[key]; ok {
 		if _, ok := v.(string); ok && rel.ToOne {
