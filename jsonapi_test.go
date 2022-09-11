@@ -3,7 +3,6 @@ package jsonapi_test
 import (
 	"encoding/json"
 	"flag"
-	"strings"
 	"time"
 
 	. "github.com/mfcochauxlaberge/jsonapi"
@@ -81,24 +80,6 @@ func (t testObjType) GetZeroValue(array, nullable bool) interface{} {
 	default:
 		return testObjType{}
 	}
-}
-
-func (t testObjType) CheckAttrType(typ string) (ok, array, nullable bool) {
-	bi := strings.Index(typ, "[]")
-	array = bi == 0 || bi == 1
-	nullable = strings.HasPrefix(typ, "*")
-
-	switch {
-	case nullable && array:
-		typ = typ[3:]
-	case array:
-		typ = typ[2:]
-	case nullable:
-		typ = typ[1:]
-	}
-
-	// %T includes the package name for any non-builtin type.
-	return typ == "jsonapi_test.testObjType", array, nullable
 }
 
 func (t testObjType) UnmarshalToType(data []byte, array, nullable bool) (interface{}, error) {

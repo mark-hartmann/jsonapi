@@ -226,8 +226,6 @@ func (t Type) Copy() Type {
 // types that are not supported by default.
 type TypeUnmarshaler interface {
 	GetZeroValue(array, nullable bool) interface{}
-	// CheckAttrType checks if the provided %T value is valid and if it's nullable and/or an array.
-	CheckAttrType(t string) (ok, array, nullable bool)
 	UnmarshalToType(data []byte, array, nullable bool) (interface{}, error)
 }
 
