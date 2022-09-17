@@ -146,12 +146,13 @@ type mockType5 struct {
 type mockType6 struct {
 	ID string `json:"ID" api:"mocktype6"`
 
-	Str       string         `json:"str" api:"attr"`
-	StrPtr    *string        `json:"strPtr" api:"attr"`
-	StrArr    []string       `json:"strArr" api:"attr" array:"true"`
-	StrPtrArr *[]string      `json:"strPtrArr" api:"attr" array:"true"`
-	Obj       testObjType    `json:"obj" api:"attr"`
-	ObjPtr    *testObjType   `json:"objPtr" api:"attr"`
-	ObjArr    []testObjType  `json:"objArr" api:"attr" array:"true"`
-	ObjArrPtr *[]testObjType `json:"objArrPtr" api:"attr" array:"true"`
+	Str           string         `json:"str" api:"attr"`
+	StrPtr        *string        `json:"strPtr" api:"attr"`
+	StrArr        []string       `json:"strArr" api:"attr"`
+	StrPtrArr     *[]string      `json:"strPtrArr" api:"attr"`
+	Obj           testObjType    `json:"obj" api:"attr"`
+	ObjPtr        *testObjType   `json:"objPtr" api:"attr"`
+	ObjArr        []testObjType  `json:"objArr" api:"attr"`
+	ObjArrPtr     *[]testObjType `json:"objArrPtr" api:"attr"`
+	Float32Matrix [][]float32    `json:"float32Matrix" api:"attr" array:"false"`
 }

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"math"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -163,6 +164,10 @@ func TestMarshalDocument(t *testing.T) {
 			Prop2: "mno",
 			Prop3: "pqr",
 		},
+		Float32Matrix: [][]float32{
+			{1.0, 0.5, 0.25, 0.175},
+			{0.175, 0.25, 0.5, 1.0},
+		},
 	}))
 
 	var (
@@ -269,6 +274,12 @@ func TestMarshalDocument(t *testing.T) {
 				Nullable:    true,
 				Unmarshaler: testObjType{},
 			},
+			"float32MatrixArr": {
+				Name:        "float32MatrixArr",
+				Type:        AttrTypeOther,
+				Array:       true,
+				Unmarshaler: ReflectTypeUnmarshaler{Type: reflect.TypeOf([][]float32{})},
+			},
 		},
 	}}
 	cres4.SetID("id1")
@@ -290,6 +301,14 @@ func TestMarshalDocument(t *testing.T) {
 		},
 	})
 	cres4.Set("objptr", nil)
+	cres4.Set("float32MatrixArr", [][][]float32{
+		{
+			{0.1, 0.2, 0.3, 0.4, 0.5},
+		},
+		{
+			{0.6, 0.7, 0.8, 0.9, 1.0},
+		},
+	})
 
 	// Test struct
 	tests := []struct {
@@ -392,7 +411,7 @@ func TestMarshalDocument(t *testing.T) {
 				Data: cres4,
 			},
 			fields: map[string][]string{
-				"objtest": {"obj", "objarr", "objptr", "objptrarr"},
+				"objtest": {"obj", "objarr", "objptr", "objptrarr", "float32MatrixArr"},
 			},
 		}, {
 			name: "collection",
@@ -406,7 +425,7 @@ func TestMarshalDocument(t *testing.T) {
 			fields: map[string][]string{
 				"mocktype":   {"str", "uint64", "bool", "int", "time", "to-1", "to-x-from-1"},
 				"mocktypes1": {"str"},
-				"mocktype6":  {"obj", "objPtr", "objArr"},
+				"mocktype6":  {"obj", "objPtr", "objArr", "float32Matrix"},
 			},
 		}, {
 			name: "meta",

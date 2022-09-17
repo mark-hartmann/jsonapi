@@ -18,7 +18,15 @@
 					"prop3": "f"
 				}
 			],
-			"objptr": null
+			"objptr": null,
+			"float32MatrixArr": [
+				[
+					[0.1, 0.2, 0.3, 0.4, 0.5]
+				],
+				[
+					[0.6, 0.7, 0.8, 0.9, 1.0]
+				]
+			]
 		},
 		"id": "id1",
 		"links": {
@@ -31,6 +39,6 @@
 		"version": "1.0"
 	},
 	"links": {
-		"self": "/fake/path?fields%5Bobjtest%5D=obj%2Cobjarr%2Cobjptr%2Cobjptrarr"
+		"self": "/fake/path?fields%5Bobjtest%5D=float32MatrixArr%2Cobj%2Cobjarr%2Cobjptr%2Cobjptrarr"
 	}
 }

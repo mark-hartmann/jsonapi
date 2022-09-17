@@ -94,12 +94,12 @@ func Wrap(v interface{}) *Wrapper {
 					t = t.Elem()
 					null = true
 
-					if arrTag == "true" &&
+					if arrTag != "true" &&
 						(t.Kind() == reflect.Slice || t.Kind() == reflect.Array) {
 						t = t.Elem()
 						arr = true
 					}
-				} else if arrTag == "true" &&
+				} else if arrTag != "true" &&
 					(t.Kind() == reflect.Slice || t.Kind() == reflect.Array) {
 					t = t.Elem()
 					arr = true

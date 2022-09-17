@@ -354,6 +354,7 @@ func TestWrapperSet(t *testing.T) {
 		assert.Equal("", res.Get("str"))
 		assert.Equal((*string)(nil), res.Get("strPtr"))
 		assert.Equal([]string{}, res.Get("strArr"))
+		assert.Equal([][]float32{}, res.Get("float32Matrix"))
 		assert.Equal((*[]string)(nil), res.Get("strPtrArr"))
 
 		assert.Equal(testObjType{}, res.Get("obj"))
