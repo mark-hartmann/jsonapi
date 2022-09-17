@@ -41,38 +41,25 @@ func Check(v interface{}) error {
 	// Check attributes
 	for i := 0; i < value.NumField(); i++ {
 		sf := value.Type().Field(i)
+		typ := sf.Type
 
-		if sf.Tag.Get("api") == "attr" {
-			isValid := false
-
-			switch sf.Type.String() {
-			case
-				"int", "int8", "int16", "int32", "int64",
-				"*int", "*int8", "*int16", "*int32", "*int64",
-				"[]int", "[]int8", "[]int16", "[]int32", "[]int64",
-				"*[]int", "*[]int8", "*[]int16", "*[]int32", "*[]int64",
-
-				"uint", "uint8", "uint16", "uint32", "uint64",
-				"*uint", "*uint8", "*uint16", "*uint32", "*uint64",
-				"[]uint", "[]uint8", "[]uint16", "[]uint32", "[]uint64",
-				"*[]uint", "*[]uint8", "*[]uint16", "*[]uint32", "*[]uint64",
-
-				"float32", "*float32", "[]float32", "*[]float32",
-				"float64", "*float64", "[]float64", "*[]float64",
-
-				"string", "*string", "[]string", "*[]string",
-				"bool", "*bool", "[]bool", "*[]bool",
-				"time.Time", "*time.Time", "[]time.Time", "*[]time.Time":
-				isValid = true
+		switch typ.Kind() {
+		case reflect.Ptr:
+			typ = typ.Elem()
+			if typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array {
+				typ = typ.Elem()
 			}
+		case reflect.Array, reflect.Slice:
+			typ = typ.Elem()
+		}
 
-			if !isValid {
-				return fmt.Errorf(
-					"jsonapi: attribute %q of type %q is of unsupported type",
-					sf.Name,
-					resType,
-				)
-			}
+		switch typ.Kind() {
+		// Basically all types which cannot be unmarshalled by the json package.
+		case reflect.Chan, reflect.Complex64, reflect.Complex128, reflect.Func, reflect.Interface:
+			return fmt.Errorf("jsonapi: attribute %q of type %q is of unsupported type",
+				sf.Name,
+				resType,
+			)
 		}
 	}
 

@@ -1,6 +1,7 @@
 package jsonapi
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -73,6 +74,7 @@ func Wrap(v interface{}) *Wrapper {
 		jsonTag := fs.Tag.Get("json")
 		apiTag := fs.Tag.Get("api")
 		byteTag := fs.Tag.Get("bytes")
+		arrTag := fs.Tag.Get("array")
 
 		if apiTag == "attr" {
 			typ, arr, null := GetAttrType(fs.Type.String())
@@ -80,11 +82,44 @@ func Wrap(v interface{}) *Wrapper {
 				typ = AttrTypeBytes
 			}
 
+			// If the type is not handled by default, create a reflection based TypeUnmarshaler for
+			// this type.
+			var typU TypeUnmarshaler
+
+			if typ == AttrTypeInvalid {
+				typ = AttrTypeOther
+				t := fs.Type
+
+				if t.Kind() == reflect.Ptr {
+					t = t.Elem()
+					null = true
+
+					if arrTag == "true" &&
+						(t.Kind() == reflect.Slice || t.Kind() == reflect.Array) {
+						t = t.Elem()
+						arr = true
+					}
+				} else if arrTag == "true" &&
+					(t.Kind() == reflect.Slice || t.Kind() == reflect.Array) {
+					t = t.Elem()
+					arr = true
+					null = false
+				}
+
+				ru := ReflectTypeUnmarshaler{Type: t}
+				if fs.Type.Implements(reflect.TypeOf((*TypeUnmarshaler)(nil)).Elem()) {
+					typU = ru.GetZeroValue(false, false).(TypeUnmarshaler)
+				} else {
+					typU = ru
+				}
+			}
+
 			w.attrs[jsonTag] = Attr{
-				Name:     jsonTag,
-				Type:     typ,
-				Array:    arr,
-				Nullable: null,
+				Name:        jsonTag,
+				Type:        typ,
+				Array:       arr,
+				Nullable:    null,
+				Unmarshaler: typU,
 			}
 		}
 	}
@@ -255,15 +290,17 @@ func (w *Wrapper) getField(key string) interface{} {
 		sf := w.val.Type().Field(i)
 
 		if key == sf.Tag.Get("json") && sf.Tag.Get("api") != "" {
-			typ, arr, null := GetAttrType(field.Type().String())
-			if typ != AttrTypeInvalid {
-				if (arr || null) && field.IsNil() {
-					zv := GetZeroValue(typ, arr, null)
-					return zv
+			attr := w.attrs[key]
+
+			if (attr.Array || attr.Nullable) && field.IsNil() {
+				if attr.Unmarshaler != nil {
+					return attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
 				}
 
-				return field.Interface()
+				return GetZeroValue(attr.Type, attr.Array, attr.Nullable)
 			}
+
+			return field.Interface()
 		}
 	}
 
@@ -299,4 +336,92 @@ func (w *Wrapper) setField(key string, v interface{}) {
 	}
 
 	panic(fmt.Sprintf("attribute %q does not exist", key))
+}
+
+// ReflectTypeUnmarshaler is a reflection based type unmarshaler.
+type ReflectTypeUnmarshaler struct {
+	// Type is the "base" type (not nullable and not an array) of the attribute. For example, for
+	// a Struct property of type "*[]string", reflect.TypeOf("") would be correct.
+	Type reflect.Type
+}
+
+func (u ReflectTypeUnmarshaler) typ(array, nullable bool) reflect.Type {
+	switch {
+	case array && nullable:
+		return reflect.New(reflect.SliceOf(u.Type)).Type()
+	case array:
+		return reflect.SliceOf(u.Type)
+	case nullable:
+		return reflect.New(u.Type).Type()
+	}
+
+	return u.Type
+}
+
+func (u ReflectTypeUnmarshaler) GetZeroValue(array, nullable bool) interface{} {
+	var typ reflect.Type
+
+	switch {
+	case array && nullable:
+		typ = u.typ(true, true)
+		return reflect.Zero(typ).Interface()
+	case array:
+		typ = u.typ(true, false)
+		return reflect.MakeSlice(typ, 0, 0).Interface()
+	case nullable:
+		typ = u.typ(false, true)
+		return reflect.New(typ).Elem().Interface()
+	}
+
+	typ = u.Type
+
+	// Make sure that types with nil-zero value are initialized empty instead.
+	if typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array {
+		return reflect.MakeSlice(typ, 0, 0).Slice(0, 0).Interface()
+	} else if typ.Kind() == reflect.Map {
+		return reflect.MakeMap(typ).Interface()
+	}
+
+	return reflect.Zero(typ).Interface()
+}
+
+func (u ReflectTypeUnmarshaler) UnmarshalToType(data []byte, array, nullable bool) (interface{}, error) {
+	if data == nil || (!nullable && string(data) == "null") {
+		return nil, fmt.Errorf("type is not nullable")
+	}
+
+	if nullable && string(data) == "null" {
+		return u.GetZeroValue(array, nullable), nil
+	}
+
+	var (
+		val interface{}
+		err error
+	)
+
+	if array {
+		tv := reflect.New(u.typ(true, false))
+		err = json.Unmarshal(data, tv.Interface())
+
+		if nullable {
+			val = tv.Interface()
+		} else {
+			val = tv.Elem().Interface()
+		}
+	} else {
+		tv := reflect.New(u.typ(false, false))
+		err = json.Unmarshal(data, tv.Interface())
+
+		if nullable {
+			val = tv.Interface()
+		} else {
+			val = tv.Elem().Interface()
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return val, nil
 }

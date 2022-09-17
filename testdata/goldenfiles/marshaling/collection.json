@@ -143,12 +143,32 @@
 				}
 			},
 			"type": "mocktype"
+		},
+		{
+			"attributes": {
+				"obj": {
+					"prop1": "abc",
+					"prop2": "def",
+					"prop3": "ghi"
+				},
+				"objPtr": {
+					"prop1": "jkl",
+					"prop2": "mno",
+					"prop3": "pqr"
+				},
+				"objArr": []
+			},
+			"id": "test-123",
+			"links": {
+				"self": "https://example.org/mocktype6/test-123"
+			},
+			"type": "mocktype6"
 		}
 	],
 	"jsonapi": {
 		"version": "1.0"
 	},
 	"links": {
-		"self": "https://example.org/fake/path?fields%5Bmocktype%5D=bool%2Cint%2Cstr%2Ctime%2Cto-1%2Cto-x-from-1%2Cuint64\u0026fields%5Bmocktypes1%5D=str"
+		"self": "https://example.org/fake/path?fields%5Bmocktype%5D=bool%2Cint%2Cstr%2Ctime%2Cto-1%2Cto-x-from-1%2Cuint64\u0026fields%5Bmocktype6%5D=obj%2CobjArr%2CobjPtr\u0026fields%5Bmocktypes1%5D=str"
 	}
 }

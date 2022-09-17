@@ -151,6 +151,20 @@ func TestMarshalDocument(t *testing.T) {
 		Str: "str with <html> chars",
 	}))
 
+	col.Add(Wrap(&mockType6{
+		ID: "test-123",
+		Obj: testObjType{
+			Prop1: "abc",
+			Prop2: "def",
+			Prop3: "ghi",
+		},
+		ObjPtr: &testObjType{
+			Prop1: "jkl",
+			Prop2: "mno",
+			Prop3: "pqr",
+		},
+	}))
+
 	var (
 		strarr   = []string{"foo", "bar", "baz"}
 		int8arr  = []int8{-100, -50, 0, 50, 100}
@@ -392,6 +406,7 @@ func TestMarshalDocument(t *testing.T) {
 			fields: map[string][]string{
 				"mocktype":   {"str", "uint64", "bool", "int", "time", "to-1", "to-x-from-1"},
 				"mocktypes1": {"str"},
+				"mocktype6":  {"obj", "objPtr", "objArr"},
 			},
 		}, {
 			name: "meta",
@@ -749,6 +764,24 @@ func TestUnmarshalDocument(t *testing.T) {
 	})
 	col.Add(Wrap(r4))
 
+	r6 := Wrap(&mockType6{
+		ID: "test-123",
+		Obj: testObjType{
+			Prop1: "abc",
+			Prop2: "def",
+			Prop3: "ghi",
+		},
+		ObjPtr: &testObjType{
+			Prop1: "jkl",
+			Prop2: "mno",
+			Prop3: "pqr",
+		},
+	})
+	col.Add(r6)
+	typ6 := r6.GetType()
+
+	_ = schema.AddType(typ6)
+
 	// Tests
 	t.Run("resource with inclusions", func(t *testing.T) {
 		assert := assert.New(t)
@@ -793,6 +826,7 @@ func TestUnmarshalDocument(t *testing.T) {
 		url, _ := NewURLFromRaw(schema, "/mocktype/id1")
 		url.Params.Fields["mocktype4"] = typ4.Fields()
 		url.Params.Fields["mocktype5"] = typ5.Fields()
+		url.Params.Fields["mocktype6"] = typ6.Fields()
 		url.Params.Fields["uint8arrtest"] = uint8arrRes.Type.Fields()
 
 		doc := &Document{
