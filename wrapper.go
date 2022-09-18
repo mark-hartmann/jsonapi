@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 )
 
 // Wrapper wraps a reflect.Value that represents a struct.
@@ -14,13 +13,9 @@ import (
 // It implements the Resource interface, so the value can be handled as if it
 // were a Resource.
 type Wrapper struct {
-	val reflect.Value // Actual value (with content)
-
-	// Structure
-	typ   string
-	attrs map[string]Attr
-	rels  map[string]Rel
-	meta  Meta
+	val  reflect.Value // Actual value (with content)
+	typ  Type
+	meta Meta
 }
 
 // Wrap wraps v (a struct or a pointer to a struct) and returns a Wrapper that
@@ -33,14 +28,8 @@ type Wrapper struct {
 func Wrap(v interface{}) *Wrapper {
 	val := reflect.ValueOf(v)
 
-	switch {
-	case val.Kind() != reflect.Ptr:
-		if val.Kind() != reflect.Struct {
-			panic("value has to be a pointer to a struct")
-		}
-
+	if val.Kind() != reflect.Ptr {
 		newVal := reflect.New(val.Type()).Elem()
-
 		for i := 0; i < newVal.NumField(); i++ {
 			f := newVal.Field(i)
 			if f.CanSet() {
@@ -49,9 +38,7 @@ func Wrap(v interface{}) *Wrapper {
 		}
 
 		val = newVal
-	case val.Elem().Kind() != reflect.Struct:
-		panic("value has to be a pointer to a struct")
-	default:
+	} else {
 		val = val.Elem()
 	}
 
@@ -60,96 +47,15 @@ func Wrap(v interface{}) *Wrapper {
 		panic("invalid struct: " + err.Error())
 	}
 
+	typ, attrs, rels := getTypeInfo(val)
+
 	w := &Wrapper{
 		val: val,
-	}
-
-	// ID and type
-	_, w.typ = IDAndType(v)
-
-	// Attributes
-	w.attrs = map[string]Attr{}
-	for i := 0; i < w.val.NumField(); i++ {
-		fs := w.val.Type().Field(i)
-		jsonTag := fs.Tag.Get("json")
-		apiTag := fs.Tag.Get("api")
-		byteTag := fs.Tag.Get("bytes")
-		arrTag := fs.Tag.Get("array")
-
-		if apiTag == "attr" {
-			typ, arr, null := GetAttrType(fs.Type.String())
-			if typ == AttrTypeUint8 && arr && byteTag == "true" {
-				typ = AttrTypeBytes
-			}
-
-			// If the type is not handled by default, create a reflection based TypeUnmarshaler for
-			// this type.
-			var typU TypeUnmarshaler
-
-			if typ == AttrTypeInvalid {
-				typ = AttrTypeOther
-				t := fs.Type
-
-				if t.Kind() == reflect.Ptr {
-					t = t.Elem()
-					null = true
-
-					if arrTag != "true" &&
-						(t.Kind() == reflect.Slice || t.Kind() == reflect.Array) {
-						t = t.Elem()
-						arr = true
-					}
-				} else if arrTag != "true" &&
-					(t.Kind() == reflect.Slice || t.Kind() == reflect.Array) {
-					t = t.Elem()
-					arr = true
-					null = false
-				}
-
-				ru := ReflectTypeUnmarshaler{Type: t}
-				if fs.Type.Implements(reflect.TypeOf((*TypeUnmarshaler)(nil)).Elem()) {
-					typU = ru.GetZeroValue(false, false).(TypeUnmarshaler)
-				} else {
-					typU = ru
-				}
-			}
-
-			w.attrs[jsonTag] = Attr{
-				Name:        jsonTag,
-				Type:        typ,
-				Array:       arr,
-				Nullable:    null,
-				Unmarshaler: typU,
-			}
-		}
-	}
-
-	// Relationships
-	w.rels = map[string]Rel{}
-	for i := 0; i < w.val.NumField(); i++ {
-		fs := w.val.Type().Field(i)
-		jsonTag := fs.Tag.Get("json")
-		relTag := strings.Split(fs.Tag.Get("api"), ",")
-		invName := ""
-
-		if len(relTag) == 3 {
-			invName = relTag[2]
-		}
-
-		toOne := true
-		if fs.Type.String() == "[]string" {
-			toOne = false
-		}
-
-		if relTag[0] == "rel" {
-			w.rels[jsonTag] = Rel{
-				FromName: jsonTag,
-				ToType:   relTag[1],
-				ToOne:    toOne,
-				ToName:   invName,
-				FromType: w.typ,
-			}
-		}
+		typ: Type{
+			Name:  typ,
+			Attrs: attrs,
+			Rels:  rels,
+		},
 	}
 
 	// Meta
@@ -169,17 +75,17 @@ func (w *Wrapper) IDAndType() (string, string) {
 
 // Attrs returns the attributes of the Wrapper.
 func (w *Wrapper) Attrs() map[string]Attr {
-	return w.attrs
+	return w.typ.Attrs
 }
 
 // Rels returns the relationships of the Wrapper.
 func (w *Wrapper) Rels() map[string]Rel {
-	return w.rels
+	return w.typ.Rels
 }
 
 // Attr returns the attribute that corresponds to the given key.
 func (w *Wrapper) Attr(key string) Attr {
-	for _, attr := range w.attrs {
+	for _, attr := range w.typ.Attrs {
 		if attr.Name == key {
 			return attr
 		}
@@ -190,7 +96,7 @@ func (w *Wrapper) Attr(key string) Attr {
 
 // Rel returns the relationship that corresponds to the given key.
 func (w *Wrapper) Rel(key string) Rel {
-	for _, rel := range w.rels {
+	for _, rel := range w.typ.Rels {
 		if rel.FromName == key {
 			return rel
 		}
@@ -202,7 +108,6 @@ func (w *Wrapper) Rel(key string) Rel {
 // New returns a copy of the resource under the wrapper.
 func (w *Wrapper) New() Resource {
 	newVal := reflect.New(w.val.Type())
-
 	return Wrap(newVal.Interface())
 }
 
@@ -214,11 +119,7 @@ func (w *Wrapper) GetID() string {
 
 // GetType returns the wrapped resource's type.
 func (w *Wrapper) GetType() Type {
-	return Type{
-		Name:  w.typ,
-		Attrs: w.attrs,
-		Rels:  w.rels,
-	}
+	return w.typ
 }
 
 // Get returns the value associated to the attribute named after key.
@@ -290,7 +191,7 @@ func (w *Wrapper) getField(key string) interface{} {
 		sf := w.val.Type().Field(i)
 
 		if key == sf.Tag.Get("json") && sf.Tag.Get("api") != "" {
-			attr := w.attrs[key]
+			attr := w.typ.Attrs[key]
 
 			if (attr.Array || attr.Nullable) && field.IsNil() {
 				if attr.Unmarshaler != nil {

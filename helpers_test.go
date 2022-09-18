@@ -64,6 +64,14 @@ func TestBuildType(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal(true, Equal(Wrap(&mockType1{}), typ.New()))
 
+	typ, err = BuildType(&mockType4{})
+	assert.NoError(err)
+	assert.True(Equal(Wrap(&mockType4{}), typ.New()))
+
+	typ, err = BuildType(&mockType6{})
+	assert.NoError(err)
+	assert.True(Equal(Wrap(&mockType6{}), typ.New()))
+
 	// Build from invalid struct
 	_, err = BuildType(invalidRelAPITag{})
 	assert.Error(err)
@@ -76,6 +84,10 @@ func TestIDAndType(t *testing.T) {
 		ID: "abc123",
 	}
 	id, typ := IDAndType(mt)
+	assert.Equal("abc123", id)
+	assert.Equal("mocktype", typ)
+
+	id, typ = IDAndType(&mt)
 	assert.Equal("abc123", id)
 	assert.Equal("mocktype", typ)
 
