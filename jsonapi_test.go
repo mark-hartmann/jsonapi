@@ -140,23 +140,26 @@ func (c stringTypeUnmarshalerRot13) GetZeroValue(array, nullable bool) interface
 }
 
 func (c stringTypeUnmarshalerRot13) UnmarshalToType(data []byte, array, nullable bool) (interface{}, error) {
-	var v interface{}
-	var err error
+	var (
+		v   interface{}
+		err error
+	)
 
 	rot13 := func(r rune) rune {
 		if r >= 'a' && r <= 'z' {
 			if r >= 'm' {
 				return r - 13
-			} else {
-				return r + 13
 			}
+
+			return r + 13
 		} else if r >= 'A' && r <= 'Z' {
 			if r >= 'M' {
 				return r - 13
-			} else {
-				return r + 13
 			}
+
+			return r + 13
 		}
+
 		return r
 	}
 
@@ -187,4 +190,3 @@ func (c stringTypeUnmarshalerRot13) UnmarshalToType(data []byte, array, nullable
 
 	return v, err
 }
-
