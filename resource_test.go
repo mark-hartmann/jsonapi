@@ -28,7 +28,24 @@ func TestUnmarshalPartialResource(t *testing.T) {
 		},
 	}
 
-	schema := &Schema{Types: []Type{typ, typ4, objType}}
+	typ5 := Type{
+		Name: "rot13Type",
+		Attrs: map[string]Attr{
+			"rot13": {
+				Name:        "rot13",
+				Type:        AttrTypeString,
+				Unmarshaler: stringTypeUnmarshalerRot13{},
+			},
+			"rot13Arr": {
+				Name:        "rot13Arr",
+				Type:        AttrTypeString,
+				Array:       true,
+				Unmarshaler: stringTypeUnmarshalerRot13{},
+			},
+		},
+	}
+
+	schema := &Schema{Types: []Type{typ, typ4, objType, typ5}}
 
 	// Tests
 	t.Run("partial resource", func(t *testing.T) {
@@ -119,6 +136,34 @@ func TestUnmarshalPartialResource(t *testing.T) {
 		assert.Len(res.Rels(), 0)
 
 		assert.Equal(testObjType{Prop1: "foo", Prop2: "bar", Prop3: "baz"}, res.Get("obj"))
+	})
+
+	t.Run("partial resource string custom type unmarshaler", func(t *testing.T) {
+		assert := assert.New(t)
+
+		payload := `{
+			"id": "id1",
+			"type": "rot13Type",
+			"attributes": {
+				"rot13": "hello world",
+				"rot13Arr": ["hello world", "foo bar baz"]
+			}
+		}`
+
+		res, err := UnmarshalPartialResource([]byte(payload), schema)
+		assert.NoError(err)
+
+		assert.Equal("id1", res.GetID())
+		assert.Equal("rot13Type", res.GetType().Name)
+		assert.Len(res.Attrs(), 2)
+		assert.Len(res.Rels(), 0)
+
+		assert.Equal("uryyb jbeyq", res.Get("rot13"))
+
+		r13Arr := res.Get("rot13Arr")
+		assert.Len(r13Arr, 2)
+		assert.Contains(r13Arr, "uryyb jbeyq")
+		assert.Contains(r13Arr, "sbb one onm")
 	})
 
 	t.Run("partial resource (invalid attribute)", func(t *testing.T) {

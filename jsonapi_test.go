@@ -3,6 +3,7 @@ package jsonapi_test
 import (
 	"encoding/json"
 	"flag"
+	"strings"
 	"time"
 
 	. "github.com/mfcochauxlaberge/jsonapi"
@@ -118,3 +119,72 @@ func (t testObjType) UnmarshalToType(data []byte, array, nullable bool) (interfa
 
 	return val, nil
 }
+
+// stringTypeUnmarshalerRot13 shows that even wacky use-cases can be implemented using
+// a TypeUnmarshaler. If this TypeUnmarshaler is used with AttrTypeString, the payload is
+// rot-13 encoded.
+type stringTypeUnmarshalerRot13 struct {
+}
+
+func (c stringTypeUnmarshalerRot13) GetZeroValue(array, nullable bool) interface{} {
+	switch {
+	case array && nullable:
+		return (*[]string)(nil)
+	case array:
+		return []string{}
+	case nullable:
+		return (*string)(nil)
+	default:
+		return ""
+	}
+}
+
+func (c stringTypeUnmarshalerRot13) UnmarshalToType(data []byte, array, nullable bool) (interface{}, error) {
+	var v interface{}
+	var err error
+
+	rot13 := func(r rune) rune {
+		if r >= 'a' && r <= 'z' {
+			if r >= 'm' {
+				return r - 13
+			} else {
+				return r + 13
+			}
+		} else if r >= 'A' && r <= 'Z' {
+			if r >= 'M' {
+				return r - 13
+			} else {
+				return r + 13
+			}
+		}
+		return r
+	}
+
+	if array {
+		var sa []string
+		err = json.Unmarshal(data, &sa)
+
+		for i, s := range sa {
+			sa[i] = strings.Map(rot13, s)
+		}
+
+		if nullable {
+			v = &sa
+		} else {
+			v = sa
+		}
+	} else if string(data) != "null" {
+		var s string
+		err = json.Unmarshal(data, &s)
+		s = strings.Map(rot13, s)
+
+		if nullable {
+			v = &s
+		} else {
+			v = s
+		}
+	}
+
+	return v, err
+}
+

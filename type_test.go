@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -23,6 +24,22 @@ func TestType_AddAttr(t *testing.T) {
 				Type:     AttrTypeString,
 				Nullable: false,
 			},
+		},
+		"attr string with type unmarshaler": {
+			attr: Attr{
+				Name:        "attr",
+				Type:        AttrTypeOther,
+				Unmarshaler: ReflectTypeUnmarshaler{Type: reflect.TypeOf("")},
+			},
+			err: false,
+		},
+		"attr other with type unmarshaler": {
+			attr: Attr{
+				Name:        "attr",
+				Type:        AttrTypeString,
+				Unmarshaler: ReflectTypeUnmarshaler{Type: reflect.TypeOf("")},
+			},
+			err: false,
 		},
 		"attr *string": {
 			attr: Attr{
@@ -53,6 +70,10 @@ func TestType_AddAttr(t *testing.T) {
 		},
 		"attr (no name)": {
 			attr: Attr{Type: AttrTypeBool},
+			err:  true,
+		},
+		"attr (no type unmarshaler)": {
+			attr: Attr{Type: AttrTypeOther},
 			err:  true,
 		},
 	}
