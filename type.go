@@ -732,7 +732,7 @@ func GetAttrTypeString(t int, array, nullable bool) string {
 	case AttrTypeTime:
 		str = "time.Time"
 	default:
-		str = ""
+		return ""
 	}
 
 	if array {
