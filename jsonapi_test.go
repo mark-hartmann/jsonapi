@@ -56,6 +56,14 @@ func (mt *mocktype) SetMeta(m Meta) {
 	mt.meta = m
 }
 
+func (mt *mocktype) Links() map[string]Link {
+	return mt.links
+}
+
+func (mt *mocktype) SetLinks(links map[string]Link) {
+	mt.links = links
+}
+
 type mockTypeImpl struct {
 	ID string `json:"id" api:"mockTypeImpl"`
 
@@ -145,6 +153,7 @@ func (mt mockTypeImpl) Get(key string) interface{} {
 			},
 		}
 	}
+
 	return nil
 }
 

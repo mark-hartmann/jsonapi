@@ -257,7 +257,13 @@ func TestMarshalDocument(t *testing.T) {
 				},
 				PrePath: "https://example.org",
 				Links: map[string]Link{
-					"foo": {HRef: "https://example.org/bar", Meta: map[string]interface{}{"foo": "bar", "bar": "baz"}},
+					"foo": {
+						HRef: "https://example.org/bar",
+						Meta: map[string]interface{}{
+							"foo": "bar",
+							"bar": "baz",
+						},
+					},
 				},
 			},
 			fields: []string{
