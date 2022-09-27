@@ -309,8 +309,16 @@ func TestErrorMarshalJSON(t *testing.T) {
 		Status: "Status",
 		Title:  "Title",
 		Detail: "Detail",
-		Links: map[string]string{
-			"link": "http://example.com",
+		Links: map[string]Link{
+			"link": {
+				HRef: "https://example.com",
+			},
+			"about": {
+				HRef: "https://example.com",
+				Meta: map[string]interface{}{
+					"abc": "def",
+				},
+			},
 		},
 		Source: map[string]interface{}{
 			"parameter": "param",
@@ -329,7 +337,13 @@ func TestErrorMarshalJSON(t *testing.T) {
 			"detail": "Detail",
 			"id": "c1897530-fdf5-4a42-88fb-1c1c4bd0962f",
 			"links": {
-				"link": "http://example.com"
+				"link": "https://example.com",
+				"about": {
+					"href": "https://example.com",
+					"meta": {
+						"abc": "def"					
+					}
+				}
 			},
 			"meta": {
 				"meta": 123
