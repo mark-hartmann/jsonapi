@@ -159,18 +159,19 @@ func MarshalDocument(doc *Document, url *URL) ([]byte, error) {
 		plMap["meta"] = doc.Meta
 	}
 
-	links := map[string]Link{}
-	if len(doc.Links) > 0 {
-		links = doc.Links
-	}
+	links := doc.Links
 
 	if url != nil {
+		if links == nil {
+			links = map[string]Link{}
+		}
+
 		links["self"] = Link{
 			HRef: doc.PrePath + url.String(),
 		}
 	}
 
-	if len(links) > 0 {
+	if links != nil {
 		plMap["links"] = links
 	}
 
