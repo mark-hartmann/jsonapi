@@ -69,6 +69,37 @@ func TestWrapStruct(t *testing.T) {
 	res1.Str = "new_string"
 	assert.NotEqual(res1.Str, wrap1.Get("str"), "str field")
 	assert.Equal("another_string", wrap1.Get("str"), "str field")
+
+	res2 := mockType6{
+		ID:        "id1",
+		Obj:       testObjType{Prop1: "abc"},
+		ObjPtr:    &testObjType{Prop2: "def"},
+		ObjArr:    []testObjType{{Prop1: "abc"}},
+		ObjArrPtr: &[]testObjType{{Prop1: "def"}},
+	}
+
+	wrap2 := Wrap(res2)
+
+	// ID, type, field
+	id, typ = wrap2.IDAndType()
+	assert.Equal(res2.ID, id, "id")
+	assert.Equal("mocktype6", typ, "type")
+	assert.Equal(res2.Str, wrap2.Get("str"), "str field")
+
+	// Modifying the wrapper does not modify the original value.
+	wrap2.SetID("another_id")
+
+	id, _ = wrap1.IDAndType()
+	assert.Equal("another_id", id, "type")
+
+	wrap2.Set("obj", testObjType{Prop1: "xyz"})
+	assert.Equal(testObjType{Prop1: "xyz"}, wrap2.Get("obj"), "obj field")
+	assert.NotEqual(res2.Obj, wrap2.Get("obj"), "obj field")
+
+	// Modifying the original value does not modify the wrapper.
+	res2.ObjPtr = &testObjType{Prop1: "xyz"}
+	assert.NotEqual(res2.ObjPtr, wrap2.Get("objPtr"), "objPtr field")
+	assert.Equal(&testObjType{Prop2: "def"}, wrap2.Get("objPtr"), "objPtr field")
 }
 
 func TestWrapper(t *testing.T) {
@@ -206,20 +237,11 @@ func TestWrapper(t *testing.T) {
 	assert.Equal(&newInt, wrap2.Get("intptr"), "set int pointer attribute")
 
 	wrap2.Set("uintptr", nil)
+	assert.Equal((*uint)(nil), wrap2.Get("uintptr"))
+	assert.NotEqual(nil, wrap2.Get("uintptr"))
 
-	if wrap2.Get("uintptr") != nil {
-		// We first do a != nil check because that's what we are really
-		// checking and reflect.DeepEqual doesn't work exactly work the same
-		// way. If the nil check fails, then the next line will fail too.
-		assert.Equal("nil pointer", nil, wrap2.Get("uintptr"))
-	}
-
-	if res2.UintPtr != nil {
-		// We first do a != nil check because that's what we are really
-		// checking and reflect.DeepEqual doesn't work exactly work the same
-		// way. If the nil check fails, then the next line will fail too.
-		assert.Equal("nil pointer 2", nil, res2.UintPtr)
-	}
+	assert.Equal((*uint)(nil), res2.UintPtr)
+	assert.NotEqual(nil, res2.UintPtr)
 
 	// New
 	wrap3 := wrap1.New()
@@ -250,6 +272,37 @@ func TestWrapper(t *testing.T) {
 		wrap3.Get("str"),
 		"modified value does not affect original",
 	)
+
+	res4 := &mockType4{
+		BoolArr: []bool{true, false},
+	}
+	wrap4 := Wrap(res4)
+
+	assert.Equal([]bool{true, false}, wrap4.Get("boolarr"))
+	assert.Equal([]uint{}, wrap4.Get("uintarr"))
+
+	res5 := &mockType5{
+		BoolArrPtr: &[]bool{true, false},
+	}
+	wrap5 := Wrap(res5)
+
+	assert.Equal(&[]bool{true, false}, res5.BoolArrPtr)
+	assert.Equal(res5.BoolArrPtr, wrap5.Get("boolarrptr"))
+
+	assert.Equal((*[]uint)(nil), res5.UintArrPtr)
+	assert.Equal(res5.UintArrPtr, wrap5.Get("uintarrptr"))
+
+	wrap5.Set("boolarrptr", nil)
+	assert.Equal((*[]bool)(nil), res5.BoolArrPtr)
+	assert.Equal(res5.BoolArrPtr, wrap5.Get("boolarrptr"))
+
+	wrap5.Set("strarrptr", &[]string{"foo", "bar"})
+	assert.Equal(&[]string{"foo", "bar"}, res5.StrArrPtr)
+	assert.Equal(res5.StrArrPtr, wrap5.Get("strarrptr"))
+
+	wrap5.Set("strarrptr", (*[]string)(nil))
+	assert.Equal((*[]string)(nil), res5.StrArrPtr)
+	assert.Equal(res5.StrArrPtr, wrap5.Get("strarrptr"))
 }
 
 func TestWrapperSet(t *testing.T) {
@@ -293,6 +346,39 @@ func TestWrapperSet(t *testing.T) {
 			assert.EqualValues(test.val, res1.Get(test.field))
 		}
 	}
+
+	t.Run("custom type unmarshaler", func(t *testing.T) {
+		res := Wrap(&mockType6{})
+		assert.NotNil(res)
+
+		assert.Equal("", res.Get("str"))
+		assert.Equal((*string)(nil), res.Get("strPtr"))
+		assert.Equal([]string{}, res.Get("strArr"))
+		assert.Equal([][]float32{}, res.Get("float32Matrix"))
+		assert.Equal((*[]string)(nil), res.Get("strPtrArr"))
+
+		assert.Equal(testObjType{}, res.Get("obj"))
+		assert.Equal((*testObjType)(nil), res.Get("objPtr"))
+		assert.Equal([]testObjType{}, res.Get("objArr"))
+		assert.Equal((*[]testObjType)(nil), res.Get("objArrPtr"))
+
+		obj := testObjType{Prop1: "foo", Prop2: "bar", Prop3: "baz"}
+		objPtr := &testObjType{Prop1: "foo", Prop2: "bar", Prop3: "baz"}
+		objArr := []testObjType{{Prop1: "foo", Prop2: "bar", Prop3: "baz"}}
+		objArrPtr := &[]testObjType{{Prop1: "foo", Prop2: "bar", Prop3: "baz"}}
+
+		res.Set("obj", obj)
+		assert.Equal(obj, res.Get("obj"))
+
+		res.Set("objPtr", objPtr)
+		assert.Equal(objPtr, res.Get("objPtr"))
+
+		res.Set("objArr", objArr)
+		assert.Equal(objArr, res.Get("objArr"))
+
+		res.Set("objArrPtr", objArrPtr)
+		assert.Equal(objArrPtr, res.Get("objArrPtr"))
+	})
 }
 
 func TestWrapperGetAndSetErrors(t *testing.T) {
@@ -324,5 +410,360 @@ func TestWrapperGetAndSetErrors(t *testing.T) {
 	// Set with value of wrong type
 	assert.Panics(func() {
 		wrap.Set("str", 42)
+	})
+}
+
+func TestReflectTypeUnmarshaler_GetZeroValue(t *testing.T) {
+	tests := []struct {
+		Name      string
+		Type      reflect.Type
+		Array     bool
+		Nullable  bool
+		ZeroValue interface{}
+	}{
+		{
+			Name: "str",
+			Type: reflect.TypeOf(""),
+
+			ZeroValue: "",
+		},
+		{
+			Name: "str arr",
+			Type: reflect.TypeOf(""),
+
+			Array:     true,
+			ZeroValue: []string{},
+		},
+		{
+			Name: "str ptr",
+			Type: reflect.TypeOf(""),
+
+			Nullable:  true,
+			ZeroValue: (*string)(nil),
+		},
+		{
+			Name: "str array ptr",
+			Type: reflect.TypeOf(""),
+
+			Array:     true,
+			Nullable:  true,
+			ZeroValue: (*[]string)(nil),
+		},
+		{
+			Name: "str arr",
+			Type: reflect.TypeOf([]string{}),
+
+			ZeroValue: []string{},
+		},
+		{
+			Name: "str arr arr",
+			Type: reflect.TypeOf([]string{}),
+
+			Array:     true,
+			ZeroValue: [][]string{},
+		},
+		{
+			Name: "str arr ptr",
+			Type: reflect.TypeOf([]string{}),
+
+			Nullable:  true,
+			ZeroValue: (*[]string)(nil),
+		},
+		{
+			Name: "str arr arr ptr",
+			Type: reflect.TypeOf([]string{}),
+
+			Array:     true,
+			Nullable:  true,
+			ZeroValue: (*[][]string)(nil),
+		},
+		{
+			Name: "testObjType",
+			Type: reflect.TypeOf(testObjType{}),
+
+			ZeroValue: testObjType{},
+		},
+		{
+			Name: "testObjType arr",
+			Type: reflect.TypeOf(testObjType{}),
+
+			Array:     true,
+			ZeroValue: []testObjType{},
+		},
+		{
+			Name: "testObjType ptr",
+			Type: reflect.TypeOf(testObjType{}),
+
+			Nullable:  true,
+			ZeroValue: (*testObjType)(nil),
+		},
+		{
+			Name: "testObjType array ptr",
+			Type: reflect.TypeOf(testObjType{}),
+
+			Array:     true,
+			Nullable:  true,
+			ZeroValue: (*[]testObjType)(nil),
+		},
+		{
+			Name: "anon struct",
+			Type: reflect.TypeOf(struct {
+				Prop string
+			}{}),
+
+			ZeroValue: struct {
+				Prop string
+			}{},
+		},
+		{
+			Name: "anon struct arr",
+			Type: reflect.TypeOf(struct {
+				Prop string
+			}{}),
+
+			Array: true,
+			ZeroValue: []struct {
+				Prop string
+			}{},
+		},
+		{
+			Name: "anon struct ptr",
+			Type: reflect.TypeOf(struct {
+				Prop string
+			}{}),
+
+			Nullable: true,
+			ZeroValue: (*struct {
+				Prop string
+			})(nil),
+		},
+		{
+			Name: "anon struct array ptr",
+			Type: reflect.TypeOf(struct {
+				Prop string
+			}{}),
+
+			Array:    true,
+			Nullable: true,
+			ZeroValue: (*[]struct {
+				Prop string
+			})(nil),
+		},
+		{
+			Name: "map",
+			Type: reflect.TypeOf(map[string]string{}),
+
+			Array:     false,
+			Nullable:  false,
+			ZeroValue: map[string]string{},
+		},
+		{
+			Name: "map array",
+			Type: reflect.TypeOf(map[string]string{}),
+
+			Array:     true,
+			Nullable:  false,
+			ZeroValue: []map[string]string{},
+		},
+		{
+			Name: "map ptr",
+			Type: reflect.TypeOf(map[string]string{}),
+
+			Array:     false,
+			Nullable:  true,
+			ZeroValue: (*map[string]string)(nil),
+		},
+		{
+			Name: "map array ptr",
+			Type: reflect.TypeOf(map[string]string{}),
+
+			Array:     true,
+			Nullable:  true,
+			ZeroValue: (*[]map[string]string)(nil),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			ru := ReflectTypeUnmarshaler{Type: test.Type}
+			assert.Equal(t, test.ZeroValue, ru.GetZeroValue(test.Array, test.Nullable))
+		})
+	}
+}
+
+func TestReflectTypeUnmarshaler_UnmarshalToType(t *testing.T) {
+	str := "test! äöü"
+
+	tests := []struct {
+		Name     string
+		Type     reflect.Type
+		Array    bool
+		Nullable bool
+		Data     []byte
+		Value    interface{}
+	}{
+		{
+			Name: "str",
+			Type: reflect.TypeOf(""),
+
+			Data:  []byte("\"foo\""),
+			Value: "foo",
+		},
+		{
+			Name: "str empty",
+			Type: reflect.TypeOf(""),
+
+			Data:  []byte("\"\""),
+			Value: "",
+		},
+		{
+			Name: "str array",
+			Type: reflect.TypeOf(""),
+
+			Array: true,
+			Data:  []byte("[\"foo\"]"),
+			Value: []string{"foo"},
+		},
+		{
+			Name: "str empty array",
+			Type: reflect.TypeOf(""),
+
+			Array: true,
+			Data:  []byte("[]"),
+			Value: []string{},
+		},
+		{
+			Name: "str ptr null",
+			Type: reflect.TypeOf(""),
+
+			Nullable: true,
+			Data:     []byte("null"),
+			Value:    (*string)(nil),
+		},
+		{
+			Name: "str ptr",
+			Type: reflect.TypeOf(""),
+
+			Nullable: true,
+			Data:     []byte("\"test! äöü\""),
+			Value:    &str,
+		},
+		{
+			Type: reflect.TypeOf(""),
+
+			Name:     "str array ptr null",
+			Array:    true,
+			Nullable: true,
+			Data:     []byte("null"),
+			Value:    (*[]string)(nil),
+		},
+		{
+			Name: "str arr ptr",
+			Type: reflect.TypeOf(""),
+
+			Array:    true,
+			Nullable: true,
+			Data:     []byte("[\"abc\",\"def\"]"),
+			Value:    &[]string{"abc", "def"},
+		},
+		{
+			Name: "2d string matrix empty",
+			Type: reflect.TypeOf(([][]string)(nil)),
+
+			Data:  []byte("[]"),
+			Value: [][]string{},
+		},
+		{
+			Name: "2d string matrix",
+			Type: reflect.TypeOf(([][]string)(nil)),
+
+			Data:  []byte("[[\"abc\"],[\"abc\",\"def\"]]"),
+			Value: [][]string{{"abc"}, {"abc", "def"}},
+		},
+		{
+			Name: "2d string matrix array ptr",
+			Type: reflect.TypeOf(([][]string)(nil)),
+
+			Array:    true,
+			Nullable: true,
+			Data:     []byte("[[[\"abc\"],[\"abc\",\"def\"]]]"),
+			Value:    &[][][]string{{{"abc"}, {"abc", "def"}}},
+		},
+		{
+			Name: "map",
+			Type: reflect.TypeOf(map[string]string{}),
+
+			Data:  []byte("{\"foo\":\"bar\"}"),
+			Value: map[string]string{"foo": "bar"},
+		},
+		{
+			Name: "map array",
+			Type: reflect.TypeOf(map[string]string{}),
+
+			Array: true,
+			Data:  []byte("[{\"foo\":\"bar\"}]"),
+			Value: []map[string]string{{"foo": "bar"}},
+		},
+		{
+			Name: "map nullable array",
+			Type: reflect.TypeOf(map[string]string{}),
+
+			Array:    true,
+			Nullable: true,
+			Data:     []byte("null"),
+			Value:    (*[]map[string]string)(nil),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			ru := ReflectTypeUnmarshaler{Type: test.Type}
+			v, e := ru.UnmarshalToType(test.Data, test.Array, test.Nullable)
+
+			assert.NoError(t, e)
+			assert.Equal(t, test.Value, v)
+		})
+	}
+
+	t.Run("errors", func(t *testing.T) {
+		ru := ReflectTypeUnmarshaler{Type: reflect.TypeOf((*[]string)(nil))}
+
+		v, err := ru.UnmarshalToType(nil, false, false)
+		assert.Nil(t, v)
+		assert.Error(t, err)
+
+		v, err = ru.UnmarshalToType(nil, false, true)
+		assert.Nil(t, v)
+		assert.Error(t, err)
+
+		v, err = ru.UnmarshalToType([]byte("null"), false, false)
+		assert.Nil(t, v)
+		assert.Error(t, err)
+
+		v, err = ru.UnmarshalToType([]byte("null"), true, false)
+		assert.Nil(t, v)
+		assert.Error(t, err)
+
+		ru = ReflectTypeUnmarshaler{Type: reflect.TypeOf((*[]testObjType)(nil))}
+
+		v, err = ru.UnmarshalToType(nil, false, false)
+		assert.Nil(t, v)
+		assert.Error(t, err)
+
+		v, err = ru.UnmarshalToType(nil, false, true)
+		assert.Nil(t, v)
+		assert.Error(t, err)
+
+		v, err = ru.UnmarshalToType([]byte("null"), false, false)
+		assert.Nil(t, v)
+		assert.Error(t, err)
+
+		v, err = ru.UnmarshalToType([]byte("null"), true, false)
+		assert.Nil(t, v)
+		assert.Error(t, err)
+
+		v, err = ru.UnmarshalToType([]byte("\"test\""), true, false)
+		assert.Nil(t, v)
+		assert.Error(t, err)
 	})
 }

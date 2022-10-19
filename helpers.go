@@ -18,7 +18,7 @@ func Check(v interface{}) error {
 	value := reflect.ValueOf(v)
 	kind := value.Kind()
 
-	// Check wether it's a struct
+	// Check whether it's a struct
 	if kind != reflect.Struct {
 		return errors.New("jsonapi: not a struct")
 	}
@@ -41,34 +41,25 @@ func Check(v interface{}) error {
 	// Check attributes
 	for i := 0; i < value.NumField(); i++ {
 		sf := value.Type().Field(i)
+		typ := sf.Type
 
-		if sf.Tag.Get("api") == "attr" {
-			isValid := false
-
-			switch sf.Type.String() {
-			case
-				"string",
-				"int", "int8", "int16", "int32", "int64",
-				"uint", "uint8", "uint16", "uint32", "uint64",
-				"bool",
-				"time.Time",
-				"[]uint8",
-				"*string",
-				"*int", "*int8", "*int16", "*int32", "*int64",
-				"*uint", "*uint8", "*uint16", "*uint32", "*uint64",
-				"*bool",
-				"*time.Time",
-				"*[]uint8":
-				isValid = true
+		switch typ.Kind() {
+		case reflect.Ptr:
+			typ = typ.Elem()
+			if typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array {
+				typ = typ.Elem()
 			}
+		case reflect.Array, reflect.Slice:
+			typ = typ.Elem()
+		}
 
-			if !isValid {
-				return fmt.Errorf(
-					"jsonapi: attribute %q of type %q is of unsupported type",
-					sf.Name,
-					resType,
-				)
-			}
+		switch typ.Kind() {
+		// Basically all types which cannot be unmarshalled by the json package.
+		case reflect.Chan, reflect.Complex64, reflect.Complex128, reflect.Func, reflect.Interface:
+			return fmt.Errorf("jsonapi: attribute %q of type %q is of unsupported type",
+				sf.Name,
+				resType,
+			)
 		}
 	}
 
@@ -121,55 +112,7 @@ func BuildType(v interface{}) (Type, error) {
 		return typ, fmt.Errorf("jsonapi: invalid type: %q", err)
 	}
 
-	// ID and type
-	_, typ.Name = IDAndType(v)
-
-	// Attributes
-	typ.Attrs = map[string]Attr{}
-
-	for i := 0; i < val.NumField(); i++ {
-		fs := val.Type().Field(i)
-		jsonTag := fs.Tag.Get("json")
-		apiTag := fs.Tag.Get("api")
-
-		if apiTag == "attr" {
-			fieldType, null := GetAttrType(fs.Type.String())
-			typ.Attrs[jsonTag] = Attr{
-				Name:     jsonTag,
-				Type:     fieldType,
-				Nullable: null,
-			}
-		}
-	}
-
-	// Relationships
-	typ.Rels = map[string]Rel{}
-
-	for i := 0; i < val.NumField(); i++ {
-		fs := val.Type().Field(i)
-		jsonTag := fs.Tag.Get("json")
-		relTag := strings.Split(fs.Tag.Get("api"), ",")
-		invName := ""
-
-		if len(relTag) == 3 {
-			invName = relTag[2]
-		}
-
-		toOne := true
-		if fs.Type.String() == "[]string" {
-			toOne = false
-		}
-
-		if relTag[0] == "rel" {
-			typ.Rels[jsonTag] = Rel{
-				FromName: jsonTag,
-				ToOne:    toOne,
-				ToType:   relTag[1],
-				ToName:   invName,
-				FromType: typ.Name,
-			}
-		}
-	}
+	typ.Name, typ.Attrs, typ.Rels = getTypeInfo(val)
 
 	// NewFunc
 	res := Wrap(reflect.New(val.Type()).Interface())
@@ -221,4 +164,96 @@ func IDAndType(v interface{}) (string, string) {
 	}
 
 	return "", ""
+}
+
+func getTypeInfo(val reflect.Value) (string, map[string]Attr, map[string]Rel) {
+	_, typ := IDAndType(val.Interface())
+
+	attrs := map[string]Attr{}
+
+	for i := 0; i < val.NumField(); i++ {
+		fs := val.Type().Field(i)
+		jsonTag := fs.Tag.Get("json")
+		apiTag := fs.Tag.Get("api")
+		byteTag := fs.Tag.Get("bytes")
+		arrTag := fs.Tag.Get("array")
+
+		if apiTag == "attr" {
+			typ, arr, null := GetAttrType(fs.Type.String())
+			if typ == AttrTypeUint8 && arr && byteTag == "true" {
+				typ = AttrTypeBytes
+			}
+
+			// If the type is not handled by default, create a reflection based TypeUnmarshaler for
+			// this type.
+			var typU TypeUnmarshaler
+
+			if typ == AttrTypeInvalid {
+				typ = AttrTypeOther
+				t := fs.Type
+
+				if t.Kind() == reflect.Ptr {
+					t = t.Elem()
+					null = true
+
+					if arrTag != "true" &&
+						(t.Kind() == reflect.Slice || t.Kind() == reflect.Array) {
+						t = t.Elem()
+						arr = true
+					}
+				} else if arrTag != "true" &&
+					(t.Kind() == reflect.Slice || t.Kind() == reflect.Array) {
+					t = t.Elem()
+					arr = true
+					null = false
+				}
+
+				ru := ReflectTypeUnmarshaler{Type: t}
+				if fs.Type.Implements(reflect.TypeOf((*TypeUnmarshaler)(nil)).Elem()) {
+					typU = ru.GetZeroValue(false, false).(TypeUnmarshaler)
+				} else {
+					typU = ru
+				}
+			}
+
+			attrs[jsonTag] = Attr{
+				Name:        jsonTag,
+				Type:        typ,
+				Array:       arr,
+				Nullable:    null,
+				Unmarshaler: typU,
+			}
+		}
+	}
+
+	// Relationships
+	rels := map[string]Rel{}
+
+	for i := 0; i < val.NumField(); i++ {
+		fs := val.Type().Field(i)
+		jsonTag := fs.Tag.Get("json")
+		relTag := strings.Split(fs.Tag.Get("api"), ",")
+		invName := ""
+
+		if len(relTag) == 3 {
+			invName = relTag[2]
+		}
+
+		toOne := true
+		if fs.Type.String() == "[]string" {
+			toOne = false
+		}
+
+		if relTag[0] == "rel" {
+			rels[jsonTag] = Rel{
+				FromName: jsonTag,
+				ToType:   relTag[1],
+				ToOne:    toOne,
+				ToName:   invName,
+				FromType: typ,
+			}
+		}
+	}
+
+	return typ, attrs, rels
 }

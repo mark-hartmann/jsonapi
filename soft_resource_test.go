@@ -57,6 +57,27 @@ func TestSoftResource(t *testing.T) {
 			Type:     AttrTypeString,
 			Nullable: true,
 		},
+		"attr3": {
+			Name:     "attr3",
+			Type:     AttrTypeString,
+			Array:    true,
+			Nullable: false,
+		},
+		"attr4": {
+			Name:     "attr4",
+			Type:     AttrTypeString,
+			Array:    true,
+			Nullable: true,
+		},
+		"attr5": {
+			Name: "attr5",
+			Type: AttrTypeBytes,
+		},
+		"attr6": {
+			Name:     "attr6",
+			Type:     AttrTypeBytes,
+			Nullable: true,
+		},
 	}
 	for _, attr := range attrs {
 		sr.AddAttr(attr)
@@ -96,6 +117,10 @@ func TestSoftResource(t *testing.T) {
 	sr.RemoveField("attr1")
 	assert.Equal(t, Attr{}, sr.Attr("attr1"))
 	sr.RemoveField("attr2")
+	sr.RemoveField("attr3")
+	sr.RemoveField("attr4")
+	sr.RemoveField("attr5")
+	sr.RemoveField("attr6")
 	assert.Equal(t, map[string]Attr{}, sr.Attrs())
 
 	sr.RemoveField("rel1")
@@ -120,14 +145,50 @@ func TestSoftResource(t *testing.T) {
 
 	// Set and get some fields
 	assert.Equal(t, "", sr.Get("attr1"))
+	assert.Equal(t, (*string)(nil), sr.Get("attr2"))
+	assert.Equal(t, []string{}, sr.Get("attr3"))
+	assert.Equal(t, (*[]string)(nil), sr.Get("attr4"))
+	assert.Equal(t, []byte{}, sr.Get("attr5"))
+	assert.Equal(t, (*[]byte)(nil), sr.Get("attr6"))
 	assert.Equal(t, "", sr.Get("rel1").(string))
 	assert.Equal(t, []string{}, sr.Get("rel2").([]string))
 	sr.Set("attr1", "value")
+	sr.Set("attr3", []string{"foo", "bar"})
+	sr.Set("attr4", &[]string{"foo", "bar"})
 	sr.Set("rel1", "id1")
 	sr.Set("rel2", []string{"id1", "id2"})
 	assert.Equal(t, "value", sr.Get("attr1"))
+	assert.Equal(t, []string{"foo", "bar"}, sr.Get("attr3"))
+	assert.Equal(t, &[]string{"foo", "bar"}, sr.Get("attr4"))
 	assert.Equal(t, "id1", sr.Get("rel1").(string))
 	assert.Equal(t, []string{"id1", "id2"}, sr.Get("rel2").([]string))
+
+	// test setting nil values
+	sr.Set("attr1", "test")
+	sr.Set("attr1", nil)
+	assert.Equal(t, "", sr.Get("attr1"))
+	sr.Set("attr1", "test")
+	sr.Set("attr1", (*map[int]string)(nil))
+	assert.Equal(t, "", sr.Get("attr1"))
+
+	sr.Set("attr3", []string{"foo", "bar"})
+	sr.Set("attr3", nil)
+	assert.Equal(t, []string{}, sr.Get("attr3"))
+
+	sr.Set("attr3", []string{"foo", "bar"})
+	sr.Set("attr3", ([]string)(nil))
+	assert.Equal(t, []string{}, sr.Get("attr3"))
+
+	sr.Set("attr4", &[]string{"foo", "bar"})
+	sr.Set("attr4", nil)
+	assert.Equal(t, (*[]string)(nil), sr.Get("attr4"))
+
+	sr.Set("attr4", &[]string{"foo", "bar"})
+	sr.Set("attr4", (*[]string)(nil))
+	assert.Equal(t, (*[]string)(nil), sr.Get("attr4"))
+
+	sr.Set("attr3", "some invalid value")
+	assert.Equal(t, []string{}, sr.Get("attr3"))
 
 	// Set a nullable attribute to nil
 	_ = sr.Type.AddAttr(Attr{
@@ -205,42 +266,79 @@ func TestSoftResourceCopy(t *testing.T) {
 
 	// Attributes
 	attrs := map[string]interface{}{
-		"string":     "abc",
-		"int":        42,
-		"int8":       8,
-		"int16":      16,
-		"int32":      32,
-		"int64":      64,
-		"uint":       42,
-		"uint8":      8,
-		"uint16":     16,
-		"uint32":     32,
-		"uint64":     64,
-		"bool":       true,
-		"time.Time":  now,
-		"[]uint8":    []byte{'a', 'b', 'c'},
-		"*string":    ptr("abc"),
-		"*int":       ptr(42),
-		"*int8":      ptr(8),
-		"*int16":     ptr(16),
-		"*int32":     ptr(32),
-		"*int64":     ptr(64),
-		"*uint":      ptr(42),
-		"*uint8":     ptr(8),
-		"*uint16":    ptr(16),
-		"*uint32":    ptr(32),
-		"*uint64":    ptr(64),
-		"*bool":      ptr(true),
-		"*time.Time": ptr(now),
-		"*[]uint8":   ptr([]byte{'a', 'b', 'c'}),
+		"string":    "abc",
+		"*string":   ptr("abc"),
+		"[]string":  []string{"abc"},
+		"*[]string": &[]string{"abc"},
+
+		"int":    42,
+		"*int":   ptr(42),
+		"[]int":  []int{42},
+		"*[]int": &[]int{42},
+
+		"int8":    8,
+		"*int8":   ptr(8),
+		"[]int8":  []int8{8},
+		"*[]int8": &[]int8{8},
+
+		"int16":    16,
+		"*int16":   ptr(16),
+		"[]int16":  []int16{16},
+		"*[]int16": &[]int16{16},
+
+		"int32":    32,
+		"*int32":   ptr(32),
+		"[]int32":  []int32{32},
+		"*[]int32": &[]int32{32},
+
+		"int64":    64,
+		"*int64":   ptr(64),
+		"[]int64":  []int64{64},
+		"*[]int64": &[]int64{64},
+
+		"uint":    42,
+		"*uint":   ptr(42),
+		"[]uint":  []uint{42},
+		"*[]uint": &[]uint{42},
+
+		"uint8":    8,
+		"*uint8":   ptr(8),
+		"[]uint8":  []byte{'a', 'b', 'c'},
+		"*[]uint8": &[]byte{'a', 'b', 'c'},
+
+		"uint16":    16,
+		"*uint16":   ptr(16),
+		"[]uint16":  []uint16{16},
+		"*[]uint16": &[]uint16{16},
+
+		"uint32":    32,
+		"*uint32":   ptr(32),
+		"[]uint32":  []uint32{32},
+		"*[]uint32": &[]uint32{32},
+
+		"uint64":    64,
+		"*uint64":   ptr(64),
+		"[]uint64":  []uint64{64},
+		"*[]uint64": &[]uint64{64},
+
+		"bool":    true,
+		"*bool":   ptr(true),
+		"[]bool":  []bool{true},
+		"*[]bool": &[]bool{true},
+
+		"time.Time":    now,
+		"*time.Time":   ptr(now),
+		"[]time.Time":  []time.Time{now},
+		"*[]time.Time": &[]time.Time{now},
 	}
 
 	for t, v := range attrs {
-		typ, null := GetAttrType(t)
+		typ, arr, null := GetAttrType(t)
 
 		sr.AddAttr(Attr{
 			Name:     t,
 			Type:     typ,
+			Array:    arr,
 			Nullable: null,
 		})
 
@@ -248,13 +346,65 @@ func TestSoftResourceCopy(t *testing.T) {
 	}
 
 	// Special cases
-	sr.AddAttr(Attr{
-		Name:     "nil-*[]byte",
-		Type:     AttrTypeBytes,
-		Nullable: true,
-	})
+	specialAttrs := map[string]struct {
+		attr Attr
+		val  interface{}
+	}{
+		"nil-*[]string": {
+			attr: Attr{Type: AttrTypeString, Array: true, Nullable: true},
+			val:  nil,
+		},
+		"typed-nil-*[]int": {
+			attr: Attr{Type: AttrTypeInt, Array: true, Nullable: true},
+			val:  (*[]int)(nil),
+		},
+		"nil-*[]int8": {
+			attr: Attr{Type: AttrTypeInt8, Array: true, Nullable: true},
+			val:  nil,
+		},
+		"typed-nil-*[]int16": {
+			attr: Attr{Type: AttrTypeInt16, Array: true, Nullable: true},
+			val:  (*[]int16)(nil),
+		},
+		"nil-*[]int32": {
+			attr: Attr{Type: AttrTypeInt32, Array: true, Nullable: true},
+			val:  nil},
+		"typed-nil-*[]int64": {
+			attr: Attr{Type: AttrTypeInt64, Array: true, Nullable: true},
+			val:  (*[]int64)(nil)},
 
-	sr.Set("nil-*[]byte", (*[]byte)(nil))
+		"typed-nil-*[]uint": {
+			attr: Attr{Type: AttrTypeUint, Array: true, Nullable: true},
+			val:  (*[]uint)(nil)},
+		"nil-*[]uint8": {
+			attr: Attr{Type: AttrTypeUint8, Array: true, Nullable: true},
+			val:  nil},
+		"typed-nil-*[]uint16": {
+			attr: Attr{Type: AttrTypeUint16, Array: true, Nullable: true},
+			val:  (*[]uint16)(nil)},
+		"nil-*[]uint32": {
+			attr: Attr{Type: AttrTypeUint32, Array: true, Nullable: true},
+			val:  nil},
+		"typed-nil-*[]uint64": {
+			attr: Attr{Type: AttrTypeUint64, Array: true, Nullable: true},
+			val:  (*[]uint64)(nil)},
+
+		"nil-*[]byte": {
+			attr: Attr{Type: AttrTypeBytes, Nullable: true},
+			val:  nil},
+		"typed-nil-*[]bool": {
+			attr: Attr{Type: AttrTypeBool, Array: true, Nullable: true},
+			val:  (*[]bool)(nil)},
+		"nil-*[]time.Time": {
+			attr: Attr{Type: AttrTypeTime, Array: true, Nullable: true},
+			val:  nil},
+	}
+
+	for name, data := range specialAttrs {
+		data.attr.Name = name
+		sr.AddAttr(data.attr)
+		sr.Set(name, data.val)
+	}
 
 	// Relationships
 	sr.AddRel(Rel{
@@ -316,10 +466,12 @@ func TestSoftResource_Links(t *testing.T) {
 }
 
 func TestSoftResourceGetSetID(t *testing.T) {
-	assert := assert.New(t)
-
 	sr := &SoftResource{}
 	sr.Set("id", "abc123")
+	assert.Equal(t, "abc123", sr.GetID())
+	assert.Equal(t, "abc123", sr.Get("id"))
 
-	assert.Equal("abc123", sr.Get("id"))
+	sr.SetID("def456")
+	assert.Equal(t, "def456", sr.GetID())
+	assert.Equal(t, "def456", sr.Get("id"))
 }

@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"math"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -167,6 +169,8 @@ func TestMarshalDocument(t *testing.T) {
 		Uint16:   1016,
 		Uint32:   1032,
 		Uint64:   1064,
+		Float32:  math.MaxFloat32,
+		Float64:  math.MaxFloat64,
 		Bool:     true,
 		Time:     getTime(),
 		Bytes:    []byte{1, 2, 3},
@@ -197,16 +201,184 @@ func TestMarshalDocument(t *testing.T) {
 	})
 	col.Add(Wrap(r4))
 
+	// The collection is ordered by id within the Range function, so this resource
+	// will be second in the resource array (0=id1, 1=id1 (this), 2=id2).
+	col.Add(Wrap(&mockType1{
+		ID:  "id1",
+		Str: "str with <html> chars",
+	}))
+
+	col.Add(Wrap(&mockType6{
+		ID: "test-123",
+		Obj: testObjType{
+			Prop1: "abc",
+			Prop2: "def",
+			Prop3: "ghi",
+		},
+		ObjPtr: &testObjType{
+			Prop1: "jkl",
+			Prop2: "mno",
+			Prop3: "pqr",
+		},
+		Float32Matrix: [][]float32{
+			{1.0, 0.5, 0.25, 0.175},
+			{0.175, 0.25, 0.5, 1.0},
+		},
+	}))
+
+	var (
+		strarr   = []string{"foo", "bar", "baz"}
+		int8arr  = []int8{-100, -50, 0, 50, 100}
+		int32arr = []int32{-10000000, 123456, -45, 333333333}
+		bytearr  = []byte("hello world")
+		boolarr  = []bool{true, false, true, true}
+	)
+
+	cres1 := Wrap(mockType4{
+		ID:         "id1",
+		StrArr:     strarr,
+		Int8Arr:    int8arr,
+		Int32Arr:   int32arr,
+		Uint8Arr:   bytearr,
+		BoolArr:    boolarr,
+		Float32Arr: []float32{math.MaxFloat32},
+		Float64Arr: []float64{math.MaxFloat64},
+	})
+
+	cres2 := Wrap(mockType5{
+		ID:            "id1",
+		StrArrPtr:     &strarr,
+		Int8ArrPtr:    &int8arr,
+		BoolArrPtr:    &boolarr,
+		Float32ArrPtr: &[]float32{3.4028235e+38},
+	})
+
+	// uint8
+	cres3 := &SoftResource{Type: &Type{
+		Name: "bytestest",
+		Attrs: map[string]Attr{
+			"uint8arr": {
+				Name:  "uint8arr",
+				Type:  AttrTypeUint8,
+				Array: true,
+			},
+			"uint8arrptr": {
+				Name:     "uint8arrptr",
+				Type:     AttrTypeUint8,
+				Array:    true,
+				Nullable: true,
+			},
+			"uint8arrempty": {
+				Name:  "uint8arrempty",
+				Type:  AttrTypeUint8,
+				Array: true,
+			},
+			"uint8arrptrnull": {
+				Name:     "uint8arrptrnull",
+				Type:     AttrTypeUint8,
+				Array:    true,
+				Nullable: true,
+			},
+			"bytes": {
+				Name: "bytes",
+				Type: AttrTypeBytes,
+			},
+			"bytesptr": {
+				Name:     "bytesptr",
+				Type:     AttrTypeBytes,
+				Nullable: true,
+			},
+			"nullbytes": {
+				Name: "nullbytes",
+				Type: AttrTypeBytes,
+			},
+			"nullbytesptr": {
+				Name:     "nullbytesptr",
+				Type:     AttrTypeBytes,
+				Nullable: true,
+			},
+		},
+	}}
+
+	arr := []uint8{1, 2, 4, 8, 16, 32}
+
+	cres3.SetID("id1")
+	cres3.Set("uint8arr", arr)
+	cres3.Set("uint8arrptr", &arr)
+	cres3.Set("uint8arrempty", nil)
+	cres3.Set("uint8arrptrnull", nil)
+	cres3.Set("bytes", arr)
+	cres3.Set("bytesptr", &arr)
+
+	cres4 := &SoftResource{Type: &Type{
+		Name: "objtest",
+		Attrs: map[string]Attr{
+			"obj": {
+				Name:        "obj",
+				Type:        AttrTypeOther,
+				Unmarshaler: testObjType{},
+			},
+			"objarr": {
+				Name:        "objarr",
+				Type:        AttrTypeOther,
+				Array:       true,
+				Unmarshaler: testObjType{},
+			},
+			"objptr": {
+				Name:        "objptr",
+				Type:        AttrTypeOther,
+				Nullable:    true,
+				Unmarshaler: testObjType{},
+			},
+			"float32MatrixArr": {
+				Name:        "float32MatrixArr",
+				Type:        AttrTypeOther,
+				Array:       true,
+				Unmarshaler: ReflectTypeUnmarshaler{Type: reflect.TypeOf([][]float32{})},
+			},
+		},
+	}}
+	cres4.SetID("id1")
+	cres4.Set("obj", testObjType{
+		Prop1: "foo",
+		Prop2: "bar",
+		Prop3: "baz",
+	})
+	cres4.Set("objarr", []testObjType{
+		{
+			Prop1: "a",
+			Prop2: "b",
+			Prop3: "c",
+		},
+		{
+			Prop1: "d",
+			Prop2: "e",
+			Prop3: "f",
+		},
+	})
+	cres4.Set("objptr", nil)
+	cres4.Set("float32MatrixArr", [][][]float32{
+		{
+			{0.1, 0.2, 0.3, 0.4, 0.5},
+		},
+		{
+			{0.6, 0.7, 0.8, 0.9, 1.0},
+		},
+	})
+
 	// Test struct
 	tests := []struct {
 		name   string
 		doc    *Document
-		fields []string
+		fields map[string][]string
 	}{
 		{
 			name: "empty data",
 			doc: &Document{
 				PrePath: "https://example.org",
+			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
 			},
 		}, {
 			name: "empty data with links",
@@ -224,6 +396,9 @@ func TestMarshalDocument(t *testing.T) {
 			doc: &Document{
 				Data: &Resources{},
 			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
+			},
 		}, {
 			name: "resource",
 			doc: &Document{
@@ -232,9 +407,78 @@ func TestMarshalDocument(t *testing.T) {
 					"mocktype": {"to-1", "to-x-from-1"},
 				},
 			},
-			fields: []string{
-				"str", "uint64", "bool", "int", "time", "bytes", "to-1",
-				"to-x-from-1",
+			fields: map[string][]string{
+				"mocktype": {
+					"str",
+					"uint64",
+					"bool",
+					"int",
+					"time",
+					"bytes",
+					"float32",
+					"float64",
+					"to-1",
+					"to-x-from-1",
+				},
+			},
+		}, {
+			name: "resource array attributes",
+			doc: &Document{
+				Data: cres1,
+			},
+			fields: map[string][]string{
+				"mocktype4": {
+					"strarr",
+					"int8arr",
+					"int32arr",
+					"uint8arr",
+					"boolarr",
+					"int16arr",
+					"float32arr",
+					"float64arr",
+				},
+			},
+		}, {
+			name: "resource nullable array attributes",
+			doc: &Document{
+				Data: cres2,
+			},
+			fields: map[string][]string{
+				"mocktype5": {
+					"strarrptr",
+					"int8arrptr",
+					"int32arrptr",
+					"uint8arrptr",
+					"boolarrptr",
+					"int16arrptr",
+					"float32arrptr",
+					"float64arrptr",
+				},
+			},
+		}, {
+			name: "resource bytes",
+			doc: &Document{
+				Data: cres3,
+			},
+			fields: map[string][]string{
+				"bytestest": {
+					"uint8arr",
+					"uint8arrptr",
+					"bytes",
+					"bytesptr",
+					"nullbytes",
+					"nullbytesptr",
+					"uint8arrempty",
+					"uint8arrptrnull",
+				},
+			},
+		}, {
+			name: "resource object property",
+			doc: &Document{
+				Data: cres4,
+			},
+			fields: map[string][]string{
+				"objtest": {"obj", "objarr", "objptr", "objptrarr", "float32MatrixArr"},
 			},
 		}, {
 			name: "collection",
@@ -245,8 +489,10 @@ func TestMarshalDocument(t *testing.T) {
 				},
 				PrePath: "https://example.org",
 			},
-			fields: []string{
-				"str", "uint64", "bool", "int", "time", "to-1", "to-x-from-1",
+			fields: map[string][]string{
+				"mocktype":   {"str", "uint64", "bool", "int", "time", "to-1", "to-x-from-1"},
+				"mocktypes1": {"str"},
+				"mocktype6":  {"obj", "objPtr", "objArr", "float32Matrix"},
 			},
 		}, {
 			name: "collection with links",
@@ -266,8 +512,8 @@ func TestMarshalDocument(t *testing.T) {
 					},
 				},
 			},
-			fields: []string{
-				"str", "uint64", "bool", "int", "time", "to-1", "to-x-from-1",
+			fields: map[string][]string{
+				"mocktype": {"str", "uint64", "bool", "int", "time", "to-1", "to-x-from-1"},
 			},
 		}, {
 			name: "meta",
@@ -278,6 +524,9 @@ func TestMarshalDocument(t *testing.T) {
 					"f2": 42,
 					"f3": true,
 				},
+			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
 			},
 		}, {
 			name: "collection with inclusions",
@@ -300,6 +549,9 @@ func TestMarshalDocument(t *testing.T) {
 					}),
 				},
 			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
+			},
 		}, {
 			name: "identifier",
 			doc: &Document{
@@ -307,6 +559,9 @@ func TestMarshalDocument(t *testing.T) {
 					ID:   "id1",
 					Type: "mocktype",
 				},
+			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
 			},
 		}, {
 			name: "identifiers",
@@ -324,6 +579,9 @@ func TestMarshalDocument(t *testing.T) {
 					},
 				},
 			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
+			},
 		}, {
 			name: "error",
 			doc: &Document{
@@ -332,6 +590,9 @@ func TestMarshalDocument(t *testing.T) {
 					err.ID = "00000000-0000-0000-0000-000000000000"
 					return []Error{err}
 				}(),
+			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
 			},
 		}, {
 			name: "errors",
@@ -344,20 +605,19 @@ func TestMarshalDocument(t *testing.T) {
 					return []Error{err1, err2}
 				}(),
 			},
+			fields: map[string][]string{
+				"mocktype": nil, // To achieve the same result as before with []string
+			},
 		},
 	}
 
-	for i := range tests {
-		i := i
-		test := tests[i]
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert := assert.New(t)
-
 			// URL
 			url := &URL{
 				Fragments: []string{"fake", "path"},
 				Params: &Params{
-					Fields: map[string][]string{"mocktype": test.fields},
+					Fields: test.fields,
 				},
 			}
 			if _, ok := test.doc.Data.(Collection); ok {
@@ -366,7 +626,7 @@ func TestMarshalDocument(t *testing.T) {
 
 			// Marshaling
 			payload, err := MarshalDocument(test.doc, url)
-			assert.NoError(err)
+			assert.NoError(t, err)
 
 			// Golden file
 			filename := strings.ReplaceAll(test.name, " ", "_") + ".json"
@@ -374,15 +634,15 @@ func TestMarshalDocument(t *testing.T) {
 			if !*update {
 				// Retrieve the expected result from file
 				expected, _ := ioutil.ReadFile(path)
-				assert.NoError(err, test.name)
-				assert.JSONEq(string(expected), string(payload))
+				assert.NoError(t, err, test.name)
+				assert.JSONEq(t, string(expected), string(payload))
 			} else {
 				dst := &bytes.Buffer{}
 				err = json.Indent(dst, payload, "", "\t")
-				assert.NoError(err)
+				assert.NoError(t, err)
 				// TODO Figure out whether 0600 is okay or not.
 				err = ioutil.WriteFile(path, dst.Bytes(), 0600)
-				assert.NoError(err)
+				assert.NoError(t, err)
 			}
 		})
 	}
@@ -472,7 +732,18 @@ func TestUnmarshalDocument(t *testing.T) {
 	typ.NewFunc = func() Resource {
 		return Wrap(&mocktype{})
 	}
-	schema := &Schema{Types: []Type{typ}}
+
+	typ4, _ := BuildType(mockType4{})
+	typ4.NewFunc = func() Resource {
+		return Wrap(&mockType4{})
+	}
+
+	typ5, _ := BuildType(mockType5{})
+	typ5.NewFunc = func() Resource {
+		return Wrap(&mockType5{})
+	}
+
+	schema := &Schema{Types: []Type{typ, typ4, typ5}}
 	col := Resources{}
 	col.Add(Wrap(&mocktype{
 		ID:       "id1",
@@ -487,6 +758,8 @@ func TestUnmarshalDocument(t *testing.T) {
 		Uint16:   1016,
 		Uint32:   1032,
 		Uint64:   1064,
+		Float32:  math.MaxFloat32,
+		Float64:  math.MaxFloat64,
 		Bool:     true,
 		Time:     getTime(),
 		Bytes:    []byte{1, 2, 3},
@@ -499,6 +772,93 @@ func TestUnmarshalDocument(t *testing.T) {
 	}))
 	col.Add(Wrap(&mocktype{ID: "id2"}))
 	col.Add(Wrap(&mocktype{ID: "id3"}))
+	col.Add(Wrap(&mockType4{
+		ID:      "id1",
+		BoolArr: []bool{true, false},
+		StrArr:  []string{"a", "b", "c"},
+	}))
+	col.Add(Wrap(&mockType5{
+		ID:          "id123",
+		BoolArrPtr:  &[]bool{true, false},
+		StrArrPtr:   &[]string{"a", "b", "c"},
+		Uint8ArrPtr: &[]byte{1, 2, 4, 8, 16},
+	}))
+
+	uint8arrRes := &SoftResource{}
+	uint8arrRes.SetType(&Type{
+		Name: "uint8arrtest",
+		Attrs: map[string]Attr{
+			"uint8arr": {Name: "uint8arr", Type: AttrTypeUint8, Array: true},
+			"bytes":    {Name: "bytes", Type: AttrTypeBytes},
+		},
+	})
+
+	_ = schema.AddType(*uint8arrRes.Type)
+
+	uint8arrRes.SetID("id1")
+	uint8arrRes.Set("uint8arr", []uint8{0, 1, 2, 4, 8, 16, 32, 64, 128, 255})
+	uint8arrRes.Set("bytes", []uint8{0, 1, 2, 4, 8, 16, 32, 64, 128, 255})
+
+	col.Add(uint8arrRes)
+
+	objRes := &SoftResource{}
+	objRes.SetType(&Type{
+		Name: "objtest",
+		Attrs: map[string]Attr{
+			"obj": {
+				Name:        "obj",
+				Type:        AttrTypeOther,
+				Unmarshaler: testObjType{},
+			},
+			"objarr": {
+				Name:        "objarr",
+				Type:        AttrTypeOther,
+				Array:       true,
+				Unmarshaler: testObjType{},
+			},
+			"objptr": {
+				Name:        "objptr",
+				Type:        AttrTypeOther,
+				Nullable:    true,
+				Unmarshaler: testObjType{},
+			},
+			"objptrarr": {
+				Name:        "objptrarr",
+				Type:        AttrTypeOther,
+				Array:       true,
+				Nullable:    true,
+				Unmarshaler: testObjType{},
+			},
+		},
+	})
+	objRes.SetID("id1")
+	objRes.Set("obj", testObjType{
+		Prop1: "foo",
+		Prop2: "bar",
+		Prop3: "baz",
+	})
+	objRes.Set("objarr", []testObjType{
+		{
+			Prop1: "a",
+			Prop2: "b",
+			Prop3: "c",
+		},
+		{
+			Prop1: "c",
+			Prop2: "d",
+			Prop3: "e",
+		},
+	})
+	objRes.Set("objptr", nil)
+	objRes.Set("objptrarr", []testObjType{
+		{
+			Prop1: "1",
+			Prop2: "2",
+			Prop3: "3",
+		},
+	})
+
+	_ = schema.AddType(*objRes.Type)
 
 	r4 := &mocktype{
 		ID: "id4",
@@ -510,6 +870,24 @@ func TestUnmarshalDocument(t *testing.T) {
 		"key4": getTime(),
 	})
 	col.Add(Wrap(r4))
+
+	r6 := Wrap(&mockType6{
+		ID: "test-123",
+		Obj: testObjType{
+			Prop1: "abc",
+			Prop2: "def",
+			Prop3: "ghi",
+		},
+		ObjPtr: &testObjType{
+			Prop1: "jkl",
+			Prop2: "mno",
+			Prop3: "pqr",
+		},
+	})
+	col.Add(r6)
+	typ6 := r6.GetType()
+
+	_ = schema.AddType(typ6)
 
 	// Tests
 	t.Run("resource with inclusions", func(t *testing.T) {
@@ -537,10 +915,26 @@ func TestUnmarshalDocument(t *testing.T) {
 		// TODO Make all the necessary assertions.
 	})
 
+	t.Run("resource with object property", func(t *testing.T) {
+		url, _ := NewURLFromRaw(schema, "/objtest/id1")
+		doc := &Document{Data: objRes}
+
+		payload, err := MarshalDocument(doc, url)
+		assert.NoError(t, err)
+
+		doc2, err := UnmarshalDocument(payload, schema)
+		assert.NoError(t, err)
+		assert.True(t, Equal(doc.Data.(Resource), doc2.Data.(Resource)))
+	})
+
 	t.Run("collection with inclusions", func(t *testing.T) {
 		assert := assert.New(t)
 
 		url, _ := NewURLFromRaw(schema, "/mocktype/id1")
+		url.Params.Fields["mocktype4"] = typ4.Fields()
+		url.Params.Fields["mocktype5"] = typ5.Fields()
+		url.Params.Fields["mocktype6"] = typ6.Fields()
+		url.Params.Fields["uint8arrtest"] = uint8arrRes.Type.Fields()
 
 		doc := &Document{
 			Data: &col,
@@ -564,6 +958,16 @@ func TestUnmarshalDocument(t *testing.T) {
 				}
 			}
 		}
+
+		col2, ok := doc.Data.(Collection)
+		assert.True(ok)
+
+		// A few assertions to make sure some edge cases work.
+		arrRes := col2.At(5)
+		assert.Equal("uint8arrtest", arrRes.GetType().Name)
+		assert.Equal([]byte{0, 1, 2, 4, 8, 16, 32, 64, 128, 255}, arrRes.Get("uint8arr"))
+		assert.Equal(arrRes.Get("uint8arr"), arrRes.Get("bytes"))
+
 		// TODO Make all the necessary assertions.
 	})
 
@@ -629,6 +1033,17 @@ func TestUnmarshalDocument(t *testing.T) {
 							"to-x": {
 								"data": "wrong"
 							}
+						}
+					}
+				}`,
+				expected: "400 Bad Request: The field value is invalid for the expected type.",
+			}, {
+				payload: `{
+					"data": {
+						"id": "1",
+						"type": "objtest",
+						"attributes": {
+							"obj": 123
 						}
 					}
 				}`,

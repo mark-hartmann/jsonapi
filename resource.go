@@ -34,7 +34,30 @@ func MarshalResource(r Resource, prepath string, fields []string, relData map[st
 	for _, attr := range r.Attrs() {
 		for _, field := range fields {
 			if field == attr.Name {
+				// AttrTypeUint8(Array=true) is handled like any other array.
+				// todo: check if there's a better way to do this
+				if attr.Type == AttrTypeUint8 && attr.Array {
+					v := r.Get(attr.Name)
+
+					var d *[]uint8
+
+					if attr.Nullable {
+						d = v.(*[]uint8)
+					} else {
+						a := v.([]uint8)
+						d = &a
+					}
+
+					attrs[attr.Name] = uint8Array{
+						Data:     d,
+						Nullable: attr.Nullable,
+					}
+
+					break
+				}
+
 				attrs[attr.Name] = r.Get(attr.Name)
+
 				break
 			}
 		}
@@ -224,9 +247,24 @@ func UnmarshalResource(data []byte, schema *Schema) (Resource, error) {
 
 	for a, v := range rske.Attributes {
 		if attr, ok := typ.Attrs[a]; ok {
-			val, err := attr.UnmarshalToType(v)
+			var val interface{}
+			if attr.Unmarshaler != nil {
+				val, err = attr.Unmarshaler.UnmarshalToType(v, attr.Array, attr.Nullable)
+			} else {
+				val, err = attr.UnmarshalToType(v)
+			}
+
 			if err != nil {
-				return nil, err
+				var ts string
+				// Prevent implementation details (in this case the underlying data type) from
+				// being leaked.
+				if tExp, ok := attr.Unmarshaler.(TypeNameExposer); ok {
+					ts = tExp.PublicTypeName()
+				} else {
+					ts = GetAttrTypeString(attr.Type, attr.Array, attr.Nullable)
+				}
+
+				return nil, NewErrInvalidFieldValueInBody(attr.Name, string(data), ts)
 			}
 
 			res.Set(attr.Name, val)
@@ -306,9 +344,24 @@ func UnmarshalPartialResource(data []byte, schema *Schema) (*SoftResource, error
 
 	for a, v := range rske.Attributes {
 		if attr, ok := typ.Attrs[a]; ok {
-			val, err := attr.UnmarshalToType(v)
+			var val interface{}
+			if attr.Unmarshaler != nil {
+				val, err = attr.Unmarshaler.UnmarshalToType(v, attr.Array, attr.Nullable)
+			} else {
+				val, err = attr.UnmarshalToType(v)
+			}
+
 			if err != nil {
-				return nil, err
+				var ts string
+				// Prevent implementation details (in this case the underlying data type) from
+				// being leaked.
+				if tExp, ok := attr.Unmarshaler.(TypeNameExposer); ok {
+					ts = tExp.PublicTypeName()
+				} else {
+					ts = GetAttrTypeString(attr.Type, attr.Array, attr.Nullable)
+				}
+
+				return nil, NewErrInvalidFieldValueInBody(attr.Name, string(v), ts)
 			}
 
 			_ = newType.AddAttr(attr)

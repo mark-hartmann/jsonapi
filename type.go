@@ -22,11 +22,15 @@ import (
 //   - string
 //   - int, int8, int16, int32, int64
 //   - uint, uint8, uint16, uint32, uint64
+//   - float32, float64
 //   - bool
 //   - time (Go type is time.Time)
-//   - bytes (Go type is []uint8 or []byte)
+//   - []byte
 //
-// An asterisk is present as a prefix when the type is nullable (like *string).
+// An asterisk is present as a prefix if the type is nullable (like *string), brackets
+// if it is an array (e.g. []string). Nullable arrays combine asterisk and
+// brackets (e.g. *[]string). Byte arrays are represented by []uint8, which are output
+// as a base64 encoded string if the attribute type is equal to AttrTypeBytes.
 //
 // Developers are encouraged to use the constants, the Type struct, and other
 // tools to handle attribute types instead of dealing with strings.
@@ -43,10 +47,31 @@ const (
 	AttrTypeUint16
 	AttrTypeUint32
 	AttrTypeUint64
+	AttrTypeFloat32
+	AttrTypeFloat64
 	AttrTypeBool
 	AttrTypeTime
 	AttrTypeBytes
+	AttrTypeOther
 )
+
+// uint8Array is used to marshal *[]uint8 or []byte as literal array instead of
+// a base64 encoded string value.
+type uint8Array struct {
+	Data     *[]uint8
+	Nullable bool
+}
+
+func (u uint8Array) MarshalJSON() ([]byte, error) {
+	var result string
+	if u.Data == nil {
+		result = "null"
+	} else {
+		result = strings.Join(strings.Fields(fmt.Sprintf("%d", *u.Data)), ",")
+	}
+
+	return []byte(result), nil
+}
 
 // A Type stores all the necessary information about a type as represented in
 // the JSON:API specification.
@@ -73,7 +98,7 @@ func (t *Type) AddAttr(attr Attr) error {
 		return fmt.Errorf("jsonapi: attribute name is empty")
 	}
 
-	if GetAttrTypeString(attr.Type, attr.Nullable) == "" {
+	if attr.Unmarshaler == nil && GetAttrTypeString(attr.Type, attr.Array, attr.Nullable) == "" {
 		return fmt.Errorf("jsonapi: attribute type is invalid")
 	}
 
@@ -197,18 +222,37 @@ func (t Type) Copy() Type {
 	return ctyp
 }
 
-// Attr represents a resource attribute.
-type Attr struct {
-	Name     string
-	Type     int
-	Nullable bool
+// TypeUnmarshaler is a custom type unmarshaler that is used instead of Attr.UnmarshalToType for
+// types that are not supported by default.
+type TypeUnmarshaler interface {
+	GetZeroValue(array, nullable bool) interface{}
+	UnmarshalToType(data []byte, array, nullable bool) (interface{}, error)
 }
 
-// UnmarshalToType unmarshals the data into a value of the type represented by
+// TypeNameExposer allows a custom unmarshaler to specify the real type name or referenceable alias
+// in the error metadata if the value cannot be unmarshalled correctly.
+type TypeNameExposer interface {
+	PublicTypeName() string
+}
+
+// Attr represents a resource attribute.
+type Attr struct {
+	Name        string
+	Type        int
+	Nullable    bool
+	Array       bool
+	Unmarshaler TypeUnmarshaler
+}
+
+// UnmarshalToType unmarshalls the data into a value of the type represented by
 // the attribute and returns it.
 func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
+	if data == nil || (!a.Nullable && string(data) == "null") {
+		return nil, fmt.Errorf("%s is not nullable", a.Name)
+	}
+
 	if a.Nullable && string(data) == "null" {
-		return GetZeroValue(a.Type, a.Nullable), nil
+		return GetZeroValue(a.Type, a.Array, a.Nullable), nil
 	}
 
 	var (
@@ -218,124 +262,308 @@ func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 
 	switch a.Type {
 	case AttrTypeString:
-		var s string
-		err = json.Unmarshal(data, &s)
+		if a.Array {
+			var sa []string
+			err = json.Unmarshal(data, &sa)
 
-		if a.Nullable {
-			v = &s
-		} else {
-			v = s
+			if a.Nullable {
+				v = &sa
+			} else {
+				v = sa
+			}
+		} else if string(data) != "null" {
+			var s string
+			err = json.Unmarshal(data, &s)
+
+			if a.Nullable {
+				v = &s
+			} else {
+				v = s
+			}
 		}
 	case AttrTypeInt:
-		v, err = strconv.Atoi(string(data))
+		if a.Array {
+			var ia []int
+			err = json.Unmarshal(data, &ia)
 
-		if a.Nullable {
-			n := v.(int)
-			v = &n
+			if a.Nullable {
+				v = &ia
+			} else {
+				v = ia
+			}
 		} else {
-			v = v.(int)
+			v, err = strconv.Atoi(string(data))
+
+			if a.Nullable {
+				n := v.(int)
+				v = &n
+			} else {
+				v = v.(int)
+			}
 		}
 	case AttrTypeInt8:
-		v, err = strconv.Atoi(string(data))
+		if a.Array {
+			var ia []int8
+			err = json.Unmarshal(data, &ia)
 
-		if a.Nullable {
-			n := int8(v.(int))
-			v = &n
+			if a.Nullable {
+				v = &ia
+			} else {
+				v = ia
+			}
 		} else {
-			v = int8(v.(int))
+			v, err = strconv.Atoi(string(data))
+
+			if a.Nullable {
+				n := int8(v.(int))
+				v = &n
+			} else {
+				v = int8(v.(int))
+			}
 		}
 	case AttrTypeInt16:
-		v, err = strconv.Atoi(string(data))
+		if a.Array {
+			var ia []int16
+			err = json.Unmarshal(data, &ia)
 
-		if a.Nullable {
-			n := int16(v.(int))
-			v = &n
+			if a.Nullable {
+				v = &ia
+			} else {
+				v = ia
+			}
 		} else {
-			v = int16(v.(int))
+			v, err = strconv.Atoi(string(data))
+
+			if a.Nullable {
+				n := int16(v.(int))
+				v = &n
+			} else {
+				v = int16(v.(int))
+			}
 		}
 	case AttrTypeInt32:
-		v, err = strconv.Atoi(string(data))
+		if a.Array {
+			var ia []int32
+			err = json.Unmarshal(data, &ia)
 
-		if a.Nullable {
-			n := int32(v.(int))
-			v = &n
+			if a.Nullable {
+				v = &ia
+			} else {
+				v = ia
+			}
 		} else {
-			v = int32(v.(int))
+			v, err = strconv.Atoi(string(data))
+
+			if a.Nullable {
+				n := int32(v.(int))
+				v = &n
+			} else {
+				v = int32(v.(int))
+			}
 		}
 	case AttrTypeInt64:
-		v, err = strconv.Atoi(string(data))
+		if a.Array {
+			var ia []int64
+			err = json.Unmarshal(data, &ia)
 
-		if a.Nullable {
-			n := int64(v.(int))
-			v = &n
+			if a.Nullable {
+				v = &ia
+			} else {
+				v = ia
+			}
 		} else {
-			v = int64(v.(int))
+			v, err = strconv.Atoi(string(data))
+
+			if a.Nullable {
+				n := int64(v.(int))
+				v = &n
+			} else {
+				v = int64(v.(int))
+			}
 		}
 	case AttrTypeUint:
-		v, err = strconv.ParseUint(string(data), 10, 64)
+		if a.Array {
+			var ia []uint
+			err = json.Unmarshal(data, &ia)
 
-		if a.Nullable {
-			n := uint(v.(uint64))
-			v = &n
+			if a.Nullable {
+				v = &ia
+			} else {
+				v = ia
+			}
 		} else {
-			v = uint(v.(uint64))
+			v, err = strconv.ParseUint(string(data), 10, 64)
+
+			if a.Nullable {
+				n := uint(v.(uint64))
+				v = &n
+			} else {
+				v = uint(v.(uint64))
+			}
 		}
 	case AttrTypeUint8:
-		v, err = strconv.ParseUint(string(data), 10, 8)
+		if a.Array {
+			var ia []uint8
+			err = json.Unmarshal(data, &ia)
 
-		if a.Nullable {
-			n := uint8(v.(uint64))
-			v = &n
+			if a.Nullable {
+				v = &ia
+			} else {
+				v = ia
+			}
 		} else {
-			v = uint8(v.(uint64))
+			v, err = strconv.ParseUint(string(data), 10, 8)
+
+			if a.Nullable {
+				n := uint8(v.(uint64))
+				v = &n
+			} else {
+				v = uint8(v.(uint64))
+			}
 		}
 	case AttrTypeUint16:
-		v, err = strconv.ParseUint(string(data), 10, 16)
+		if a.Array {
+			var ia []uint16
+			err = json.Unmarshal(data, &ia)
 
-		if a.Nullable {
-			n := uint16(v.(uint64))
-			v = &n
+			if a.Nullable {
+				v = &ia
+			} else {
+				v = ia
+			}
 		} else {
-			v = uint16(v.(uint64))
+			v, err = strconv.ParseUint(string(data), 10, 16)
+
+			if a.Nullable {
+				n := uint16(v.(uint64))
+				v = &n
+			} else {
+				v = uint16(v.(uint64))
+			}
 		}
 	case AttrTypeUint32:
-		v, err = strconv.ParseUint(string(data), 10, 32)
+		if a.Array {
+			var ia []uint32
+			err = json.Unmarshal(data, &ia)
 
-		if a.Nullable {
-			n := uint32(v.(uint64))
-			v = &n
+			if a.Nullable {
+				v = &ia
+			} else {
+				v = ia
+			}
 		} else {
-			v = uint32(v.(uint64))
+			v, err = strconv.ParseUint(string(data), 10, 32)
+
+			if a.Nullable {
+				n := uint32(v.(uint64))
+				v = &n
+			} else {
+				v = uint32(v.(uint64))
+			}
 		}
 	case AttrTypeUint64:
-		v, err = strconv.ParseUint(string(data), 10, 64)
+		if a.Array {
+			var ia []uint64
+			err = json.Unmarshal(data, &ia)
 
-		if a.Nullable {
-			n := v.(uint64)
-			v = &n
+			if a.Nullable {
+				v = &ia
+			} else {
+				v = ia
+			}
 		} else {
-			v = v.(uint64)
+			v, err = strconv.ParseUint(string(data), 10, 64)
+
+			if a.Nullable {
+				n := v.(uint64)
+				v = &n
+			} else {
+				v = v.(uint64)
+			}
+		}
+	case AttrTypeFloat32:
+		if a.Array {
+			var fa []float32
+			err = json.Unmarshal(data, &fa)
+
+			if a.Nullable {
+				v = &fa
+			} else {
+				v = fa
+			}
+		} else {
+			var f64 float64
+			f64, err = strconv.ParseFloat(string(data), 32)
+			if a.Nullable {
+				n := float32(f64)
+				v = &n
+			} else {
+				v = float32(f64)
+			}
+		}
+	case AttrTypeFloat64:
+		if a.Array {
+			var fa []float64
+			err = json.Unmarshal(data, &fa)
+
+			if a.Nullable {
+				v = &fa
+			} else {
+				v = fa
+			}
+		} else {
+			var f64 float64
+			f64, err = strconv.ParseFloat(string(data), 64)
+			if a.Nullable {
+				n := f64
+				v = &n
+			} else {
+				v = f64
+			}
 		}
 	case AttrTypeBool:
-		var b bool
-		if string(data) == "true" {
-			b = true
-		} else if string(data) != "false" {
-			err = errors.New("boolean is not true or false")
-		}
+		if a.Array {
+			var ba []bool
+			err = json.Unmarshal(data, &ba)
 
-		v = b
+			if a.Nullable {
+				v = &ba
+			} else {
+				v = ba
+			}
+		} else {
+			var b bool
+			if string(data) == "true" {
+				b = true
+			} else if string(data) != "false" {
+				err = errors.New("boolean is not true or false")
+			}
 
-		if a.Nullable {
-			v = &b
+			if a.Nullable {
+				v = &b
+			} else {
+				v = b
+			}
 		}
 	case AttrTypeTime:
-		var t time.Time
-		err = json.Unmarshal(data, &t)
-		v = t
+		if a.Array {
+			var ta []time.Time
+			err = json.Unmarshal(data, &ta)
 
-		if a.Nullable {
-			v = &t
+			if a.Nullable {
+				v = &ta
+			} else {
+				v = ta
+			}
+		} else {
+			var t time.Time
+			err = json.Unmarshal(data, &t)
+
+			if a.Nullable {
+				v = &t
+			} else {
+				v = t
+			}
 		}
 	case AttrTypeBytes:
 		s := make([]byte, len(data))
@@ -355,11 +583,7 @@ func (a Attr) UnmarshalToType(data []byte) (interface{}, error) {
 	}
 
 	if err != nil {
-		return nil, NewErrInvalidFieldValueInBody(
-			a.Name,
-			string(data),
-			GetAttrTypeString(a.Type, a.Nullable),
-		)
+		return nil, err
 	}
 
 	return v, nil
@@ -416,52 +640,61 @@ func (r Rel) String() string {
 	return id
 }
 
-// GetAttrType returns the attribute type as an int (see constants) and a
-// boolean that indicates whether the attribute can be null or not.
-func GetAttrType(t string) (int, bool) {
-	nullable := strings.HasPrefix(t, "*")
+// GetAttrType returns the attribute type as int (see constants) and whether
+// the type is an array and/or nullable (ptr).
+func GetAttrType(t string) (typ int, array bool, nullable bool) {
+	bi := strings.Index(t, "[]")
+	array = bi == 0 || bi == 1
+	nullable = strings.HasPrefix(t, "*")
 
-	if nullable {
+	switch {
+	case nullable && array:
+		t = t[3:]
+	case array:
+		t = t[2:]
+	case nullable:
 		t = t[1:]
 	}
 
 	switch t {
 	case "string":
-		return AttrTypeString, nullable
+		return AttrTypeString, array, nullable
 	case "int":
-		return AttrTypeInt, nullable
+		return AttrTypeInt, array, nullable
 	case "int8":
-		return AttrTypeInt8, nullable
+		return AttrTypeInt8, array, nullable
 	case "int16":
-		return AttrTypeInt16, nullable
+		return AttrTypeInt16, array, nullable
 	case "int32":
-		return AttrTypeInt32, nullable
+		return AttrTypeInt32, array, nullable
 	case "int64":
-		return AttrTypeInt64, nullable
+		return AttrTypeInt64, array, nullable
 	case "uint":
-		return AttrTypeUint, nullable
-	case "uint8":
-		return AttrTypeUint8, nullable
+		return AttrTypeUint, array, nullable
+	case "uint8", "byte":
+		return AttrTypeUint8, array, nullable
 	case "uint16":
-		return AttrTypeUint16, nullable
+		return AttrTypeUint16, array, nullable
 	case "uint32":
-		return AttrTypeUint32, nullable
+		return AttrTypeUint32, array, nullable
 	case "uint64":
-		return AttrTypeUint64, nullable
+		return AttrTypeUint64, array, nullable
+	case "float32":
+		return AttrTypeFloat32, array, nullable
+	case "float64":
+		return AttrTypeFloat64, array, nullable
 	case "bool":
-		return AttrTypeBool, nullable
-	case "time.Time", "time":
-		return AttrTypeTime, nullable
-	case "[]uint8", "[]byte", "bytes":
-		return AttrTypeBytes, nullable
+		return AttrTypeBool, array, nullable
+	case "time.Time":
+		return AttrTypeTime, array, nullable
 	default:
-		return AttrTypeInvalid, false
+		return AttrTypeInvalid, false, false
 	}
 }
 
 // GetAttrTypeString returns the name of the attribute type specified by t (see
-// constants) and nullable.
-func GetAttrTypeString(t int, nullable bool) string {
+// constants), array and nullable.
+func GetAttrTypeString(t int, array, nullable bool) string {
 	str := ""
 
 	switch t {
@@ -481,20 +714,29 @@ func GetAttrTypeString(t int, nullable bool) string {
 		str = "uint"
 	case AttrTypeUint8:
 		str = "uint8"
+	case AttrTypeBytes:
+		array = true
+		str = "uint8"
 	case AttrTypeUint16:
 		str = "uint16"
 	case AttrTypeUint32:
 		str = "uint32"
 	case AttrTypeUint64:
 		str = "uint64"
+	case AttrTypeFloat32:
+		str = "float32"
+	case AttrTypeFloat64:
+		str = "float64"
 	case AttrTypeBool:
 		str = "bool"
 	case AttrTypeTime:
-		str = "time"
-	case AttrTypeBytes:
-		str = "bytes"
+		str = "time.Time"
 	default:
-		str = ""
+		return ""
+	}
+
+	if array {
+		str = "[]" + str
 	}
 
 	if nullable {
@@ -507,94 +749,193 @@ func GetAttrTypeString(t int, nullable bool) string {
 // GetZeroValue returns the zero value of the attribute type represented by the
 // specified int (see constants).
 //
-// If nullable is true, the returned value is a nil pointer.
-func GetZeroValue(t int, nullable bool) interface{} {
+// If nullable is true, the returned value is a nil pointer. if nullable and array
+// are true, a null pointer to a slice is returned.
+func GetZeroValue(t int, array, nullable bool) interface{} {
 	switch t {
 	case AttrTypeString:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]string)(nil)
+		case array:
+			return []string{}
+		case nullable:
 			return (*string)(nil)
 		}
 
 		return ""
 	case AttrTypeInt:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]int)(nil)
+		case array:
+			return []int{}
+		case nullable:
 			return (*int)(nil)
 		}
 
-		return int(0)
+		return 0
 	case AttrTypeInt8:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]int8)(nil)
+		case array:
+			return []int8{}
+		case nullable:
 			return (*int8)(nil)
 		}
 
 		return int8(0)
 	case AttrTypeInt16:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]int16)(nil)
+		case array:
+			return []int16{}
+		case nullable:
 			return (*int16)(nil)
 		}
 
 		return int16(0)
 	case AttrTypeInt32:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]int32)(nil)
+		case array:
+			return []int32{}
+		case nullable:
 			return (*int32)(nil)
 		}
 
 		return int32(0)
 	case AttrTypeInt64:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]int64)(nil)
+		case array:
+			return []int64{}
+		case nullable:
 			return (*int64)(nil)
 		}
 
 		return int64(0)
 	case AttrTypeUint:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]uint)(nil)
+		case array:
+			return []uint{}
+		case nullable:
 			return (*uint)(nil)
 		}
 
 		return uint(0)
-	case AttrTypeUint8:
-		if nullable {
+	case AttrTypeUint8, AttrTypeBytes:
+		if t == AttrTypeBytes {
+			array = true
+		}
+
+		switch {
+		case nullable && array:
+			return (*[]uint8)(nil)
+		case array:
+			return []uint8{}
+		case nullable:
 			return (*uint8)(nil)
 		}
 
 		return uint8(0)
 	case AttrTypeUint16:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]uint16)(nil)
+		case array:
+			return []uint16{}
+		case nullable:
 			return (*uint16)(nil)
 		}
 
 		return uint16(0)
 	case AttrTypeUint32:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]uint32)(nil)
+		case array:
+			return []uint32{}
+		case nullable:
 			return (*uint32)(nil)
 		}
 
 		return uint32(0)
 	case AttrTypeUint64:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]uint64)(nil)
+		case array:
+			return []uint64{}
+		case nullable:
 			return (*uint64)(nil)
 		}
 
 		return uint64(0)
+	case AttrTypeFloat32:
+		switch {
+		case nullable && array:
+			return (*[]float32)(nil)
+		case array:
+			return []float32{}
+		case nullable:
+			return (*float32)(nil)
+		}
+
+		return float32(0)
+	case AttrTypeFloat64:
+		switch {
+		case nullable && array:
+			return (*[]float64)(nil)
+		case array:
+			return []float64{}
+		case nullable:
+			return (*float64)(nil)
+		}
+
+		return float64(0)
 	case AttrTypeBool:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]bool)(nil)
+		case array:
+			return []bool{}
+		case nullable:
 			return (*bool)(nil)
 		}
 
 		return false
 	case AttrTypeTime:
-		if nullable {
+		switch {
+		case nullable && array:
+			return (*[]time.Time)(nil)
+		case array:
+			return []time.Time{}
+		case nullable:
 			return (*time.Time)(nil)
 		}
 
 		return time.Time{}
-	case AttrTypeBytes:
-		if nullable {
-			return (*[]byte)(nil)
-		}
-
-		return []byte{}
 	default:
 		return nil
 	}
+}
+
+func isNil(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice:
+		return reflect.ValueOf(v).IsNil()
+	}
+
+	return false
 }

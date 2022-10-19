@@ -1,0 +1,50 @@
+{
+	"data": {
+		"attributes": {
+			"strarr": [
+				"foo",
+				"bar",
+				"baz"
+			],
+			"int8arr": [
+				-100,
+				-50,
+				0,
+				50,
+				100
+			],
+			"int32arr": [
+				-10000000,
+				123456,
+				-45,
+				333333333
+			],
+			"uint8arr": "aGVsbG8gd29ybGQ=",
+			"boolarr": [
+				true,
+				false,
+				true,
+				true
+			],
+			"int16arr": [],
+			"float32arr": [
+				3.4028235e+38
+			],
+			"float64arr": [
+				1.7976931348623157e+308
+			]
+		},
+		"id": "id1",
+		"links": {
+			"self": "/mocktype4/id1"
+		},
+
+		"type": "mocktype4"
+	},
+	"jsonapi": {
+		"version": "1.0"
+	},
+	"links": {
+		"self": "/fake/path?fields%5Bmocktype4%5D=boolarr%2Cfloat32arr%2Cfloat64arr%2Cint16arr%2Cint32arr%2Cint8arr%2Cstrarr%2Cuint8arr"
+	}
+}

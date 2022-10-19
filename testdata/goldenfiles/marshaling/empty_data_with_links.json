@@ -4,7 +4,7 @@
 		"version": "1.0"
 	},
 	"links": {
-		"self": "https://example.org/fake/path?fields%5Bmocktype%",
+		"self": "https://example.org/fake/path",
 		"foo": {
 			"href": "https://example.org/bar",
 			"meta": {

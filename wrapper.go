@@ -1,9 +1,9 @@
 package jsonapi
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 )
 
 // Wrapper wraps a reflect.Value that represents a struct.
@@ -13,13 +13,9 @@ import (
 // It implements the Resource interface, so the value can be handled as if it
 // were a Resource.
 type Wrapper struct {
-	val reflect.Value // Actual value (with content)
-
-	// Structure
-	typ   string
-	attrs map[string]Attr
-	rels  map[string]Rel
-	meta  Meta
+	val  reflect.Value // Actual value (with content)
+	typ  Type
+	meta Meta
 }
 
 // Wrap wraps v (a struct or a pointer to a struct) and returns a Wrapper that
@@ -32,14 +28,8 @@ type Wrapper struct {
 func Wrap(v interface{}) *Wrapper {
 	val := reflect.ValueOf(v)
 
-	switch {
-	case val.Kind() != reflect.Ptr:
-		if val.Kind() != reflect.Struct {
-			panic("value has to be a pointer to a struct")
-		}
-
+	if val.Kind() != reflect.Ptr {
 		newVal := reflect.New(val.Type()).Elem()
-
 		for i := 0; i < newVal.NumField(); i++ {
 			f := newVal.Field(i)
 			if f.CanSet() {
@@ -48,9 +38,7 @@ func Wrap(v interface{}) *Wrapper {
 		}
 
 		val = newVal
-	case val.Elem().Kind() != reflect.Struct:
-		panic("value has to be a pointer to a struct")
-	default:
+	} else {
 		val = val.Elem()
 	}
 
@@ -59,56 +47,15 @@ func Wrap(v interface{}) *Wrapper {
 		panic("invalid struct: " + err.Error())
 	}
 
+	typ, attrs, rels := getTypeInfo(val)
+
 	w := &Wrapper{
 		val: val,
-	}
-
-	// ID and type
-	_, w.typ = IDAndType(v)
-
-	// Attributes
-	w.attrs = map[string]Attr{}
-	for i := 0; i < w.val.NumField(); i++ {
-		fs := w.val.Type().Field(i)
-		jsonTag := fs.Tag.Get("json")
-		apiTag := fs.Tag.Get("api")
-
-		if apiTag == "attr" {
-			typ, null := GetAttrType(fs.Type.String())
-			w.attrs[jsonTag] = Attr{
-				Name:     jsonTag,
-				Type:     typ,
-				Nullable: null,
-			}
-		}
-	}
-
-	// Relationships
-	w.rels = map[string]Rel{}
-	for i := 0; i < w.val.NumField(); i++ {
-		fs := w.val.Type().Field(i)
-		jsonTag := fs.Tag.Get("json")
-		relTag := strings.Split(fs.Tag.Get("api"), ",")
-		invName := ""
-
-		if len(relTag) == 3 {
-			invName = relTag[2]
-		}
-
-		toOne := true
-		if fs.Type.String() == "[]string" {
-			toOne = false
-		}
-
-		if relTag[0] == "rel" {
-			w.rels[jsonTag] = Rel{
-				FromName: jsonTag,
-				ToType:   relTag[1],
-				ToOne:    toOne,
-				ToName:   invName,
-				FromType: w.typ,
-			}
-		}
+		typ: Type{
+			Name:  typ,
+			Attrs: attrs,
+			Rels:  rels,
+		},
 	}
 
 	// Meta
@@ -128,17 +75,17 @@ func (w *Wrapper) IDAndType() (string, string) {
 
 // Attrs returns the attributes of the Wrapper.
 func (w *Wrapper) Attrs() map[string]Attr {
-	return w.attrs
+	return w.typ.Attrs
 }
 
 // Rels returns the relationships of the Wrapper.
 func (w *Wrapper) Rels() map[string]Rel {
-	return w.rels
+	return w.typ.Rels
 }
 
 // Attr returns the attribute that corresponds to the given key.
 func (w *Wrapper) Attr(key string) Attr {
-	for _, attr := range w.attrs {
+	for _, attr := range w.typ.Attrs {
 		if attr.Name == key {
 			return attr
 		}
@@ -149,7 +96,7 @@ func (w *Wrapper) Attr(key string) Attr {
 
 // Rel returns the relationship that corresponds to the given key.
 func (w *Wrapper) Rel(key string) Rel {
-	for _, rel := range w.rels {
+	for _, rel := range w.typ.Rels {
 		if rel.FromName == key {
 			return rel
 		}
@@ -161,7 +108,6 @@ func (w *Wrapper) Rel(key string) Rel {
 // New returns a copy of the resource under the wrapper.
 func (w *Wrapper) New() Resource {
 	newVal := reflect.New(w.val.Type())
-
 	return Wrap(newVal.Interface())
 }
 
@@ -173,11 +119,7 @@ func (w *Wrapper) GetID() string {
 
 // GetType returns the wrapped resource's type.
 func (w *Wrapper) GetType() Type {
-	return Type{
-		Name:  w.typ,
-		Attrs: w.attrs,
-		Rels:  w.rels,
-	}
+	return w.typ
 }
 
 // Get returns the value associated to the attribute named after key.
@@ -249,8 +191,14 @@ func (w *Wrapper) getField(key string) interface{} {
 		sf := w.val.Type().Field(i)
 
 		if key == sf.Tag.Get("json") && sf.Tag.Get("api") != "" {
-			if strings.HasPrefix(field.Type().String(), "*") && field.IsNil() {
-				return nil
+			attr := w.typ.Attrs[key]
+
+			if (attr.Array || attr.Nullable) && field.IsNil() {
+				if attr.Unmarshaler != nil {
+					return attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
+				}
+
+				return GetZeroValue(attr.Type, attr.Array, attr.Nullable)
 			}
 
 			return field.Interface()
@@ -289,4 +237,92 @@ func (w *Wrapper) setField(key string, v interface{}) {
 	}
 
 	panic(fmt.Sprintf("attribute %q does not exist", key))
+}
+
+// ReflectTypeUnmarshaler is a reflection based type unmarshaler.
+type ReflectTypeUnmarshaler struct {
+	// Type is the "base" type (not nullable and not an array) of the attribute. For example, for
+	// a Struct property of type "*[]string", reflect.TypeOf("") would be correct.
+	Type reflect.Type
+}
+
+func (u ReflectTypeUnmarshaler) typ(array, nullable bool) reflect.Type {
+	switch {
+	case array && nullable:
+		return reflect.New(reflect.SliceOf(u.Type)).Type()
+	case array:
+		return reflect.SliceOf(u.Type)
+	case nullable:
+		return reflect.New(u.Type).Type()
+	}
+
+	return u.Type
+}
+
+func (u ReflectTypeUnmarshaler) GetZeroValue(array, nullable bool) interface{} {
+	var typ reflect.Type
+
+	switch {
+	case array && nullable:
+		typ = u.typ(true, true)
+		return reflect.Zero(typ).Interface()
+	case array:
+		typ = u.typ(true, false)
+		return reflect.MakeSlice(typ, 0, 0).Interface()
+	case nullable:
+		typ = u.typ(false, true)
+		return reflect.New(typ).Elem().Interface()
+	}
+
+	typ = u.Type
+
+	// Make sure that types with nil-zero value are initialized empty instead.
+	if typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array {
+		return reflect.MakeSlice(typ, 0, 0).Slice(0, 0).Interface()
+	} else if typ.Kind() == reflect.Map {
+		return reflect.MakeMap(typ).Interface()
+	}
+
+	return reflect.Zero(typ).Interface()
+}
+
+func (u ReflectTypeUnmarshaler) UnmarshalToType(data []byte, array, nullable bool) (interface{}, error) {
+	if data == nil || (!nullable && string(data) == "null") {
+		return nil, fmt.Errorf("type is not nullable")
+	}
+
+	if nullable && string(data) == "null" {
+		return u.GetZeroValue(array, nullable), nil
+	}
+
+	var (
+		val interface{}
+		err error
+	)
+
+	if array {
+		tv := reflect.New(u.typ(true, false))
+		err = json.Unmarshal(data, tv.Interface())
+
+		if nullable {
+			val = tv.Interface()
+		} else {
+			val = tv.Elem().Interface()
+		}
+	} else {
+		tv := reflect.New(u.typ(false, false))
+		err = json.Unmarshal(data, tv.Interface())
+
+		if nullable {
+			val = tv.Interface()
+		} else {
+			val = tv.Elem().Interface()
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return val, nil
 }

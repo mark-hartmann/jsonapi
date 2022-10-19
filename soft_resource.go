@@ -1,7 +1,7 @@
 package jsonapi
 
 import (
-	"fmt"
+	"reflect"
 	"time"
 )
 
@@ -152,11 +152,25 @@ func (sr *SoftResource) Set(key string, v interface{}) {
 	}
 
 	if attr, ok := sr.Type.Attrs[key]; ok {
-		typ, nullable := GetAttrType(fmt.Sprintf("%T", v))
-		if attr.Type == typ && attr.Nullable == nullable {
+		if isNil(v) {
+			if attr.Unmarshaler != nil {
+				sr.data[key] = attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
+			} else {
+				sr.data[key] = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
+			}
+
+			return
+		}
+
+		var zv interface{}
+		if attr.Unmarshaler != nil {
+			zv = attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
+		} else {
+			zv = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
+		}
+
+		if reflect.TypeOf(v) == reflect.TypeOf(zv) {
 			sr.data[key] = v
-		} else if v == nil && attr.Nullable {
-			sr.data[key] = GetZeroValue(attr.Type, attr.Nullable)
 		}
 	} else if rel, ok := sr.Type.Rels[key]; ok {
 		if _, ok := v.(string); ok && rel.ToOne {
@@ -231,9 +245,14 @@ func (sr *SoftResource) check() {
 	}
 
 	for i := range sr.Type.Attrs {
-		n := sr.Type.Attrs[i].Name
-		if _, ok := sr.data[n]; !ok {
-			sr.data[n] = GetZeroValue(sr.Type.Attrs[i].Type, sr.Type.Attrs[i].Nullable)
+		attr := sr.Type.Attrs[i]
+
+		if _, ok := sr.data[attr.Name]; !ok {
+			if attr.Type == AttrTypeBytes {
+				sr.data[attr.Name] = GetZeroValue(attr.Type, true, attr.Nullable)
+			} else {
+				sr.data[attr.Name] = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
+			}
 		}
 	}
 
@@ -268,78 +287,182 @@ func (sr *SoftResource) check() {
 }
 
 func copyData(d map[string]interface{}) map[string]interface{} {
+	// todo: handle AttrTypeOther
 	d2 := map[string]interface{}{}
 
 	for k, v := range d {
 		switch v2 := v.(type) {
-		case string:
-			d2[k] = v2
-		case int:
-			d2[k] = v2
-		case int8:
-			d2[k] = v2
-		case int16:
-			d2[k] = v2
-		case int32:
-			d2[k] = v2
-		case int64:
-			d2[k] = v2
-		case uint:
-			d2[k] = v2
-		case uint8:
-			d2[k] = v2
-		case uint16:
-			d2[k] = v2
-		case uint32:
-			d2[k] = v2
-		case uint64:
-			d2[k] = v2
-		case bool:
-			d2[k] = v2
-		case time.Time:
-			d2[k] = v2
-		case []uint8:
-			nv := make([]byte, len(v2))
-			_ = copy(nv, v2)
-			d2[k] = v2
+		// String array
 		case []string:
 			nv := make([]string, len(v2))
 			_ = copy(nv, v2)
 			d2[k] = v2
-		case *string:
+		case *[]string:
+			if v2 == nil {
+				d2[k] = (*[]string)(nil)
+			} else {
+				nv := make([]string, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Int array
+		case []int:
+			nv := make([]int, len(v2))
+			_ = copy(nv, v2)
 			d2[k] = v2
-		case *int:
+		case *[]int:
+			if v2 == nil {
+				d2[k] = (*[]int)(nil)
+			} else {
+				nv := make([]int, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Int8 array
+		case []int8:
+			nv := make([]int8, len(v2))
+			_ = copy(nv, v2)
 			d2[k] = v2
-		case *int8:
+		case *[]int8:
+			if v2 == nil {
+				d2[k] = (*[]int8)(nil)
+			} else {
+				nv := make([]int8, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Int16 array
+		case []int16:
+			nv := make([]int16, len(v2))
+			_ = copy(nv, v2)
 			d2[k] = v2
-		case *int16:
+		case *[]int16:
+			if v2 == nil {
+				d2[k] = (*[]int16)(nil)
+			} else {
+				nv := make([]int16, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Int32 array
+		case []int32:
+			nv := make([]int32, len(v2))
+			_ = copy(nv, v2)
 			d2[k] = v2
-		case *int32:
+		case *[]int32:
+			if v2 == nil {
+				d2[k] = (*[]int32)(nil)
+			} else {
+				nv := make([]int32, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Int64 array
+		case []int64:
+			nv := make([]int64, len(v2))
+			_ = copy(nv, v2)
 			d2[k] = v2
-		case *int64:
+		case *[]int64:
+			if v2 == nil {
+				d2[k] = (*[]int64)(nil)
+			} else {
+				nv := make([]int64, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Uint array
+		case []uint:
+			nv := make([]uint, len(v2))
+			_ = copy(nv, v2)
 			d2[k] = v2
-		case *uint:
-			d2[k] = v2
-		case *uint8:
-			d2[k] = v2
-		case *uint16:
-			d2[k] = v2
-		case *uint32:
-			d2[k] = v2
-		case *uint64:
-			d2[k] = v2
-		case *bool:
-			d2[k] = v2
-		case *time.Time:
+		case *[]uint:
+			if v2 == nil {
+				d2[k] = (*[]uint)(nil)
+			} else {
+				nv := make([]uint, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Uint8 array
+		case []uint8:
+			nv := make([]uint8, len(v2))
+			_ = copy(nv, v2)
 			d2[k] = v2
 		case *[]uint8:
 			if v2 == nil {
 				d2[k] = (*[]uint8)(nil)
 			} else {
-				nv := make([]byte, len(*v2))
+				nv := make([]uint8, len(*v2))
 				_ = copy(nv, *v2)
 				d2[k] = v2
 			}
+		// Uint16 array
+		case []uint16:
+			nv := make([]uint16, len(v2))
+			_ = copy(nv, v2)
+			d2[k] = v2
+		case *[]uint16:
+			if v2 == nil {
+				d2[k] = (*[]uint16)(nil)
+			} else {
+				nv := make([]uint16, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Uint32 array
+		case []uint32:
+			nv := make([]uint32, len(v2))
+			_ = copy(nv, v2)
+			d2[k] = v2
+		case *[]uint32:
+			if v2 == nil {
+				d2[k] = (*[]uint32)(nil)
+			} else {
+				nv := make([]uint32, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Uint64 array
+		case []uint64:
+			nv := make([]uint64, len(v2))
+			_ = copy(nv, v2)
+			d2[k] = v2
+		case *[]uint64:
+			if v2 == nil {
+				d2[k] = (*[]uint64)(nil)
+			} else {
+				nv := make([]uint64, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Bool array
+		case []bool:
+			nv := make([]bool, len(v2))
+			_ = copy(nv, v2)
+			d2[k] = v2
+		case *[]bool:
+			if v2 == nil {
+				d2[k] = (*[]bool)(nil)
+			} else {
+				nv := make([]bool, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		// Time array
+		case []time.Time:
+			nv := make([]time.Time, len(v2))
+			_ = copy(nv, v2)
+			d2[k] = v2
+		case *[]time.Time:
+			if v2 == nil {
+				d2[k] = (*[]time.Time)(nil)
+			} else {
+				nv := make([]time.Time, len(*v2))
+				_ = copy(nv, *v2)
+				d2[k] = v2
+			}
+		default:
+			d2[k] = v2
 		}
 	}
 

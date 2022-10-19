@@ -3,6 +3,8 @@ package jsonapi_test
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -11,53 +13,146 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestType(t *testing.T) {
-	assert := assert.New(t)
+func TestType_AddAttr(t *testing.T) {
+	attrTests := map[string]struct {
+		attr Attr
+		err  bool
+	}{
+		"attr string": {
+			attr: Attr{
+				Name:     "attr1",
+				Type:     AttrTypeString,
+				Nullable: false,
+			},
+		},
+		"attr string with type unmarshaler": {
+			attr: Attr{
+				Name:        "attr",
+				Type:        AttrTypeOther,
+				Unmarshaler: ReflectTypeUnmarshaler{Type: reflect.TypeOf("")},
+			},
+			err: false,
+		},
+		"attr other with type unmarshaler": {
+			attr: Attr{
+				Name:        "attr",
+				Type:        AttrTypeString,
+				Unmarshaler: ReflectTypeUnmarshaler{Type: reflect.TypeOf("")},
+			},
+			err: false,
+		},
+		"attr *string": {
+			attr: Attr{
+				Name:     "attr",
+				Type:     AttrTypeString,
+				Nullable: true,
+			},
+		},
+		"attr *[]string": {
+			attr: Attr{
+				Name:     "attr",
+				Type:     AttrTypeString,
+				Array:    true,
+				Nullable: true,
+			},
+		},
+		// AttrTypeBytes is implicitly Array=true
+		"attr bytes (non-array)": {
+			attr: Attr{
+				Name:     "attr",
+				Type:     AttrTypeBytes,
+				Nullable: true,
+			},
+		},
+		"attr (invalid type)": {
+			attr: Attr{Name: "invalid"},
+			err:  true,
+		},
+		"attr (no name)": {
+			attr: Attr{Type: AttrTypeBool},
+			err:  true,
+		},
+		"attr (no type unmarshaler)": {
+			attr: Attr{Type: AttrTypeOther},
+			err:  true,
+		},
+	}
+
+	for name, test := range attrTests {
+		t.Run(name, func(t *testing.T) {
+			typ := &Type{
+				Name: "type",
+			}
+
+			err := typ.AddAttr(test.attr)
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 
 	typ := &Type{
 		Name: "type1",
 	}
-	attr1 := Attr{
-		Name:     "attr1",
-		Type:     AttrTypeString,
-		Nullable: false,
-	}
-	err := typ.AddAttr(attr1)
-	assert.NoError(err)
-
-	rel1 := Rel{
-		FromName: "rel1",
-		ToType:   "type1",
-	}
-	err = typ.AddRel(rel1)
-	assert.NoError(err)
-
-	assert.Contains(typ.Attrs, "attr1")
-	assert.Contains(typ.Rels, "rel1")
-
-	// Add invalid attribute (no name)
-	err = typ.AddAttr(Attr{})
-	assert.Error(err)
-
-	// Add invalid attribute (invalid type)
-	err = typ.AddAttr(Attr{Name: "invalid"})
-	assert.Error(err)
+	_ = typ.AddAttr(Attr{
+		Name: "attr1",
+		Type: AttrTypeString,
+	})
 
 	// Add invalid attribute (name already used)
-	err = typ.AddAttr(Attr{Name: "attr1", Type: AttrTypeString})
-	assert.Error(err)
+	err := typ.AddAttr(Attr{Name: "attr1", Type: AttrTypeString})
+	assert.Error(t, err)
+}
 
-	// Add invalid relationship (no name)
-	err = typ.AddRel(Rel{})
-	assert.Error(err)
+func TestType_AddRel(t *testing.T) {
+	relTests := map[string]struct {
+		rel Rel
+		err bool
+	}{
+		"rel": {
+			rel: Rel{
+				FromName: "rel1",
+				ToType:   "type1",
+			},
+		},
+		"invalid rel (no name)": {
+			rel: Rel{},
+			err: true,
+		},
+		"invalid rel (empty type)": {
+			rel: Rel{FromName: "invalid"},
+			err: true,
+		},
+	}
 
-	// Add invalid relationship (empty type)
-	err = typ.AddRel(Rel{FromName: "invalid"})
-	assert.Error(err)
+	for name, test := range relTests {
+		t.Run(name, func(t *testing.T) {
+			typ := &Type{
+				Name: "type",
+			}
+
+			err := typ.AddRel(test.rel)
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+
+	typ := &Type{
+		Name: "type1",
+	}
+	_ = typ.AddRel(Rel{
+		FromName: "rel1",
+		ToType:   "type1",
+	})
 
 	// Add invalid relationship (name already used)
-	err = typ.AddRel(Rel{FromName: "rel1", ToType: "type1"})
-	assert.Error(err)
+	err := typ.AddRel(Rel{FromName: "rel1", ToType: "type1"})
+	assert.Error(t, err)
 }
 
 // TODO Add tests with attributes and relationships.
@@ -111,57 +206,108 @@ func TestAttrUnmarshalToType(t *testing.T) {
 	assert := assert.New(t)
 
 	var (
-		vstr    = "str"
-		vint    = int(1)
-		vint8   = int8(8)
-		vint16  = int16(16)
-		vint32  = int32(32)
-		vint64  = int64(64)
-		vuint   = uint(1)
-		vuint8  = uint8(8)
-		vuint16 = uint16(16)
-		vuint32 = uint32(32)
-		vuint64 = uint64(64)
-		vbool   = true
+		vstr     = "str"
+		vint     = int(1)
+		vint8    = int8(8)
+		vint16   = int16(16)
+		vint32   = int32(32)
+		vint64   = int64(64)
+		vuint    = uint(1)
+		vuint8   = uint8(8)
+		vuint16  = uint16(16)
+		vuint32  = uint32(32)
+		vuint64  = uint64(64)
+		vfloat32 = float32(math.MaxFloat32)
+		vfloat64 = math.MaxFloat64
+		vbool    = true
+
+		vstrarr     = []string{"str"}
+		vintarr     = []int{1}
+		vint8arr    = []int8{8}
+		vint16arr   = []int16{16}
+		vint32arr   = []int32{32}
+		vint64arr   = []int64{64}
+		vuintarr    = []uint{1}
+		vuint8arr   = []uint8{8}
+		vuint16arr  = []uint16{16}
+		vuint32arr  = []uint32{32}
+		vuint64arr  = []uint64{64}
+		vfloat32arr = []float32{math.MaxFloat32}
+		vfloat64arr = []float64{math.MaxFloat64}
+		vboolarr    = []bool{true}
+		vtimearr    = []time.Time{{}}
 	)
 
 	tests := []struct {
 		val interface{}
 	}{
-		{val: "str"},            // string
-		{val: 1},                // int
-		{val: int8(8)},          // int8
-		{val: int16(16)},        // int16
-		{val: int32(32)},        // int32
-		{val: int64(64)},        // int64
-		{val: uint(1)},          // uint
-		{val: uint8(8)},         // uint8
-		{val: uint16(16)},       // uint16
-		{val: uint32(32)},       // uint32
-		{val: uint64(64)},       // uint64
-		{val: true},             // bool
-		{val: time.Time{}},      // time
-		{val: []byte{1, 2, 3}},  // []byte
-		{val: &vstr},            // *string
-		{val: &vint},            // *int
-		{val: &vint8},           // *int8
-		{val: &vint16},          // *int16
-		{val: &vint32},          // *int32
-		{val: &vint64},          // *int64
-		{val: &vuint},           // *uint
-		{val: &vuint8},          // *uint8
-		{val: &vuint16},         // *uint16
-		{val: &vuint32},         // *uint32
-		{val: &vuint64},         // *uint64
-		{val: &vbool},           // *bool
-		{val: &time.Time{}},     // *time
-		{val: &[]byte{1, 2, 3}}, // *[]byte
+		{val: "str"},       // string
+		{val: 1},           // int
+		{val: int8(8)},     // int8
+		{val: int16(16)},   // int16
+		{val: int32(32)},   // int32
+		{val: int64(64)},   // int64
+		{val: uint(1)},     // uint
+		{val: uint8(8)},    // uint8
+		{val: uint16(16)},  // uint16
+		{val: uint32(32)},  // uint32
+		{val: uint64(64)},  // uint64
+		{val: true},        // bool
+		{val: time.Time{}}, // time
+
+		{val: &vstr},        // *string
+		{val: &vint},        // *int
+		{val: &vint8},       // *int8
+		{val: &vint16},      // *int16
+		{val: &vint32},      // *int32
+		{val: &vint64},      // *int64
+		{val: &vuint},       // *uint
+		{val: &vuint8},      // *uint8
+		{val: &vuint16},     // *uint16
+		{val: &vuint32},     // *uint32
+		{val: &vuint64},     // *uint64
+		{val: &vfloat32},    // *float32
+		{val: &vfloat64},    // *float64
+		{val: &vbool},       // *bool
+		{val: &time.Time{}}, // *time
+
+		{val: vstrarr},     // []string
+		{val: vintarr},     // []int
+		{val: vint8arr},    // []int8
+		{val: vint16arr},   // []int16
+		{val: vint32arr},   // []int32
+		{val: vint64arr},   // []int64
+		{val: vuintarr},    // []uint
+		{val: vuint8arr},   // []uint8
+		{val: vuint16arr},  // []uint16
+		{val: vuint32arr},  // []uint32
+		{val: vuint64arr},  // []uint64
+		{val: vfloat32arr}, // []float32
+		{val: vfloat64arr}, // []float64
+		{val: vboolarr},    // []bool
+		{val: vtimearr},    // []time.Time
+
+		{val: &vstrarr},     // *[]string
+		{val: &vintarr},     // *[]int
+		{val: &vint8arr},    // *[]int8
+		{val: &vint16arr},   // *[]int16
+		{val: &vint32arr},   // *[]int32
+		{val: &vint64arr},   // *[]int64
+		{val: &vuintarr},    // *[]uint
+		{val: &vuint8arr},   // *[]uint8
+		{val: &vuint16arr},  // *[]uint16
+		{val: &vuint32arr},  // *[]uint32
+		{val: &vuint64arr},  // *[]uint64
+		{val: &vfloat32arr}, // *[]float32
+		{val: &vfloat64arr}, // *[]float64
+		{val: &vboolarr},    // *[]bool
+		{val: &vtimearr},    // *[]time.Time
 	}
 
 	attr := Attr{}
 
 	for _, test := range tests {
-		attr.Type, attr.Nullable = GetAttrType(fmt.Sprintf("%T", test.val))
+		attr.Type, attr.Array, attr.Nullable = GetAttrType(fmt.Sprintf("%T", test.val))
 		p, _ := json.Marshal(test.val)
 		val, err := attr.UnmarshalToType(p)
 		assert.NoError(err)
@@ -169,34 +315,166 @@ func TestAttrUnmarshalToType(t *testing.T) {
 		assert.Equal(fmt.Sprintf("%T", test.val), fmt.Sprintf("%T", val))
 	}
 
-	// Null value
-	attr.Nullable = true
-	val, err := attr.UnmarshalToType([]byte("null"))
-	assert.NoError(err)
-	assert.Nil(val)
-
-	// False value
+	// boolean not-true value
+	attr.Array = false
+	attr.Nullable = false
 	attr.Type = AttrTypeBool
-	val, err = attr.UnmarshalToType([]byte("nottrue"))
+	val, err := attr.UnmarshalToType([]byte("nottrue"))
 	assert.Error(err)
 	assert.Nil(val)
-
-	// Invalid slide of bytes
-	attr.Type = AttrTypeBytes
-
-	assert.Panics(func() {
-		_, _ = attr.UnmarshalToType([]byte("invalid"))
-	})
-	// assert.Error(err)
-	// assert.Nil(val)
 
 	// Invalid attribute type
 	attr.Type = AttrTypeInvalid
 	val, err = attr.UnmarshalToType([]byte("invalid"))
-	err2, ok := err.(Error)
-	assert.True(ok)
-	assert.IsType(Error{}, err2)
+	assert.Error(err)
 	assert.Nil(val)
+}
+
+func TestAttrUnmarshalToType_Nil(t *testing.T) {
+	attr := Attr{Type: AttrTypeString}
+	v, err := attr.UnmarshalToType(nil)
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeString, Nullable: true}
+	v, err = attr.UnmarshalToType(nil)
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeString, Array: true}
+	v, err = attr.UnmarshalToType(nil)
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeString, Nullable: true, Array: true}
+	v, err = attr.UnmarshalToType(nil)
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	// The compiler is smart enough, but better safe than sorry.
+	attr = Attr{Type: AttrTypeString, Nullable: true, Array: true}
+	v, err = attr.UnmarshalToType(([]byte)(nil))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+}
+
+func TestAttrUnmarshalToType_Null(t *testing.T) {
+	attr := Attr{Type: AttrTypeString}
+	v, err := attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeString, Nullable: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*string)(nil), v)
+
+	attr = Attr{Type: AttrTypeString, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeString, Nullable: true, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*[]string)(nil), v)
+
+	attr = Attr{Type: AttrTypeUint8}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeUint8, Nullable: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*uint8)(nil), v)
+
+	attr = Attr{Type: AttrTypeUint8, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeUint8, Nullable: true, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*[]uint8)(nil), v)
+
+	// AttrTypeBytes is implicitly Array=true
+	attr = Attr{Type: AttrTypeBytes}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeBytes, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.Error(t, err)
+	assert.Equal(t, nil, v)
+
+	attr = Attr{Type: AttrTypeBytes, Nullable: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*[]uint8)(nil), v)
+
+	attr = Attr{Type: AttrTypeBytes, Nullable: true, Array: true}
+	v, err = attr.UnmarshalToType([]byte("null"))
+	assert.NoError(t, err)
+	assert.Equal(t, (*[]uint8)(nil), v)
+}
+
+func TestAttrUnmarshalToType_Bytes(t *testing.T) {
+	t.Run("bytes", func(t *testing.T) {
+		bytes := []byte("hello world")
+		attr := Attr{Name: "bytes", Type: AttrTypeBytes, Array: true}
+		p, _ := json.Marshal(bytes)
+		assert.Equal(t, `"aGVsbG8gd29ybGQ="`, string(p))
+
+		val, err := attr.UnmarshalToType(p)
+		assert.NoError(t, err)
+		assert.Equal(t, bytes, val)
+	})
+
+	t.Run("nullable bytes", func(t *testing.T) {
+		bytes := []byte("hello world")
+		attr := Attr{Name: "bytes", Type: AttrTypeBytes, Array: true, Nullable: true}
+		p, _ := json.Marshal(bytes)
+		assert.Equal(t, `"aGVsbG8gd29ybGQ="`, string(p))
+
+		val, err := attr.UnmarshalToType(p)
+		assert.NoError(t, err)
+		assert.Equal(t, &bytes, val)
+	})
+
+	t.Run("[]uint8", func(t *testing.T) {
+		bytes := []uint8{1, 2, 4, 8, 16, 32}
+		attr := Attr{Name: "uint8arr", Type: AttrTypeUint8, Array: true, Nullable: false}
+
+		val, err := attr.UnmarshalToType([]byte("[1,2,4,8,16,32]"))
+		assert.NoError(t, err)
+		assert.Equal(t, bytes, val)
+
+		val, err = attr.UnmarshalToType([]byte("[]"))
+		assert.NoError(t, err)
+		assert.Equal(t, []byte{}, val)
+	})
+
+	t.Run("nullable []uint8", func(t *testing.T) {
+		attr := Attr{Name: "uint8arr", Type: AttrTypeUint8, Array: true, Nullable: true}
+
+		val, err := attr.UnmarshalToType([]byte("[1,2,4,8,16,32]"))
+		assert.NoError(t, err)
+		assert.Equal(t, &[]uint8{1, 2, 4, 8, 16, 32}, val)
+
+		val, err = attr.UnmarshalToType([]byte("[]"))
+		assert.NoError(t, err)
+		assert.Equal(t, &[]byte{}, val)
+	})
+
+	// Invalid slide of bytes
+	attr := Attr{Type: AttrTypeBytes}
+
+	assert.Panics(t, func() {
+		_, _ = attr.UnmarshalToType([]byte("invalid"))
+	})
 }
 
 func TestRelInvert(t *testing.T) {
@@ -270,221 +548,562 @@ func TestRelString(t *testing.T) {
 }
 
 func TestGetAttrType(t *testing.T) {
-	assert := assert.New(t)
+	testData := []struct {
+		str      string
+		typ      int
+		array    bool
+		nullable bool
+	}{
+		{
+			str:      "string",
+			typ:      AttrTypeString,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]string",
+			typ:      AttrTypeString,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*string",
+			typ:      AttrTypeString,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]string",
+			typ:      AttrTypeString,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "int",
+			typ:      AttrTypeInt,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]int",
+			typ:      AttrTypeInt,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*int",
+			typ:      AttrTypeInt,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]int",
+			typ:      AttrTypeInt,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "int8",
+			typ:      AttrTypeInt8,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]int8",
+			typ:      AttrTypeInt8,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*int8",
+			typ:      AttrTypeInt8,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]int8",
+			typ:      AttrTypeInt8,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "int16",
+			typ:      AttrTypeInt16,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]int16",
+			typ:      AttrTypeInt16,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*int16",
+			typ:      AttrTypeInt16,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]int16",
+			typ:      AttrTypeInt16,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "int32",
+			typ:      AttrTypeInt32,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]int32",
+			typ:      AttrTypeInt32,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*int32",
+			typ:      AttrTypeInt32,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]int32",
+			typ:      AttrTypeInt32,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "int64",
+			typ:      AttrTypeInt64,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]int64",
+			typ:      AttrTypeInt64,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*int64",
+			typ:      AttrTypeInt64,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]int64",
+			typ:      AttrTypeInt64,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "float32",
+			typ:      AttrTypeFloat32,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]float32",
+			typ:      AttrTypeFloat32,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*float32",
+			typ:      AttrTypeFloat32,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]float32",
+			typ:      AttrTypeFloat32,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "float64",
+			typ:      AttrTypeFloat64,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]float64",
+			typ:      AttrTypeFloat64,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*float64",
+			typ:      AttrTypeFloat64,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]float64",
+			typ:      AttrTypeFloat64,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "uint",
+			typ:      AttrTypeUint,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]uint",
+			typ:      AttrTypeUint,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*uint",
+			typ:      AttrTypeUint,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]uint",
+			typ:      AttrTypeUint,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "uint8",
+			typ:      AttrTypeUint8,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]uint8",
+			typ:      AttrTypeUint8,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*uint8",
+			typ:      AttrTypeUint8,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]uint8",
+			typ:      AttrTypeUint8,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "uint16",
+			typ:      AttrTypeUint16,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]uint16",
+			typ:      AttrTypeUint16,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*uint16",
+			typ:      AttrTypeUint16,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]uint16",
+			typ:      AttrTypeUint16,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "uint32",
+			typ:      AttrTypeUint32,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]uint32",
+			typ:      AttrTypeUint32,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*uint32",
+			typ:      AttrTypeUint32,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]uint32",
+			typ:      AttrTypeUint32,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "uint64",
+			typ:      AttrTypeUint64,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]uint64",
+			typ:      AttrTypeUint64,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*uint64",
+			typ:      AttrTypeUint64,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]uint64",
+			typ:      AttrTypeUint64,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "bool",
+			typ:      AttrTypeBool,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]bool",
+			typ:      AttrTypeBool,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*bool",
+			typ:      AttrTypeBool,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]bool",
+			typ:      AttrTypeBool,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "time.Time",
+			typ:      AttrTypeTime,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "[]time.Time",
+			typ:      AttrTypeTime,
+			array:    true,
+			nullable: false,
+		},
+		{
+			str:      "*time.Time",
+			typ:      AttrTypeTime,
+			array:    false,
+			nullable: true,
+		},
+		{
+			str:      "*[]time.Time",
+			typ:      AttrTypeTime,
+			array:    true,
+			nullable: true,
+		},
+		{
+			str:      "invalid",
+			typ:      AttrTypeInvalid,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str:      "",
+			typ:      AttrTypeInvalid,
+			array:    false,
+			nullable: false,
+		},
+		{
+			str: "byte",
+			typ: AttrTypeUint8,
+		},
+		{
+			str:   "[]byte",
+			typ:   AttrTypeUint8,
+			array: true,
+		},
+		{
+			str:      "*[]byte",
+			typ:      AttrTypeUint8,
+			array:    true,
+			nullable: true,
+		},
+	}
 
-	typ, nullable := GetAttrType("string")
-	assert.Equal(AttrTypeString, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("int")
-	assert.Equal(AttrTypeInt, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("int8")
-	assert.Equal(AttrTypeInt8, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("int16")
-	assert.Equal(AttrTypeInt16, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("int32")
-	assert.Equal(AttrTypeInt32, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("int64")
-	assert.Equal(AttrTypeInt64, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("uint")
-	assert.Equal(AttrTypeUint, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("uint8")
-	assert.Equal(AttrTypeUint8, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("uint16")
-	assert.Equal(AttrTypeUint16, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("uint32")
-	assert.Equal(AttrTypeUint32, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("uint64")
-	assert.Equal(AttrTypeUint64, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("bool")
-	assert.Equal(AttrTypeBool, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("time.Time")
-	assert.Equal(AttrTypeTime, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("time")
-	assert.Equal(AttrTypeTime, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("[]uint8")
-	assert.Equal(AttrTypeBytes, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("[]byte")
-	assert.Equal(AttrTypeBytes, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("bytes")
-	assert.Equal(AttrTypeBytes, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("*string")
-	assert.Equal(AttrTypeString, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*int")
-	assert.Equal(AttrTypeInt, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*int8")
-	assert.Equal(AttrTypeInt8, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*int16")
-	assert.Equal(AttrTypeInt16, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*int32")
-	assert.Equal(AttrTypeInt32, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*int64")
-	assert.Equal(AttrTypeInt64, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*uint")
-	assert.Equal(AttrTypeUint, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*uint8")
-	assert.Equal(AttrTypeUint8, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*uint16")
-	assert.Equal(AttrTypeUint16, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*uint32")
-	assert.Equal(AttrTypeUint32, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*uint64")
-	assert.Equal(AttrTypeUint64, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*bool")
-	assert.Equal(AttrTypeBool, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*time.Time")
-	assert.Equal(AttrTypeTime, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*time")
-	assert.Equal(AttrTypeTime, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*[]uint8")
-	assert.Equal(AttrTypeBytes, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*[]byte")
-	assert.Equal(AttrTypeBytes, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("*bytes")
-	assert.Equal(AttrTypeBytes, typ)
-	assert.True(nullable)
-
-	typ, nullable = GetAttrType("invalid")
-	assert.Equal(AttrTypeInvalid, typ)
-	assert.False(nullable)
-
-	typ, nullable = GetAttrType("")
-	assert.Equal(AttrTypeInvalid, typ)
-	assert.False(nullable)
+	for _, test := range testData {
+		t.Run(test.str, func(t *testing.T) {
+			typ, array, nullable := GetAttrType(test.str)
+			assert.Equal(t, test.typ, typ)
+			assert.Equal(t, test.nullable, nullable)
+			assert.Equal(t, test.array, array)
+		})
+	}
 }
 
 func TestGetAttrTypeString(t *testing.T) {
 	assert := assert.New(t)
 
-	assert.Equal("string", GetAttrTypeString(AttrTypeString, false))
-	assert.Equal("int", GetAttrTypeString(AttrTypeInt, false))
-	assert.Equal("int8", GetAttrTypeString(AttrTypeInt8, false))
-	assert.Equal("int16", GetAttrTypeString(AttrTypeInt16, false))
-	assert.Equal("int32", GetAttrTypeString(AttrTypeInt32, false))
-	assert.Equal("int64", GetAttrTypeString(AttrTypeInt64, false))
-	assert.Equal("uint", GetAttrTypeString(AttrTypeUint, false))
-	assert.Equal("uint8", GetAttrTypeString(AttrTypeUint8, false))
-	assert.Equal("uint16", GetAttrTypeString(AttrTypeUint16, false))
-	assert.Equal("uint32", GetAttrTypeString(AttrTypeUint32, false))
-	assert.Equal("uint64", GetAttrTypeString(AttrTypeUint64, false))
-	assert.Equal("bool", GetAttrTypeString(AttrTypeBool, false))
-	assert.Equal("time", GetAttrTypeString(AttrTypeTime, false))
-	assert.Equal("bytes", GetAttrTypeString(AttrTypeBytes, false))
-	assert.Equal("*string", GetAttrTypeString(AttrTypeString, true))
-	assert.Equal("*int", GetAttrTypeString(AttrTypeInt, true))
-	assert.Equal("*int8", GetAttrTypeString(AttrTypeInt8, true))
-	assert.Equal("*int16", GetAttrTypeString(AttrTypeInt16, true))
-	assert.Equal("*int32", GetAttrTypeString(AttrTypeInt32, true))
-	assert.Equal("*int64", GetAttrTypeString(AttrTypeInt64, true))
-	assert.Equal("*uint", GetAttrTypeString(AttrTypeUint, true))
-	assert.Equal("*uint8", GetAttrTypeString(AttrTypeUint8, true))
-	assert.Equal("*uint16", GetAttrTypeString(AttrTypeUint16, true))
-	assert.Equal("*uint32", GetAttrTypeString(AttrTypeUint32, true))
-	assert.Equal("*uint64", GetAttrTypeString(AttrTypeUint64, true))
-	assert.Equal("*bool", GetAttrTypeString(AttrTypeBool, true))
-	assert.Equal("*time", GetAttrTypeString(AttrTypeTime, true))
-	assert.Equal("*bytes", GetAttrTypeString(AttrTypeBytes, true))
-	assert.Equal("", GetAttrTypeString(AttrTypeInvalid, false))
-	assert.Equal("", GetAttrTypeString(999, false))
+	assert.Equal("string", GetAttrTypeString(AttrTypeString, false, false))
+	assert.Equal("int", GetAttrTypeString(AttrTypeInt, false, false))
+	assert.Equal("int8", GetAttrTypeString(AttrTypeInt8, false, false))
+	assert.Equal("int16", GetAttrTypeString(AttrTypeInt16, false, false))
+	assert.Equal("int32", GetAttrTypeString(AttrTypeInt32, false, false))
+	assert.Equal("int64", GetAttrTypeString(AttrTypeInt64, false, false))
+	assert.Equal("uint", GetAttrTypeString(AttrTypeUint, false, false))
+	assert.Equal("uint8", GetAttrTypeString(AttrTypeUint8, false, false))
+	assert.Equal("uint16", GetAttrTypeString(AttrTypeUint16, false, false))
+	assert.Equal("uint32", GetAttrTypeString(AttrTypeUint32, false, false))
+	assert.Equal("uint64", GetAttrTypeString(AttrTypeUint64, false, false))
+	assert.Equal("float32", GetAttrTypeString(AttrTypeFloat32, false, false))
+	assert.Equal("float64", GetAttrTypeString(AttrTypeFloat64, false, false))
+	assert.Equal("bool", GetAttrTypeString(AttrTypeBool, false, false))
+	assert.Equal("time.Time", GetAttrTypeString(AttrTypeTime, false, false))
+
+	assert.Equal("*string", GetAttrTypeString(AttrTypeString, false, true))
+	assert.Equal("*int", GetAttrTypeString(AttrTypeInt, false, true))
+	assert.Equal("*int8", GetAttrTypeString(AttrTypeInt8, false, true))
+	assert.Equal("*int16", GetAttrTypeString(AttrTypeInt16, false, true))
+	assert.Equal("*int32", GetAttrTypeString(AttrTypeInt32, false, true))
+	assert.Equal("*int64", GetAttrTypeString(AttrTypeInt64, false, true))
+	assert.Equal("*uint", GetAttrTypeString(AttrTypeUint, false, true))
+	assert.Equal("*uint8", GetAttrTypeString(AttrTypeUint8, false, true))
+	assert.Equal("*uint16", GetAttrTypeString(AttrTypeUint16, false, true))
+	assert.Equal("*uint32", GetAttrTypeString(AttrTypeUint32, false, true))
+	assert.Equal("*uint64", GetAttrTypeString(AttrTypeUint64, false, true))
+	assert.Equal("*float32", GetAttrTypeString(AttrTypeFloat32, false, true))
+	assert.Equal("*float64", GetAttrTypeString(AttrTypeFloat64, false, true))
+	assert.Equal("*bool", GetAttrTypeString(AttrTypeBool, false, true))
+	assert.Equal("*time.Time", GetAttrTypeString(AttrTypeTime, false, true))
+
+	assert.Equal("[]string", GetAttrTypeString(AttrTypeString, true, false))
+	assert.Equal("[]int", GetAttrTypeString(AttrTypeInt, true, false))
+	assert.Equal("[]int8", GetAttrTypeString(AttrTypeInt8, true, false))
+	assert.Equal("[]int16", GetAttrTypeString(AttrTypeInt16, true, false))
+	assert.Equal("[]int32", GetAttrTypeString(AttrTypeInt32, true, false))
+	assert.Equal("[]int64", GetAttrTypeString(AttrTypeInt64, true, false))
+	assert.Equal("[]uint", GetAttrTypeString(AttrTypeUint, true, false))
+	assert.Equal("[]uint8", GetAttrTypeString(AttrTypeUint8, true, false))
+	assert.Equal("[]uint16", GetAttrTypeString(AttrTypeUint16, true, false))
+	assert.Equal("[]uint32", GetAttrTypeString(AttrTypeUint32, true, false))
+	assert.Equal("[]uint64", GetAttrTypeString(AttrTypeUint64, true, false))
+	assert.Equal("[]float32", GetAttrTypeString(AttrTypeFloat32, true, false))
+	assert.Equal("[]float64", GetAttrTypeString(AttrTypeFloat64, true, false))
+	assert.Equal("[]bool", GetAttrTypeString(AttrTypeBool, true, false))
+	assert.Equal("[]time.Time", GetAttrTypeString(AttrTypeTime, true, false))
+
+	assert.Equal("*[]string", GetAttrTypeString(AttrTypeString, true, true))
+	assert.Equal("*[]int", GetAttrTypeString(AttrTypeInt, true, true))
+	assert.Equal("*[]int8", GetAttrTypeString(AttrTypeInt8, true, true))
+	assert.Equal("*[]int16", GetAttrTypeString(AttrTypeInt16, true, true))
+	assert.Equal("*[]int32", GetAttrTypeString(AttrTypeInt32, true, true))
+	assert.Equal("*[]int64", GetAttrTypeString(AttrTypeInt64, true, true))
+	assert.Equal("*[]uint", GetAttrTypeString(AttrTypeUint, true, true))
+	assert.Equal("*[]uint8", GetAttrTypeString(AttrTypeUint8, true, true))
+	assert.Equal("*[]uint16", GetAttrTypeString(AttrTypeUint16, true, true))
+	assert.Equal("*[]uint32", GetAttrTypeString(AttrTypeUint32, true, true))
+	assert.Equal("*[]uint64", GetAttrTypeString(AttrTypeUint64, true, true))
+	assert.Equal("*[]float32", GetAttrTypeString(AttrTypeFloat32, true, true))
+	assert.Equal("*[]float64", GetAttrTypeString(AttrTypeFloat64, true, true))
+	assert.Equal("*[]bool", GetAttrTypeString(AttrTypeBool, true, true))
+	assert.Equal("*[]time.Time", GetAttrTypeString(AttrTypeTime, true, true))
+
+	assert.Equal("[]uint8", GetAttrTypeString(AttrTypeBytes, true, false))
+	assert.Equal("[]uint8", GetAttrTypeString(AttrTypeBytes, false, false))
+	assert.Equal("*[]uint8", GetAttrTypeString(AttrTypeBytes, true, true))
+	assert.Equal("*[]uint8", GetAttrTypeString(AttrTypeBytes, false, true))
+
+	assert.Equal("", GetAttrTypeString(AttrTypeInvalid, false, false))
+	assert.Equal("", GetAttrTypeString(999, false, false))
 }
 
 func TestGetZeroValue(t *testing.T) {
 	assert := assert.New(t)
 
-	assert.Equal("", GetZeroValue(AttrTypeString, false))
-	assert.Equal(int(0), GetZeroValue(AttrTypeInt, false))
-	assert.Equal(int8(0), GetZeroValue(AttrTypeInt8, false))
-	assert.Equal(int16(0), GetZeroValue(AttrTypeInt16, false))
-	assert.Equal(int32(0), GetZeroValue(AttrTypeInt32, false))
-	assert.Equal(int64(0), GetZeroValue(AttrTypeInt64, false))
-	assert.Equal(uint(0), GetZeroValue(AttrTypeUint, false))
-	assert.Equal(uint8(0), GetZeroValue(AttrTypeUint8, false))
-	assert.Equal(uint16(0), GetZeroValue(AttrTypeUint16, false))
-	assert.Equal(uint32(0), GetZeroValue(AttrTypeUint32, false))
-	assert.Equal(uint64(0), GetZeroValue(AttrTypeUint64, false))
-	assert.Equal(false, GetZeroValue(AttrTypeBool, false))
-	assert.Equal(time.Time{}, GetZeroValue(AttrTypeTime, false))
-	assert.Equal([]byte{}, GetZeroValue(AttrTypeBytes, false))
-	assert.Equal(nilptr("string"), GetZeroValue(AttrTypeString, true))
-	assert.Equal(nilptr("int"), GetZeroValue(AttrTypeInt, true))
-	assert.Equal(nilptr("int8"), GetZeroValue(AttrTypeInt8, true))
-	assert.Equal(nilptr("int16"), GetZeroValue(AttrTypeInt16, true))
-	assert.Equal(nilptr("int32"), GetZeroValue(AttrTypeInt32, true))
-	assert.Equal(nilptr("int64"), GetZeroValue(AttrTypeInt64, true))
-	assert.Equal(nilptr("uint"), GetZeroValue(AttrTypeUint, true))
-	assert.Equal(nilptr("uint8"), GetZeroValue(AttrTypeUint8, true))
-	assert.Equal(nilptr("uint16"), GetZeroValue(AttrTypeUint16, true))
-	assert.Equal(nilptr("uint32"), GetZeroValue(AttrTypeUint32, true))
-	assert.Equal(nilptr("uint64"), GetZeroValue(AttrTypeUint64, true))
-	assert.Equal(nilptr("bool"), GetZeroValue(AttrTypeBool, true))
-	assert.Equal(nilptr("time.Time"), GetZeroValue(AttrTypeTime, true))
-	assert.Equal(nilptr("[]byte"), GetZeroValue(AttrTypeBytes, true))
-	assert.Equal(nil, GetZeroValue(AttrTypeInvalid, false))
-	assert.Equal(nil, GetZeroValue(999, false))
+	assert.Equal("", GetZeroValue(AttrTypeString, false, false))
+	assert.Equal(int(0), GetZeroValue(AttrTypeInt, false, false))
+	assert.Equal(int8(0), GetZeroValue(AttrTypeInt8, false, false))
+	assert.Equal(int16(0), GetZeroValue(AttrTypeInt16, false, false))
+	assert.Equal(int32(0), GetZeroValue(AttrTypeInt32, false, false))
+	assert.Equal(int64(0), GetZeroValue(AttrTypeInt64, false, false))
+	assert.Equal(uint(0), GetZeroValue(AttrTypeUint, false, false))
+	assert.Equal(uint8(0), GetZeroValue(AttrTypeUint8, false, false))
+	assert.Equal(uint16(0), GetZeroValue(AttrTypeUint16, false, false))
+	assert.Equal(uint32(0), GetZeroValue(AttrTypeUint32, false, false))
+	assert.Equal(uint64(0), GetZeroValue(AttrTypeUint64, false, false))
+	assert.Equal(float32(0), GetZeroValue(AttrTypeFloat32, false, false))
+	assert.Equal(float64(0), GetZeroValue(AttrTypeFloat64, false, false))
+	assert.Equal(false, GetZeroValue(AttrTypeBool, false, false))
+	assert.Equal(time.Time{}, GetZeroValue(AttrTypeTime, false, false))
+
+	assert.Equal([]string{}, GetZeroValue(AttrTypeString, true, false))
+	assert.Equal([]int{}, GetZeroValue(AttrTypeInt, true, false))
+	assert.Equal([]int8{}, GetZeroValue(AttrTypeInt8, true, false))
+	assert.Equal([]int16{}, GetZeroValue(AttrTypeInt16, true, false))
+	assert.Equal([]int32{}, GetZeroValue(AttrTypeInt32, true, false))
+	assert.Equal([]int64{}, GetZeroValue(AttrTypeInt64, true, false))
+	assert.Equal([]uint{}, GetZeroValue(AttrTypeUint, true, false))
+	assert.Equal([]uint8{}, GetZeroValue(AttrTypeUint8, true, false))
+	assert.Equal([]uint16{}, GetZeroValue(AttrTypeUint16, true, false))
+	assert.Equal([]uint32{}, GetZeroValue(AttrTypeUint32, true, false))
+	assert.Equal([]uint64{}, GetZeroValue(AttrTypeUint64, true, false))
+	assert.Equal([]float32{}, GetZeroValue(AttrTypeFloat32, true, false))
+	assert.Equal([]float64{}, GetZeroValue(AttrTypeFloat64, true, false))
+	assert.Equal([]bool{}, GetZeroValue(AttrTypeBool, true, false))
+	assert.Equal([]time.Time{}, GetZeroValue(AttrTypeTime, true, false))
+
+	assert.Equal(nilptr("string"), GetZeroValue(AttrTypeString, false, true))
+	assert.Equal(nilptr("int"), GetZeroValue(AttrTypeInt, false, true))
+	assert.Equal(nilptr("int8"), GetZeroValue(AttrTypeInt8, false, true))
+	assert.Equal(nilptr("int16"), GetZeroValue(AttrTypeInt16, false, true))
+	assert.Equal(nilptr("int32"), GetZeroValue(AttrTypeInt32, false, true))
+	assert.Equal(nilptr("int64"), GetZeroValue(AttrTypeInt64, false, true))
+	assert.Equal(nilptr("uint"), GetZeroValue(AttrTypeUint, false, true))
+	assert.Equal(nilptr("uint8"), GetZeroValue(AttrTypeUint8, false, true))
+	assert.Equal(nilptr("uint16"), GetZeroValue(AttrTypeUint16, false, true))
+	assert.Equal(nilptr("uint32"), GetZeroValue(AttrTypeUint32, false, true))
+	assert.Equal(nilptr("uint64"), GetZeroValue(AttrTypeUint64, false, true))
+	assert.Equal(nilptr("float32"), GetZeroValue(AttrTypeFloat32, false, true))
+	assert.Equal(nilptr("float64"), GetZeroValue(AttrTypeFloat64, false, true))
+	assert.Equal(nilptr("bool"), GetZeroValue(AttrTypeBool, false, true))
+	assert.Equal(nilptr("time.Time"), GetZeroValue(AttrTypeTime, false, true))
+
+	assert.Equal(nilptr("[]string"), GetZeroValue(AttrTypeString, true, true))
+	assert.Equal(nilptr("[]int"), GetZeroValue(AttrTypeInt, true, true))
+	assert.Equal(nilptr("[]int8"), GetZeroValue(AttrTypeInt8, true, true))
+	assert.Equal(nilptr("[]int16"), GetZeroValue(AttrTypeInt16, true, true))
+	assert.Equal(nilptr("[]int32"), GetZeroValue(AttrTypeInt32, true, true))
+	assert.Equal(nilptr("[]int64"), GetZeroValue(AttrTypeInt64, true, true))
+	assert.Equal(nilptr("[]uint"), GetZeroValue(AttrTypeUint, true, true))
+	assert.Equal(nilptr("[]uint8"), GetZeroValue(AttrTypeUint8, true, true))
+	assert.Equal(nilptr("[]uint16"), GetZeroValue(AttrTypeUint16, true, true))
+	assert.Equal(nilptr("[]uint32"), GetZeroValue(AttrTypeUint32, true, true))
+	assert.Equal(nilptr("[]uint64"), GetZeroValue(AttrTypeUint64, true, true))
+	assert.Equal(nilptr("[]float32"), GetZeroValue(AttrTypeFloat32, true, true))
+	assert.Equal(nilptr("[]float64"), GetZeroValue(AttrTypeFloat64, true, true))
+	assert.Equal(nilptr("[]bool"), GetZeroValue(AttrTypeBool, true, true))
+	assert.Equal(nilptr("[]time.Time"), GetZeroValue(AttrTypeTime, true, true))
+
+	// AttrTypeBytes is handled as array even if array=false.
+	assert.Equal([]uint8{}, GetZeroValue(AttrTypeBytes, true, false))
+	assert.Equal([]uint8{}, GetZeroValue(AttrTypeBytes, false, false))
+	assert.Equal((*[]uint8)(nil), GetZeroValue(AttrTypeBytes, true, true))
+	assert.Equal((*[]uint8)(nil), GetZeroValue(AttrTypeBytes, false, true))
+
+	assert.Equal(nil, GetZeroValue(AttrTypeInvalid, false, false))
+	assert.Equal(nil, GetZeroValue(999, false, false))
 }
 
 func TestCopyType(t *testing.T) {

@@ -1,0 +1,41 @@
+{
+	"data": {
+		"attributes": {
+			"strarrptr": [
+				"foo",
+				"bar",
+				"baz"
+			],
+			"int8arrptr": [
+				-100,
+				-50,
+				0,
+				50,
+				100
+			],
+			"int32arrptr": null,
+			"uint8arrptr": null,
+			"boolarrptr": [
+				true,
+				false,
+				true,
+				true
+			],
+			"int16arrptr": null,
+			"float32arrptr": [3.4028235e+38],
+			"float64arrptr": null
+		},
+		"id": "id1",
+		"links": {
+			"self": "/mocktype5/id1"
+		},
+
+		"type": "mocktype5"
+	},
+	"jsonapi": {
+		"version": "1.0"
+	},
+	"links": {
+		"self": "/fake/path?fields%5Bmocktype5%5D=boolarrptr%2Cfloat32arrptr%2Cfloat64arrptr%2Cint16arrptr%2Cint32arrptr%2Cint8arrptr%2Cstrarrptr%2Cuint8arrptr"
+	}
+}

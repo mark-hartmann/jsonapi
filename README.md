@@ -56,8 +56,6 @@ jsonapi offers the following features:
 
 The library is in **beta** and its API is subject to change until v1 is released.
 
-In terms of features, jsonapi is complete. The work left is polishing and testing the design of current API.
-
 ### Roadmap to v1
 
 While anything can happen before a v1 release, the API is stable and no big changes are expected at this moment.
@@ -126,7 +124,7 @@ type User struct {
   ID string `json:"id" api:"users"` // ID is mandatory and the api tag sets the type
 
   // Attributes
-  Name string `json:"name" api:"attr"` // attr means it is an attribute
+  Name string      `json:"name" api:"attr"` // attr means it is an attribute
   BornAt time.Time `json:"born-at" api:"attr"`
 
   // Relationships
@@ -138,30 +136,23 @@ Other fields with the `api` tag (`attr` or `rel`) can be added as attributes or 
 
 #### Attribute
 
-Attributes can be of the following types:
-
-```go
-string
-int, int8, int16, int32, int64
-uint, uint8, uint16, uint32, uint64
-bool
-time.Time
-[]byte
-*string
-*int, *int8, *int16, *int32, *int64
-*uint, *uint8, *uint16, *uint32, *uint64
-*bool
-*time.Time
-*[]byte
+The following attribute types are supported by default:
 ```
+string
+int, int8, int16, int32, int64,
+uint, uint8, uint16, uint32, uint64,
+float32, float64,
+bool, time.Time, bytes
+```
+Other types besides the above can be used, but must be configured manually. For example, if you want to use a struct or a matrix as attribute type, you have to define a `TypeUnmarshaler`.
 
-Using a pointer allows the field to be nil.
+All types can be nullable (pointer) and/or represented as array (`[]`/`*[]`).
 
 #### Relationship
 
 Relationships can be a bit tricky. To-one relationships are defined with a string and to-many relationships are defined with a slice of strings. They contain the IDs of the related resources. The api tag has to take the form of "rel,xxx[,yyy]" where yyy is optional. xxx is the type of the relationship and yyy is the name of the inverse relationship when dealing with a two-way relationship. In the following example, our Article struct defines a relationship named author of type users:
 
-```go
+```
 Author string `json:"author" api:"rel,users,articles"`
 ```
 
@@ -170,11 +161,28 @@ Author string `json:"author" api:"rel,users,articles"`
 A struct can be wrapped using the `Wrap` function which returns a pointer to a `Wrapper`. A `Wrapper` implements the `Resource` interface and can be used with this library. Modifying a Wrapper will modify the underlying struct. The resource's type is defined from reflecting on the struct.
 
 ```go
+type User struct {
+    ID   string `json:"ID" api:"users"`
+    Name string `json:"name" api:"attr"`
+}
+```
+
+```go
 user := User{}
 wrap := Wrap(&user)
 wrap.Set("name", "Mike")
 fmt.Printf(wrap.Get("name")) // Output: Mike
 fmt.Printf(user.Name) // Output: Mike
+```
+`Wrapper` supports most data types by default by using the `ReflectTypeUnmarshaler`, but in some cases it requires setting tags to make the type resolving work correctly:
+```go
+type Obj struct {
+    ID    string `json:"ID" api:"objs"`
+    
+    // Special cases
+    Bytes  []uint8 `json:"bytes" api:"attr" bytes:"true"` // Output: base64 encoded
+    Matrix [][]int `json:"matrix" api:"attr" array:"false"`
+}
 ```
 
 ### SoftResource

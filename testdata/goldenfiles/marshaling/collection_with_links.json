@@ -39,6 +39,13 @@
 			"type": "mocktype"
 		},
 		{
+			"id": "id1",
+			"links": {
+				"self": "https://example.org/mocktypes1/id1"
+			},
+			"type": "mocktypes1"
+		},
+		{
 			"attributes": {
 				"bool": false,
 				"int": -42,
@@ -133,6 +140,13 @@
 				}
 			},
 			"type": "mocktype"
+		},
+		{
+			"id": "test-123",
+			"links": {
+				"self": "https://example.org/mocktype6/test-123"
+			},
+			"type": "mocktype6"
 		}
 	],
 	"jsonapi": {
