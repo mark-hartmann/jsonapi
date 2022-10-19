@@ -14,9 +14,10 @@ import (
 type SoftResource struct {
 	Type *Type
 
-	id   string
-	data map[string]interface{}
-	meta Meta
+	id    string
+	data  map[string]interface{}
+	meta  Meta
+	links map[string]Link
 }
 
 // Attrs returns the resource's attributes.
@@ -187,6 +188,16 @@ func (sr *SoftResource) Meta() Meta {
 // SetMeta sets the meta values of the resource.
 func (sr *SoftResource) SetMeta(m Meta) {
 	sr.meta = m
+}
+
+// Links returns the links of the resource.
+func (sr *SoftResource) Links() map[string]Link {
+	return sr.links
+}
+
+// SetLinks sets the links of the resource.
+func (sr *SoftResource) SetLinks(links map[string]Link) {
+	sr.links = links
 }
 
 func (sr *SoftResource) fields() []string {

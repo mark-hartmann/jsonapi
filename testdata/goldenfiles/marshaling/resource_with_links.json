@@ -1,0 +1,65 @@
+{
+	"data": {
+		"attributes": {
+			"int": 12,
+			"str": "str"
+		},
+		"id": "id1",
+		"links": {
+			"self": "/mockTypeImpl/id1",
+			"test": "https://example.org/test"
+		},
+		"relationships": {
+			"to-1": {
+				"data": {
+					"id": "id5",
+					"type": "mockTypeImpl",
+					"meta": {
+						"k2": "v2"
+					}
+				},
+				"links": {
+					"related": "/mockTypeImpl/id1/to-1",
+					"self": "/mockTypeImpl/id1/relationships/to-1",
+					"l1": "https://example.org/l1"
+				},
+				"meta": {
+					"k1": "v1"
+				}
+			},
+			"to-x": {
+				"data": [
+                    {
+						"id": "id2",
+						"type": "mockTypeImpl"
+					},
+                    {
+						"id": "id3",
+						"type": "mockTypeImpl",
+						"meta": {
+							"key1": "value1"
+						}
+					}
+                ],
+				"links": {
+					"related": "/mockTypeImpl/id1/to-x",
+					"self": "/mockTypeImpl/id1/relationships/to-x",
+					"example": "https://example.org"
+				},
+				"meta": {
+					"test": "ok"
+				}
+			}
+		},
+		"meta": {
+			"foo": "bar"
+		},
+		"type": "mockTypeImpl"
+	},
+	"jsonapi": {
+		"version": "1.0"
+	},
+	"links": {
+		"self": "/fake/path?fields%5BmockTypeImpl%5D=int%2Cstr%2Cto-1%2Cto-x"
+	}
+}

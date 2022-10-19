@@ -61,20 +61,51 @@ func MarshalResource(r Resource, prepath string, fields []string, relData map[st
 			var raw json.RawMessage
 
 			if rel.ToOne {
-				s := map[string]map[string]string{
+				s := map[string]map[string]interface{}{
 					"links": buildRelationshipLinks(r, prepath, rel.FromName),
 				}
 
 				for _, n := range relData[r.GetType().Name] {
 					if n == rel.FromName {
-						id := r.Get(rel.FromName).(string)
-						if id != "" {
-							s["data"] = map[string]string{
-								"id":   r.Get(rel.FromName).(string),
+						id := r.Get(rel.FromName)
+
+						switch t := id.(type) {
+						case RelData:
+							// Relationship object meta.
+							if len(t.Meta) > 0 {
+								s["meta"] = t.Meta
+							}
+
+							// Relationship object links.
+							if len(t.Links) > 0 {
+								for s2, link := range t.Links {
+									// Don't override the rel links
+									if s2 != "self" && s2 != "related" {
+										s["links"][s2] = link
+									}
+								}
+							}
+
+							// Relationship data.
+							d := map[string]interface{}{
+								"id":   t.Res.ID,
 								"type": rel.ToType,
 							}
-						} else {
-							s["data"] = nil
+
+							if len(t.Res.Meta) > 0 {
+								d["meta"] = t.Res.Meta
+							}
+
+							s["data"] = d
+						case string:
+							if t != "" {
+								s["data"] = map[string]interface{}{
+									"id":   r.Get(rel.FromName).(string),
+									"type": rel.ToType,
+								}
+							} else {
+								s["data"] = nil
+							}
 						}
 
 						break
@@ -84,25 +115,61 @@ func MarshalResource(r Resource, prepath string, fields []string, relData map[st
 				raw, _ = json.Marshal(s)
 				rels[rel.FromName] = &raw
 			} else {
-				s := map[string]interface{}{
-					"links": buildRelationshipLinks(r, prepath, rel.FromName),
-				}
-
+				s := map[string]interface{}{}
+				l := buildRelationshipLinks(r, prepath, rel.FromName)
 				for _, n := range relData[r.GetType().Name] {
 					if n == rel.FromName {
-						data := []map[string]string{}
-						ids := r.Get(rel.FromName).([]string)
-						sort.Strings(ids)
-						for _, id := range ids {
-							data = append(data, map[string]string{
-								"id":   id,
-								"type": rel.ToType,
+						data := []map[string]interface{}{}
+						ids := r.Get(rel.FromName)
+
+						switch t := ids.(type) {
+						case RelDataMany:
+							// Relationship object meta.
+							if len(t.Meta) > 0 {
+								s["meta"] = t.Meta
+							}
+
+							// Relationship object links.
+							if len(t.Links) > 0 {
+								for s2, link := range t.Links {
+									// Don't override the rel links
+									if s2 != "self" && s2 != "related" {
+										l[s2] = link
+									}
+								}
+								s["links"] = l
+							}
+
+							// Relationship data.
+							sort.Slice(t.Res, func(i, j int) bool {
+								return t.Res[i].ID < t.Res[j].ID
 							})
+							for _, rd := range t.Res {
+								d := map[string]interface{}{
+									"id":   rd.ID,
+									"type": rel.ToType,
+								}
+
+								if len(rd.Meta) > 0 {
+									d["meta"] = rd.Meta
+								}
+								data = append(data, d)
+							}
+						case []string:
+							sort.Strings(ids.([]string))
+							for _, id := range ids.([]string) {
+								data = append(data, map[string]interface{}{
+									"id":   id,
+									"type": rel.ToType,
+								})
+							}
 						}
+
 						s["data"] = data
 						break
 					}
 				}
+				s["links"] = l
 
 				raw, _ = json.Marshal(s)
 				rels[rel.FromName] = &raw
@@ -115,8 +182,14 @@ func MarshalResource(r Resource, prepath string, fields []string, relData map[st
 	}
 
 	// Links
-	mapPl["links"] = map[string]string{
-		"self": buildSelfLink(r, prepath),
+	if lh, ok := r.(LinkHolder); ok && len(lh.Links()) > 0 {
+		links := lh.Links()
+		links["self"] = Link{HRef: buildSelfLink(r, prepath)}
+		mapPl["links"] = links
+	} else {
+		mapPl["links"] = map[string]string{
+			"self": buildSelfLink(r, prepath),
+		}
 	}
 
 	// Meta

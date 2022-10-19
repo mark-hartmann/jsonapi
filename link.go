@@ -31,6 +31,13 @@ func (l Link) MarshalJSON() ([]byte, error) {
 	return json.Marshal(l.HRef)
 }
 
+// A LinkHolder can hold and return meta values. It is useful for a struct that represents a
+// resource type to implement this interface to have a custom links as part of its JSON output.
+type LinkHolder interface {
+	Links() map[string]Link
+	SetLinks(map[string]Link)
+}
+
 // buildSelfLink builds a URL that points to the resource represented by the
 // value v.
 //
@@ -53,9 +60,9 @@ func buildSelfLink(res Resource, prepath string) string {
 
 // buildRelationshipLinks builds a links object (according to the JSON:API
 // specification) that include both the self and related members.
-func buildRelationshipLinks(res Resource, prepath, rel string) map[string]string {
-	return map[string]string{
-		"self":    buildSelfLink(res, prepath) + "/relationships/" + rel,
-		"related": buildSelfLink(res, prepath) + "/" + rel,
+func buildRelationshipLinks(res Resource, prepath, rel string) map[string]interface{} {
+	return map[string]interface{}{
+		"self":    Link{HRef: buildSelfLink(res, prepath) + "/relationships/" + rel},
+		"related": Link{HRef: buildSelfLink(res, prepath) + "/" + rel},
 	}
 }

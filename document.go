@@ -109,10 +109,10 @@ func MarshalDocument(doc *Document, url *URL) ([]byte, error) {
 	}
 
 	// Data
-	var errors json.RawMessage
+	var errs json.RawMessage
 	if len(doc.Errors) > 0 {
 		// Errors
-		errors, err = json.Marshal(doc.Errors)
+		errs, err = json.Marshal(doc.Errors)
 	}
 
 	if err != nil {
@@ -145,8 +145,8 @@ func MarshalDocument(doc *Document, url *URL) ([]byte, error) {
 	// Marshaling
 	plMap := map[string]interface{}{}
 
-	if len(errors) > 0 {
-		plMap["errors"] = errors
+	if len(errs) > 0 {
+		plMap["errors"] = errs
 	} else if len(data) > 0 {
 		plMap["data"] = data
 
@@ -159,10 +159,20 @@ func MarshalDocument(doc *Document, url *URL) ([]byte, error) {
 		plMap["meta"] = doc.Meta
 	}
 
+	links := doc.Links
+
 	if url != nil {
-		plMap["links"] = map[string]string{
-			"self": doc.PrePath + url.String(),
+		if links == nil {
+			links = map[string]Link{}
 		}
+
+		links["self"] = Link{
+			HRef: doc.PrePath + url.String(),
+		}
+	}
+
+	if links != nil {
+		plMap["links"] = links
 	}
 
 	plMap["jsonapi"] = map[string]string{"version": "1.0"}

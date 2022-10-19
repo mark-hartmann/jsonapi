@@ -14,7 +14,7 @@ type Error struct {
 	Status string                 `json:"status"`
 	Title  string                 `json:"title"`
 	Detail string                 `json:"detail"`
-	Links  map[string]string      `json:"links"`
+	Links  map[string]Link        `json:"links"`
 	Source map[string]interface{} `json:"source"`
 	Meta   Meta                   `json:"meta"`
 }
@@ -22,7 +22,7 @@ type Error struct {
 // NewError returns an empty Error object.
 func NewError() Error {
 	err := Error{
-		Links:  map[string]string{},
+		Links:  map[string]Link{},
 		Source: map[string]interface{}{},
 		Meta:   Meta{},
 	}
