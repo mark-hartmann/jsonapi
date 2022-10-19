@@ -118,8 +118,9 @@ func (s *SimpleURL) Path() string {
 	return strings.Join(s.Fragments, "/")
 }
 
-// String returns a string representation of the SimpleURL where special characters are escaped. The SimpleURL is
-// normalized, so it always returns exactly the same string given the same SimpleURL.
+// String returns a string representation of the SimpleURL where special characters
+// are escaped. The SimpleURL is normalized, so it always returns exactly the same
+// string given the same SimpleURL.
 func (s *SimpleURL) String() string {
 	path := "/"
 	for _, p := range s.Fragments {
@@ -147,9 +148,11 @@ func (s *SimpleURL) String() string {
 	}
 
 	sort.Strings(fields)
+
 	for _, typ := range fields {
 		sort.Strings(s.Fields[typ])
 		param := "fields%5B" + typ + "%5D="
+
 		for _, f := range s.Fields[typ] {
 			param += f + "%2C"
 		}
@@ -199,6 +202,7 @@ func (s *SimpleURL) String() string {
 	}
 
 	params = params[:len(params)-1] // Remove the last &
+
 	return path + params
 }
 

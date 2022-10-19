@@ -331,6 +331,7 @@ func TestSimpleURL_String(t *testing.T) {
 
 	// Invalid filter
 	su.Filter.Val = func() {}
+
 	assert.Panics(t, func() {
 		_ = su.String()
 	})

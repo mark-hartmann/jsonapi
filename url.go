@@ -139,6 +139,7 @@ func (u *URL) String() string {
 	// Includes
 	if len(u.Params.Include) > 0 {
 		param := "include="
+
 		for _, rels := range u.Params.Include {
 			relPath := ""
 			for _, rel := range rels {
