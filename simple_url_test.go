@@ -42,6 +42,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{},
 			},
 			expectedError: nil,
 		}, {
@@ -59,6 +60,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{},
 			},
 			expectedError: nil,
 		}, {
@@ -76,6 +78,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{},
 			},
 			expectedError: nil,
 		}, {
@@ -93,6 +96,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{},
 			},
 			expectedError: nil,
 		}, {
@@ -110,6 +114,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{},
 			},
 			expectedError: nil,
 		}, {
@@ -140,6 +145,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     20,
 				PageNumber:   1,
 				Include:      []string{"type2.type3", "type4"},
+				Params:       map[string][]string{},
 			},
 			expectedError: nil,
 		}, {
@@ -159,6 +165,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{},
 			},
 			expectedError: nil,
 		}, {
@@ -177,6 +184,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{},
 			},
 			expectedError: NewErrInvalidPageSizeParameter("-1"),
 		}, {
@@ -195,6 +203,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{},
 			},
 			expectedError: NewErrInvalidPageNumberParameter("-1"),
 		}, {
@@ -213,8 +222,8 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{"unknownparam": {"somevalue"}},
 			},
-			expectedError: NewErrUnknownParameter("unknownparam"),
 		}, {
 			name: "filter query",
 			url: `
@@ -239,6 +248,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{},
 			},
 			expectedError: nil,
 		}, {
@@ -257,6 +267,7 @@ func TestSimpleURL(t *testing.T) {
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
+				Params:       map[string][]string{},
 			},
 			expectedError: NewErrMalformedFilterParameter(`{"thisis:invalid"}`),
 		},
