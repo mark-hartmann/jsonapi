@@ -1,4 +1,4 @@
-module github.com/mfcochauxlaberge/jsonapi
+module github.com/mark-hartmann/jsonapi
 
 go 1.13
 
