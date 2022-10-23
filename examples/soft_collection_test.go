@@ -3,7 +3,7 @@ package examples_test
 import (
 	"fmt"
 
-	"github.com/mfcochauxlaberge/jsonapi"
+	"github.com/mark-hartmann/jsonapi"
 )
 
 func ExampleSoftCollection() {

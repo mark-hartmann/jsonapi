@@ -3,7 +3,7 @@ package jsonapi_test
 import (
 	"time"
 
-	. "github.com/mfcochauxlaberge/jsonapi"
+	. "github.com/mark-hartmann/jsonapi"
 )
 
 // newMockSchema ...

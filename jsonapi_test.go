@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/mfcochauxlaberge/jsonapi"
+	. "github.com/mark-hartmann/jsonapi"
 )
 
 var update = flag.Bool("update-golden-files", false, "update the golden files")

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	. "github.com/mfcochauxlaberge/jsonapi"
+	. "github.com/mark-hartmann/jsonapi"
 
 	"github.com/stretchr/testify/assert"
 )

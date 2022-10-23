@@ -1,29 +1,29 @@
 <div align="center" style="text-align: center;">
-  <img src="https://raw.githubusercontent.com/mfcochauxlaberge/jsonapi/master/assets/logo.png" height="120">
+  <img src="https://raw.githubusercontent.com/mark-hartmann/jsonapi/master/assets/logo.png" height="120">
   <br>
-  <a href="https://github.com/mfcochauxlaberge/jsonapi/actions?query=workflow%3ATest+branch%3Amaster">
-    <img src="https://github.com/mfcochauxlaberge/jsonapi/workflows/Test/badge.svg?branch=master">
+  <a href="https://github.com/mark-hartmann/jsonapi/actions?query=workflow%3ATest+branch%3Amaster">
+    <img src="https://github.com/mark-hartmann/jsonapi/workflows/Test/badge.svg?branch=master">
   </a>
-  <a href="https://github.com/mfcochauxlaberge/jsonapi/actions?query=workflow%3ALint+branch%3Amaster">
-    <img src="https://github.com/mfcochauxlaberge/jsonapi/workflows/Lint/badge.svg?branch=master">
+  <a href="https://github.com/mark-hartmann/jsonapi/actions?query=workflow%3ALint+branch%3Amaster">
+    <img src="https://github.com/mark-hartmann/jsonapi/workflows/Lint/badge.svg?branch=master">
   </a>
-  <a href="https://goreportcard.com/report/github.com/mfcochauxlaberge/jsonapi">
-    <img src="https://goreportcard.com/badge/github.com/mfcochauxlaberge/jsonapi">
+  <a href="https://goreportcard.com/report/github.com/mark-hartmann/jsonapi">
+    <img src="https://goreportcard.com/badge/github.com/mark-hartmann/jsonapi">
   </a>
-  <a href="https://codecov.io/gh/mfcochauxlaberge/jsonapi">
-    <img src="https://img.shields.io/codecov/c/github/mfcochauxlaberge/jsonapi">
+  <a href="https://codecov.io/gh/mark-hartmann/jsonapi" > 
+    <img src="https://codecov.io/gh/mark-hartmann/jsonapi/branch/master/graph/badge.svg?token=93G64ARCI4"/> 
   </a>
   <br>
-  <a href="https://github.com/mfcochauxlaberge/jsonapi/blob/master/go.mod">
+  <a href="https://github.com/mark-hartmann/jsonapi/blob/master/go.mod">
     <img src="https://img.shields.io/badge/go%20version-1.13%2B-%2300acd7">
   </a>
-  <a href="https://github.com/mfcochauxlaberge/jsonapi/blob/master/go.mod">
-    <img src="https://img.shields.io/github/v/release/mfcochauxlaberge/jsonapi?include_prereleases&sort=semver">
+  <a href="https://github.com/mark-hartmann/jsonapi/tags">
+    <img src="https://img.shields.io/github/v/tag/mark-hartmann/jsonapi?include_prereleases&sort=semver">
   </a>
-  <a href="https://github.com/mfcochauxlaberge/jsonapi/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/mfcochauxlaberge/jsonapi?color=a33">
+  <a href="https://github.com/mark-hartmann/jsonapi/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/mark-hartmann/jsonapi?color=a33">
   </a>
-  <a href="https://pkg.go.dev/github.com/mfcochauxlaberge/jsonapi?tab=doc">
+  <a href="https://pkg.go.dev/github.com/mark-hartmann/jsonapi?tab=doc">
     <img src="https://img.shields.io/static/v1?label=doc&message=pkg.go.dev&color=007d9c">
   </a>
 </div>
@@ -33,6 +33,14 @@
 jsonapi offers a set of tools to build JSON:API compliant services.
 
 The official JSON:API specification can be found at [jsonapi.org/format](http://jsonapi.org/format).
+
+## State
+
+**This fork deviates from the original repository**, as I am adapting this package to my needs and thus a lot of breaking changes are introduced. 
+Some of my initial points are already being fixed by the original author (e.g. opinionated pagination), but my goal is a stripped down and lightweight 
+version of the original package that removes some overhead and (in my opinion) unnecessary objects and features.
+
+The library is in **beta** and its API is subject to change until v1 is released.
 
 ## Features
 
@@ -52,13 +60,7 @@ jsonapi offers the following features:
   * Not made for production use.
 * Other useful helpers
 
-## State
-
-The library is in **beta** and its API is subject to change until v1 is released.
-
 ### Roadmap to v1
-
-While anything can happen before a v1 release, the API is stable and no big changes are expected at this moment.
 
 A few tasks are required before committing to the current API:
 
@@ -209,6 +211,6 @@ It is also possible to build a `URL` from a `Schema` and a `SimpleURL` which con
 
 ## Documentation
 
-Check out the [documentation](https://pkg.go.dev/github.com/mfcochauxlaberge/jsonapi?tab=doc).
+Check out the [documentation](https://pkg.go.dev/github.com/mark-hartmann/jsonapi?tab=doc).
 
 The best way to learn how to use it is to look at documentation, the examples, and the code itself.

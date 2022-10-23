@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mfcochauxlaberge/jsonapi"
+	"github.com/mark-hartmann/jsonapi"
 )
 
 func ExampleMarshalDocument() {
