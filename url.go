@@ -1,7 +1,6 @@
 package jsonapi
 
 import (
-	"encoding/json"
 	"net/url"
 	"sort"
 	"strconv"
@@ -159,17 +158,18 @@ func (u *URL) String() string {
 
 	// Filter
 	if u.Params.Filter != nil {
-		mf, err := json.Marshal(u.Params.Filter)
-		if err != nil {
-			// This should not happen since Filter should be validated
-			// at this point.
-			panic(err)
+		var filterParams []string
+
+		for name, filters := range u.Params.Filter {
+			for _, f := range filters {
+				// name (e.g. filter[xyz]) may contain characters that need to be url
+				// encoded as well.
+				filterParams = append(filterParams, url.QueryEscape(name)+"="+url.QueryEscape(f))
+			}
 		}
 
-		param := "filter=" + string(mf)
-		urlParams = append(urlParams, param)
-	} else if u.Params.FilterLabel != "" {
-		urlParams = append(urlParams, "filter="+u.Params.FilterLabel)
+		sort.Strings(filterParams)
+		urlParams = append(urlParams, filterParams...)
 	}
 
 	// Pagination

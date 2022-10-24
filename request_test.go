@@ -39,10 +39,10 @@ func TestNewRequest(t *testing.T) {
 		}, {
 			name:   "bad url",
 			method: "GET",
-			url:    "/mocktypes1?filter={invalid}",
+			url:    "/mocktypes1?page[size]=-1",
 			schema: schema,
-			expectedError: `400 Bad Request: The filter parameter is not a ` +
-				`string or a valid JSON object.`,
+			expectedError: `400 Bad Request: The page size parameter is not ` +
+				`positive integer (including 0).`,
 		},
 	}
 

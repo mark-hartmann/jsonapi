@@ -395,10 +395,34 @@ func TestParseParams(t *testing.T) {
 				Fields: map[string][]string{
 					"mocktypes1": mockTypes1.Fields(),
 				},
-				Attrs:        map[string][]Attr{},
-				Rels:         map[string][]Rel{},
-				RelData:      map[string][]string{},
-				FilterLabel:  "label",
+				Attrs:   map[string][]Attr{},
+				Rels:    map[string][]Rel{},
+				RelData: map[string][]string{},
+				Filter: map[string][]string{
+					"filter": {"label"},
+				},
+				SortingRules: []string{},
+				Include:      [][]Rel{},
+			},
+			expectedError: false,
+		}, {
+			name: "multiple filter labels",
+			url: `
+				?filter=label&filter=label2&filter[foo]=bar&filter[10%257]=3
+			`,
+			colType: "mocktypes1",
+			expectedParams: Params{
+				Fields: map[string][]string{
+					"mocktypes1": mockTypes1.Fields(),
+				},
+				Attrs:   map[string][]Attr{},
+				Rels:    map[string][]Rel{},
+				RelData: map[string][]string{},
+				Filter: map[string][]string{
+					"filter":       {"label", "label2"},
+					"filter[foo]":  {"bar"},
+					"filter[10%7]": {"3"},
+				},
 				SortingRules: []string{},
 				Include:      [][]Rel{},
 			},
@@ -607,7 +631,7 @@ func TestURLString(t *testing.T) {
 		&fields[mocktypes2]=boolptr,int16ptr,int32ptr,int64ptr,int8ptr,intptr,
 			strptr,timeptr,to-many-from-many,to-many-from-one,to-one-from-many,
 			to-one-from-one,uint16ptr,uint32ptr,uint64ptr,uint8ptr,uintptr
-		&filter={"f":"str","o":"=","v":"abc","c":""}
+		&filter={"f":"str","o":"=","v":"abc"}
 		&page[number]=3
 		&page[size]=50
 		&sort=str,-bool,uint8,int,int16,int32,int64,int8,time,uint,uint16,
@@ -618,11 +642,4 @@ func TestURLString(t *testing.T) {
 
 	assert.NoError(err)
 	assert.Equal(makeOneLineNoSpaces(expected), url.UnescapedString())
-
-	// Invalid filter
-	url.Params.Filter.Val = func() {}
-
-	assert.Panics(func() {
-		_ = url.String()
-	})
 }

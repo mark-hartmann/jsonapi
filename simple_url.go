@@ -1,7 +1,6 @@
 package jsonapi
 
 import (
-	"encoding/json"
 	"errors"
 	"net/url"
 	"strconv"
@@ -20,8 +19,7 @@ type SimpleURL struct {
 
 	// Params
 	Fields       map[string][]string
-	FilterLabel  string
-	Filter       *Filter
+	Filter       map[string][]string
 	SortingRules []string
 	PageSize     uint
 	PageNumber   uint
@@ -52,61 +50,45 @@ func NewSimpleURL(u *url.URL) (SimpleURL, error) {
 
 	values := u.Query()
 	for name := range values {
-		if strings.HasPrefix(name, "fields[") && strings.HasSuffix(name, "]") && len(name) > 8 {
-			// Fields
+		switch {
+		case strings.HasPrefix(name, "fields[") && strings.HasSuffix(name, "]") && len(name) > 8:
 			resType := name[7 : len(name)-1]
 
 			if len(values.Get(name)) > 0 {
 				sURL.Fields[resType] = parseCommaList(values.Get(name))
 			}
-		} else {
-			switch name {
-			case "filter":
-				var err error
-				if values.Get(name)[0] != '{' {
-					// It should be a label
-					err = json.Unmarshal([]byte("\""+values.Get(name)+"\""), &sURL.FilterLabel)
-				} else {
-					// It should be a JSON object
-					sURL.Filter = &Filter{}
-					err = json.Unmarshal([]byte(values.Get(name)), sURL.Filter)
-				}
-
-				if err != nil {
-					sURL.FilterLabel = ""
-					sURL.Filter = nil
-
-					return sURL, NewErrMalformedFilterParameter(values.Get(name))
-				}
-			case "sort":
-				// Sort
-				for _, rules := range values[name] {
-					sURL.SortingRules = append(sURL.SortingRules, parseCommaList(rules)...)
-				}
-			case "page[size]":
-				// Page size
-				size, err := strconv.ParseUint(values.Get(name), 10, 64)
-				if err != nil {
-					return sURL, NewErrInvalidPageSizeParameter(values.Get(name))
-				}
-
-				sURL.PageSize = uint(size)
-			case "page[number]":
-				// Page number
-				num, err := strconv.ParseUint(values.Get(name), 10, 64)
-				if err != nil {
-					return sURL, NewErrInvalidPageNumberParameter(values.Get(name))
-				}
-
-				sURL.PageNumber = uint(num)
-			case "include":
-				// Include
-				for _, include := range values[name] {
-					sURL.Include = append(sURL.Include, parseCommaList(include)...)
-				}
-			default:
-				sURL.Params[name] = values[name]
+		case name == "page[size]":
+			// Page size
+			size, err := strconv.ParseUint(values.Get(name), 10, 64)
+			if err != nil {
+				return sURL, NewErrInvalidPageSizeParameter(values.Get(name))
 			}
+
+			sURL.PageSize = uint(size)
+		case name == "page[number]":
+			// Page number
+			num, err := strconv.ParseUint(values.Get(name), 10, 64)
+			if err != nil {
+				return sURL, NewErrInvalidPageNumberParameter(values.Get(name))
+			}
+
+			sURL.PageNumber = uint(num)
+		case name == "filter" || strings.HasPrefix(name, "filter["):
+			if sURL.Filter == nil {
+				sURL.Filter = map[string][]string{}
+			}
+
+			sURL.Filter[name] = append(sURL.Filter[name], values[name]...)
+		case name == "sort":
+			for _, rules := range values[name] {
+				sURL.SortingRules = append(sURL.SortingRules, parseCommaList(rules)...)
+			}
+		case name == "include":
+			for _, include := range values[name] {
+				sURL.Include = append(sURL.Include, parseCommaList(include)...)
+			}
+		default:
+			sURL.Params[name] = values[name]
 		}
 	}
 

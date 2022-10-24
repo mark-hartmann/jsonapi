@@ -159,8 +159,7 @@ func TestSimpleURL(t *testing.T) {
 				Route:     "/type/:id/rel",
 
 				Fields:       map[string][]string{},
-				FilterLabel:  "label",
-				Filter:       nil,
+				Filter:       map[string][]string{"filter": {"label"}},
 				SortingRules: []string{},
 				PageSize:     0,
 				PageNumber:   0,
@@ -239,10 +238,10 @@ func TestSimpleURL(t *testing.T) {
 				Route:     "/type/:id/rel",
 
 				Fields: map[string][]string{},
-				Filter: &Filter{
-					Field: "field",
-					Op:    "=",
-					Val:   "abc",
+				Filter: map[string][]string{
+					"filter": {
+						"{\"f\":\"field\",\"o\":\"=\",\"v\":\"abc\"}",
+					},
 				},
 				SortingRules: []string{},
 				PageSize:     0,
@@ -255,21 +254,21 @@ func TestSimpleURL(t *testing.T) {
 			name: "filter query",
 			url: `
 				http://api.example.com/type/id/rel
-				?filter={"thisis:invalid"}
+				?filter={"thisis:afilter"}
 			`,
 			expectedURL: SimpleURL{
 				Fragments: []string{"type", "id", "rel"},
 				Route:     "/type/:id/rel",
 
 				Fields:       map[string][]string{},
-				Filter:       nil,
+				Filter:       map[string][]string{"filter": {"{\"thisis:afilter\"}"}},
 				SortingRules: []string{},
 				PageSize:     0,
 				PageNumber:   0,
 				Include:      []string{},
 				Params:       map[string][]string{},
 			},
-			expectedError: NewErrMalformedFilterParameter(`{"thisis:invalid"}`),
+			expectedError: nil,
 		},
 	}
 

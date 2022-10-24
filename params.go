@@ -159,11 +159,6 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		}
 	}
 
-	// Filter
-	params.FilterLabel = su.FilterLabel
-	params.Filter = su.Filter
-	// TODO Check whether the filter is valid
-
 	// Sorting
 	// TODO All of the following is just to figure out
 	// if the URL represents a single resource or a
@@ -239,6 +234,9 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		params.SortingRules = sortingRules
 	}
 
+	// Filter
+	params.Filter = su.Filter
+
 	// Pagination
 	params.PageSize = su.PageSize
 	params.PageNumber = su.PageNumber
@@ -255,8 +253,7 @@ type Params struct {
 	RelData map[string][]string
 
 	// Filter
-	FilterLabel string
-	Filter      *Filter
+	Filter map[string][]string
 
 	// Sorting
 	SortingRules []string
