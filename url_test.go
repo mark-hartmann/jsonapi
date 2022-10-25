@@ -71,12 +71,35 @@ func TestParseURL(t *testing.T) {
 			url:           "%z",
 			expectedError: true,
 		}, {
+			name: "string value page param",
+			url: `
+				/mocktypes1/abc123
+				?page[size]=valid
+			`,
+			expectedURL: URL{
+				Fragments:       []string{"mocktypes1", "abc123"},
+				Route:           "/mocktypes1/:id",
+				BelongsToFilter: BelongsToFilter{},
+				ResType:         "mocktypes1",
+				IsCol:           false,
+				ResID:           "abc123",
+			},
+			expectedError: false,
+		}, {
 			name: "invalid simpleurl",
 			url: `
 				/mocktypes1/abc123
-				?page[size]=invalid
+				?page=no-page-param
 			`,
-			expectedError: true,
+			expectedURL: URL{
+				Fragments:       []string{"mocktypes1", "abc123"},
+				Route:           "/mocktypes1/:id",
+				BelongsToFilter: BelongsToFilter{},
+				ResType:         "mocktypes1",
+				IsCol:           false,
+				ResID:           "abc123",
+			},
+			expectedError: false,
 		}, {
 			name: "full url for collection",
 			url:  `https://api.example.com/mocktypes1`,
@@ -215,9 +238,9 @@ func TestParseURL(t *testing.T) {
 		url, err := NewURLFromRaw(schema, makeOneLineNoSpaces(test.url))
 
 		if test.expectedError {
-			assert.Error(err)
+			assert.Error(err, test.name)
 		} else {
-			assert.NoError(err)
+			assert.NoError(err, test.name)
 			url.Params = nil
 			assert.Equal(test.expectedURL, *url, test.name)
 		}
@@ -248,8 +271,7 @@ func TestParseParams(t *testing.T) {
 				Rels:         map[string][]Rel{},
 				RelData:      map[string][]string{},
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      [][]Rel{},
 			},
 			expectedError: false,
@@ -262,8 +284,7 @@ func TestParseParams(t *testing.T) {
 				Rels:         map[string][]Rel{},
 				RelData:      map[string][]string{},
 				SortingRules: []string{},
-				PageSize:     0,
-				PageNumber:   0,
+				Page:         nil,
 				Include:      [][]Rel{},
 			},
 			expectedError: false,
@@ -291,8 +312,7 @@ func TestParseParams(t *testing.T) {
 				Rels:         map[string][]Rel{},
 				RelData:      map[string][]string{},
 				SortingRules: []string{},
-				PageSize:     50,
-				PageNumber:   3,
+				Page:         map[string]string{"size": "50", "number": "3"},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-many"],
@@ -334,8 +354,7 @@ func TestParseParams(t *testing.T) {
 				Rels:         map[string][]Rel{},
 				RelData:      map[string][]string{},
 				SortingRules: []string{},
-				PageSize:     50,
-				PageNumber:   3,
+				Page:         map[string]string{"size": "50", "number": "3"},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-many"],
@@ -375,8 +394,7 @@ func TestParseParams(t *testing.T) {
 				Rels:         map[string][]Rel{},
 				RelData:      map[string][]string{},
 				SortingRules: []string{},
-				PageSize:     90,
-				PageNumber:   110,
+				Page:         map[string]string{"size": "90", "number": "110"},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-one"],
@@ -568,12 +586,14 @@ func TestURLEscaping(t *testing.T) {
 				?fields[mocktypes1]=bool%2Cint8
 				&page[number]=2
 				&page[size]=10
+				&page[abc]
 				&filter=a_label
 			`,
 			escaped: `
 				/mocktypes1
 				?fields%5Bmocktypes1%5D=bool%2Cint8
 				&filter=a_label
+				&page%5Babc%5D=
 				&page%5Bnumber%5D=2
 				&page%5Bsize%5D=10
 				&sort=bool%2Cint%2Cint16%2Cint32%2Cint64%2Cint8%2Cstr%2Ctime%2C
@@ -583,6 +603,7 @@ func TestURLEscaping(t *testing.T) {
 				/mocktypes1
 				?fields[mocktypes1]=bool,int8
 				&filter=a_label
+				&page[abc]=
 				&page[number]=2
 				&page[size]=10
 				&sort=bool,int,int16,int32,int64,int8,str,time,uint,uint16,

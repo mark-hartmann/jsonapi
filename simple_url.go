@@ -3,7 +3,6 @@ package jsonapi
 import (
 	"errors"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
@@ -21,8 +20,7 @@ type SimpleURL struct {
 	Fields       map[string][]string
 	Filter       map[string][]string
 	SortingRules []string
-	PageSize     uint
-	PageNumber   uint
+	Page         map[string]string
 	Include      []string
 	// Params contains all off-spec query parameters.
 	Params map[string][]string
@@ -57,22 +55,13 @@ func NewSimpleURL(u *url.URL) (SimpleURL, error) {
 			if len(values.Get(name)) > 0 {
 				sURL.Fields[resType] = parseCommaList(values.Get(name))
 			}
-		case name == "page[size]":
-			// Page size
-			size, err := strconv.ParseUint(values.Get(name), 10, 64)
-			if err != nil {
-				return sURL, NewErrInvalidPageSizeParameter(values.Get(name))
+		case strings.HasPrefix(name, "page[") && strings.HasSuffix(name, "]") && len(name) > 6:
+			if sURL.Page == nil {
+				sURL.Page = map[string]string{}
 			}
 
-			sURL.PageSize = uint(size)
-		case name == "page[number]":
-			// Page number
-			num, err := strconv.ParseUint(values.Get(name), 10, 64)
-			if err != nil {
-				return sURL, NewErrInvalidPageNumberParameter(values.Get(name))
-			}
-
-			sURL.PageNumber = uint(num)
+			nme := name[5 : len(name)-1]
+			sURL.Page[nme] = values.Get(name)
 		case name == "filter" || strings.HasPrefix(name, "filter["):
 			if sURL.Filter == nil {
 				sURL.Filter = map[string][]string{}
