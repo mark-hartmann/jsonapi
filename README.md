@@ -46,13 +46,12 @@ The library is in **beta** and its API is subject to change until v1 is released
 
 jsonapi offers the following features:
 
-* Marshaling and unmarshaling of JSON:API URLs and documents
+* Marshaling and unmarshalling of JSON:API URLs and documents
 * Structs for handling URLs, documents, resources, collections...
 * Schema management
   * It can ensure relationships between types make sense.
-  * Very useful for validation when marshaling and unmarshaling.
+  * Very useful for validation when marshaling and unmarshalling.
 * Utilities for pagination, sorting, and filtering
-  * jsonapi is opiniated when it comes to those features. If you prefer you own strategy fo pagination, sorting, and filtering, it will have to be done manually.
 * In-memory data store (`SoftCollection`)
   * It can store resources (anything that implements `Resource`).
   * It can sort, filter, retrieve pages, etc.
