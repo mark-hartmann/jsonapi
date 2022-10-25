@@ -108,14 +108,14 @@ func NewErrBadRequest(title, detail string) Error {
 }
 
 // NewErrMalformedFilterParameter (400) returns the corresponding error.
-func NewErrMalformedFilterParameter(badFitler string) Error {
+func NewErrMalformedFilterParameter(badFilter string) Error {
 	e := NewError()
 
 	e.Status = strconv.Itoa(http.StatusBadRequest)
 	e.Title = "Malformed filter parameter"
 	e.Detail = "The filter parameter is not a string or a valid JSON object."
 	e.Source["parameter"] = "filter"
-	e.Meta["bad-filter"] = badFitler
+	e.Meta["bad-filter"] = badFilter
 
 	return e
 }
@@ -328,7 +328,7 @@ func NewErrUnauthorized() Error {
 
 	e.Status = strconv.Itoa(http.StatusUnauthorized)
 	e.Title = "Unauthorized"
-	e.Detail = "Authentification is required to perform this request."
+	e.Detail = "Authentication is required to perform this request."
 
 	return e
 }

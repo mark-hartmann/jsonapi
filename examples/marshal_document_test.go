@@ -62,7 +62,7 @@ func ExampleMarshalDocument() {
 	// sure the type mentioned in the path exists.
 	url, _ := jsonapi.NewURLFromRaw(schema, `/users/user1?include=articles`)
 
-	// MarhsalDocument marshals the document into a JSON:API
+	// MarshalDocument marshals the document into a JSON:API
 	// compliant payload and uses the given URL to add links
 	// and know which fields to include in the result (through
 	// the fields[...] query parameters).

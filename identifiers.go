@@ -82,7 +82,7 @@ func UnmarshalIdentifier(payload []byte, schema *Schema) (Identifier, error) {
 }
 
 // UnmarshalIdentifiers reads a payload where the main data is a collection of
-// identifiers to build and return an Idenfitiers slice.
+// identifiers to build and return an Identifiers slice.
 //
 // schema must not be nil.
 func UnmarshalIdentifiers(payload []byte, schema *Schema) (Identifiers, error) {

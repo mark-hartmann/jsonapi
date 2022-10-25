@@ -73,7 +73,7 @@ func (d *Document) Include(res Resource) {
 	d.Included = append(d.Included, res)
 }
 
-// MarshalDocument marshals a document according to the JSON:API speficication.
+// MarshalDocument marshals a document according to the JSON:API specification.
 //
 // Both doc and url must not be nil.
 func MarshalDocument(doc *Document, url *URL) ([]byte, error) {

@@ -221,7 +221,7 @@ func TestErrorConstructors(t *testing.T) {
 				e := NewErrUnauthorized()
 				return e
 			}(),
-			expected: "401 Unauthorized: Authentification is required to perform this request.",
+			expected: "401 Unauthorized: Authentication is required to perform this request.",
 		}, {
 			name: "NewErrForbidden",
 			err: func() Error {

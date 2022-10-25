@@ -229,7 +229,7 @@ type TypeUnmarshaler interface {
 	UnmarshalToType(data []byte, array, nullable bool) (interface{}, error)
 }
 
-// TypeNameExposer allows a custom unmarshaler to specify the real type name or referenceable alias
+// TypeNameExposer allows a custom unmarshaler to specify the real type name or referencable alias
 // in the error metadata if the value cannot be unmarshalled correctly.
 type TypeNameExposer interface {
 	PublicTypeName() string

@@ -1,7 +1,7 @@
 /*
 Package jsonapi offers a library to marshal and unmarshal JSON:API payloads.
 
-It also offers many utilies for developing a JSON:API backend.
+It also offers many utilities for developing a JSON:API backend.
 
 The simplest way to start using jsonapi is to use the Marshal and Unmarshal functions.
 

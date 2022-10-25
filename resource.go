@@ -228,7 +228,7 @@ func MarshalResource(r Resource, prepath string, fields []string, relData map[st
 	return pl
 }
 
-// UnmarshalResource unmarshals a JSON-encoded payload into a Resource.
+// UnmarshalResource unmarshalls a JSON-encoded payload into a Resource.
 func UnmarshalResource(data []byte, schema *Schema) (Resource, error) {
 	var rske resourceSkeleton
 	err := json.Unmarshal(data, &rske)
@@ -311,7 +311,7 @@ func UnmarshalResource(data []byte, schema *Schema) (Resource, error) {
 	return res, nil
 }
 
-// UnmarshalPartialResource unmarshals the given payload into a *SoftResource.
+// UnmarshalPartialResource unmarshalls the given payload into a *SoftResource.
 //
 // The returned *SoftResource will only contain the information found in the
 // payload. That means that fields not in the payload won't be part of the
@@ -409,7 +409,7 @@ func UnmarshalPartialResource(data []byte, schema *Schema) (*SoftResource, error
 // Equal reports whether r1 and r2 are equal.
 //
 // Two resources are equal if their types are equal, all the attributes are
-// equal (same type and same value), and all the relationstips are equal.
+// equal (same type and same value), and all the relationships are equal.
 //
 // IDs are ignored.
 func Equal(r1, r2 Resource) bool {

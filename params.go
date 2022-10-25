@@ -26,7 +26,7 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	copy(incs, su.Include)
 	sort.Strings(incs)
 
-	// Remove duplicates and uncessary includes
+	// Remove duplicates and unnecessary includes
 	for i := len(incs) - 1; i >= 0; i-- {
 		if i > 0 {
 			if strings.HasPrefix(incs[i], incs[i-1]) {

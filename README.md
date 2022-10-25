@@ -52,7 +52,7 @@ jsonapi offers the following features:
   * It can ensure relationships between types make sense.
   * Very useful for validation when marshaling and unmarshaling.
 * Utilities for pagination, sorting, and filtering
-  * jsonapi is opiniated when it comes to those features. If you prefer you own strategy fo pagination, sorting, and filtering, it will have to be done manually.
+  * jsonapi is opinionated when it comes to those features. If you prefer you own strategy fo pagination, sorting, and filtering, it will have to be done manually.
 * In-memory data store (`SoftCollection`)
   * It can store resources (anything that implements `Resource`).
   * It can sort, filter, retrieve pages, etc.

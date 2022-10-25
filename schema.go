@@ -166,11 +166,11 @@ func (s *Schema) HasType(name string) bool {
 	return false
 }
 
-// GetType returns the type associated with the speficied name.
+// GetType returns the type associated with the specified name.
 //
 // If no type with the given name is found, an zero instance of Type is
 // returned. Therefore, checking whether the Name field is empty or not is a
-// good way to dertermine whether the type was found or not.
+// good way to determine whether the type was found or not.
 func (s *Schema) GetType(name string) Type {
 	for _, typ := range s.Types {
 		if typ.Name == name {
