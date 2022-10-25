@@ -1,9 +1,9 @@
 package jsonapi
 
 import (
+	"fmt"
 	"net/url"
 	"sort"
-	"strconv"
 )
 
 // NewURL builds a URL from a SimpleURL and a schema for validating and
@@ -174,19 +174,16 @@ func (u *URL) String() string {
 
 	// Pagination
 	if u.IsCol {
-		if u.Params.PageNumber != 0 {
-			urlParams = append(
-				urlParams,
-				"page%5Bnumber%5D="+strconv.Itoa(int(u.Params.PageNumber)),
-			)
+		var pageParams []string
+		for k, v := range u.Params.Page {
+			pageParams = append(pageParams, "page%5B"+url.QueryEscape(k)+"%5D="+fmt.Sprint(v))
 		}
 
-		if u.Params.PageSize != 0 {
-			urlParams = append(
-				urlParams,
-				"page%5Bsize%5D="+strconv.Itoa(int(u.Params.PageSize)),
-			)
-		}
+		// Maps have no reliable order. One could also use sort.Slice(pageParams) with a function
+		// that explicitly checks the actual names, e.g.:
+		// params[i][:strings.Index(params[i], "=")] < params[i][:strings.Index(params[j], "=")]
+		sort.Strings(pageParams)
+		urlParams = append(urlParams, pageParams...)
 	}
 
 	// Sorting

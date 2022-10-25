@@ -36,13 +36,6 @@ func TestNewRequest(t *testing.T) {
 			url:           "/invalid",
 			schema:        schema,
 			expectedError: `400 Bad Request: "invalid" is not a known type.`,
-		}, {
-			name:   "bad url",
-			method: "GET",
-			url:    "/mocktypes1?page[size]=-1",
-			schema: schema,
-			expectedError: `400 Bad Request: The page size parameter is not ` +
-				`positive integer (including 0).`,
 		},
 	}
 
@@ -60,6 +53,13 @@ func TestNewRequest(t *testing.T) {
 			assert.Nil(doc)
 		}
 	}
+
+	body := bytes.NewBufferString("")
+	req := httptest.NewRequest("GET", "/mocktypes1", body)
+	req.URL = nil
+	doc, err := NewRequest(req, schema)
+	assert.EqualError(err, "jsonapi: pointer to url.URL is nil")
+	assert.Nil(doc)
 }
 
 func TestNewRequestInvalidBody(t *testing.T) {
