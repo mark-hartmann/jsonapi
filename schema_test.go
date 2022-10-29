@@ -199,8 +199,13 @@ func TestSchemaCheck(t *testing.T) {
 	assert.NoError(err)
 
 	type2 := Type{
-		Name:  "type2",
-		Attrs: map[string]Attr{},
+		Name: "type2",
+		Attrs: map[string]Attr{
+			"attr1": {
+				Name: "foo",
+				Type: AttrTypeInt,
+			},
+		},
 		Rels: map[string]Rel{
 			"rel1": {
 				FromName: "rel1",
@@ -212,6 +217,10 @@ func TestSchemaCheck(t *testing.T) {
 				FromName: "rel2",
 				FromType: "type2",
 				ToName:   "rel3",
+				ToType:   "type1",
+			},
+			"foo": {
+				FromName: "foo",
 				ToType:   "type1",
 			},
 		},
@@ -230,7 +239,7 @@ func TestSchemaCheck(t *testing.T) {
 		errsStr = append(errsStr, err.Error())
 	}
 
-	assert.Len(errs, 3)
+	assert.Len(errs, 4)
 	assert.Contains(
 		errsStr,
 		"jsonapi: field ToType of relationship \"rel2-invalid\" of type \"type1\" does not exist",
@@ -243,6 +252,11 @@ func TestSchemaCheck(t *testing.T) {
 	assert.Contains(
 		errsStr,
 		"jsonapi: relationship \"rel2\" of type \"type2\" and its inverse do not point each other",
+	)
+	assert.Contains(
+		errsStr,
+		"jsonapi: type \"type2\" can not have an attribute and relationship with "+
+			"the same name \"foo\"",
 	)
 }
 

@@ -203,6 +203,14 @@ func (s *Schema) Check() []error {
 				))
 			}
 
+			// SPEC 5.2.2
+			for _, attr := range typ.Attrs {
+				if attr.Name == rel.FromName {
+					errs = append(errs, fmt.Errorf("jsonapi: type %q can not have an attribute "+
+						"and relationship with the same name %q", typ.Name, rel.FromName))
+				}
+			}
+
 			// Skip to next relationship here if there's no inverse
 			if rel.ToName == "" {
 				continue
