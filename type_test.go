@@ -76,6 +76,22 @@ func TestType_AddAttr(t *testing.T) {
 			attr: Attr{Type: AttrTypeOther},
 			err:  true,
 		},
+		"attr (illegal name relationships)": {
+			attr: Attr{Name: "relationships"},
+			err:  true,
+		},
+		"attr (illegal name links)": {
+			attr: Attr{Name: "links"},
+			err:  true,
+		},
+		"attr (illegal name type)": {
+			attr: Attr{Name: "type"},
+			err:  true,
+		},
+		"attr (illegal name id)": {
+			attr: Attr{Name: "id"},
+			err:  true,
+		},
 	}
 
 	for name, test := range attrTests {
@@ -119,6 +135,14 @@ func TestType_AddRel(t *testing.T) {
 		},
 		"invalid rel (no name)": {
 			rel: Rel{},
+			err: true,
+		},
+		"invalid rel (illegal name id)": {
+			rel: Rel{FromName: "id"},
+			err: true,
+		},
+		"invalid rel (illegal name type)": {
+			rel: Rel{FromName: "type"},
 			err: true,
 		},
 		"invalid rel (empty type)": {

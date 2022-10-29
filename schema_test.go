@@ -113,6 +113,26 @@ func TestSchemaAddTwoWayRel(t *testing.T) {
 	})
 	assert.NoError(err)
 
+	err = schema.AddTwoWayRel(Rel{
+		FromType: "type1",
+		FromName: "id",
+		ToOne:    true,
+		ToType:   "type2",
+		ToName:   "children",
+		FromOne:  false,
+	})
+	assert.EqualError(err, `jsonapi: illegal relationship name "id"`)
+
+	err = schema.AddTwoWayRel(Rel{
+		FromType: "type1",
+		FromName: "parent2",
+		ToOne:    true,
+		ToType:   "type2",
+		ToName:   "type",
+		FromOne:  false,
+	})
+	assert.EqualError(err, `jsonapi: illegal relationship name "type"`)
+
 	// Add two-way relationship (missing type)
 	schema = &Schema{}
 	_ = schema.AddType(Type{Name: "type1"})

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -55,6 +56,8 @@ const (
 	AttrTypeOther
 )
 
+var memberRegexp = regexp.MustCompile(`^[a-zA-Z0-9](?:[-\w]*[a-zA-Z0-9])?$`)
+
 // uint8Array is used to marshal *[]uint8 or []byte as literal array instead of
 // a base64 encoded string value.
 type uint8Array struct {
@@ -94,8 +97,16 @@ type Type struct {
 // AddAttr adds an attributes to the type.
 func (t *Type) AddAttr(attr Attr) error {
 	// Validation
-	if attr.Name == "" {
-		return fmt.Errorf("jsonapi: attribute name is empty")
+	if !memberRegexp.MatchString(attr.Name) {
+		return fmt.Errorf("jsonapi: attribute name does not meet member name requirements")
+	}
+
+	// SPEC 5.2.2 - 5.2.3
+	// The user is responsible for ensuring that types which are turned into a json object have
+	// neither "relationships" nor "links" as field names.
+	if attr.Name == "relationships" || attr.Name == "links" || attr.Name == "id" ||
+		attr.Name == "type" {
+		return fmt.Errorf(`jsonapi: illegal attribute name "%s"`, attr.Name)
 	}
 
 	if attr.Unmarshaler == nil && GetAttrTypeString(attr.Type, attr.Array, attr.Nullable) == "" {
@@ -130,8 +141,14 @@ func (t *Type) RemoveAttr(attr string) {
 // AddRel adds a relationship to the type.
 func (t *Type) AddRel(rel Rel) error {
 	// Validation
-	if rel.FromName == "" {
-		return fmt.Errorf("jsonapi: relationship name is empty")
+	if !memberRegexp.MatchString(rel.FromName) {
+		return fmt.Errorf("jsonapi: relationship name does not meet member " +
+			"name requirements")
+	}
+
+	// SPEC 5.2.2 - 5.2.3
+	if rel.FromName == "id" || rel.FromName == "type" {
+		return fmt.Errorf(`jsonapi: illegal relationship name "%s"`, rel.FromName)
 	}
 
 	if rel.ToType == "" {
