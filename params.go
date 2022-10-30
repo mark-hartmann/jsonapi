@@ -15,7 +15,6 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		Fields:       map[string][]string{},
 		Attrs:        map[string][]Attr{},
 		Rels:         map[string][]Rel{},
-		RelData:      map[string][]string{},
 		Filter:       nil,
 		SortingRules: []string{},
 		Include:      [][]Rel{},
@@ -246,10 +245,9 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 // A Params object represents all the query parameters from the URL.
 type Params struct {
 	// Fields
-	Fields  map[string][]string
-	Attrs   map[string][]Attr
-	Rels    map[string][]Rel
-	RelData map[string][]string
+	Fields map[string][]string
+	Attrs  map[string][]Attr
+	Rels   map[string][]Rel
 
 	// Filter
 	Filter map[string][]string

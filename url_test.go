@@ -269,7 +269,6 @@ func TestParseParams(t *testing.T) {
 				Fields:       map[string][]string{},
 				Attrs:        map[string][]Attr{},
 				Rels:         map[string][]Rel{},
-				RelData:      map[string][]string{},
 				SortingRules: []string{},
 				Page:         nil,
 				Include:      [][]Rel{},
@@ -282,7 +281,6 @@ func TestParseParams(t *testing.T) {
 				Fields:       map[string][]string{},
 				Attrs:        map[string][]Attr{},
 				Rels:         map[string][]Rel{},
-				RelData:      map[string][]string{},
 				SortingRules: []string{},
 				Page:         nil,
 				Include:      [][]Rel{},
@@ -310,7 +308,6 @@ func TestParseParams(t *testing.T) {
 				},
 				Attrs:        map[string][]Attr{},
 				Rels:         map[string][]Rel{},
-				RelData:      map[string][]string{},
 				SortingRules: []string{},
 				Page:         map[string]string{"size": "50", "number": "3"},
 				Include: [][]Rel{
@@ -352,7 +349,6 @@ func TestParseParams(t *testing.T) {
 				},
 				Attrs:        map[string][]Attr{},
 				Rels:         map[string][]Rel{},
-				RelData:      map[string][]string{},
 				SortingRules: []string{},
 				Page:         map[string]string{"size": "50", "number": "3"},
 				Include: [][]Rel{
@@ -392,7 +388,6 @@ func TestParseParams(t *testing.T) {
 				},
 				Attrs:        map[string][]Attr{},
 				Rels:         map[string][]Rel{},
-				RelData:      map[string][]string{},
 				SortingRules: []string{},
 				Page:         map[string]string{"size": "90", "number": "110"},
 				Include: [][]Rel{
@@ -413,9 +408,8 @@ func TestParseParams(t *testing.T) {
 				Fields: map[string][]string{
 					"mocktypes1": mockTypes1.Fields(),
 				},
-				Attrs:   map[string][]Attr{},
-				Rels:    map[string][]Rel{},
-				RelData: map[string][]string{},
+				Attrs: map[string][]Attr{},
+				Rels:  map[string][]Rel{},
 				Filter: map[string][]string{
 					"filter": {"label"},
 				},
@@ -433,9 +427,8 @@ func TestParseParams(t *testing.T) {
 				Fields: map[string][]string{
 					"mocktypes1": mockTypes1.Fields(),
 				},
-				Attrs:   map[string][]Attr{},
-				Rels:    map[string][]Rel{},
-				RelData: map[string][]string{},
+				Attrs: map[string][]Attr{},
+				Rels:  map[string][]Rel{},
 				Filter: map[string][]string{
 					"filter":       {"label", "label2"},
 					"filter[foo]":  {"bar"},
@@ -456,9 +449,8 @@ func TestParseParams(t *testing.T) {
 				Fields: map[string][]string{
 					"mocktypes1": mockTypes1.Fields(),
 				},
-				Attrs:   map[string][]Attr{},
-				Rels:    map[string][]Rel{},
-				RelData: map[string][]string{},
+				Attrs: map[string][]Attr{},
+				Rels:  map[string][]Rel{},
 				SortingRules: []string{
 					"str", "-int", "bool", "int16", "int32", "int64", "int8",
 					"time", "uint", "uint16", "uint32", "uint64", "uint8", "id",
@@ -477,9 +469,8 @@ func TestParseParams(t *testing.T) {
 				Fields: map[string][]string{
 					"mocktypes1": mockTypes1.Fields(),
 				},
-				Attrs:   map[string][]Attr{},
-				Rels:    map[string][]Rel{},
-				RelData: map[string][]string{},
+				Attrs: map[string][]Attr{},
+				Rels:  map[string][]Rel{},
 				SortingRules: []string{
 					"str", "-int", "id", "bool", "int16", "int32", "int64", "int8",
 					"time", "uint", "uint16", "uint32", "uint64", "uint8",
@@ -500,7 +491,6 @@ func TestParseParams(t *testing.T) {
 				},
 				Attrs:        map[string][]Attr{},
 				Rels:         map[string][]Rel{},
-				RelData:      map[string][]string{},
 				SortingRules: []string{},
 				Include:      [][]Rel{},
 			},
@@ -520,7 +510,6 @@ func TestParseParams(t *testing.T) {
 				Rels: map[string][]Rel{
 					"mocktypes1": {},
 				},
-				RelData: map[string][]string{},
 				SortingRules: []string{
 					"bool", "int", "int16", "int32", "int64", "int8", "str",
 					"time", "uint", "uint16", "uint32", "uint64", "uint8", "id",
