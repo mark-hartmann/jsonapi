@@ -4,7 +4,7 @@
 		"version": "1.0"
 	},
 	"links": {
-		"self": "/fake/path?fields%5Bmocktype%"
+		"self": "/fake/path"
 	},
 	"meta": {
 		"f1": "漢語",

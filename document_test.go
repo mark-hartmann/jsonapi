@@ -893,7 +893,8 @@ func TestUnmarshalDocument(t *testing.T) {
 	t.Run("resource with inclusions", func(t *testing.T) {
 		assert := assert.New(t)
 
-		url, _ := NewURLFromRaw(schema, "/mocktype/id1")
+		url, _ := NewURLFromRaw(schema, "/mocktype/id1?fields[mocktype]="+
+			strings.Join(typ.Fields(), ","))
 
 		doc := &Document{
 			Data: col.At(0),
@@ -916,7 +917,8 @@ func TestUnmarshalDocument(t *testing.T) {
 	})
 
 	t.Run("resource with object property", func(t *testing.T) {
-		url, _ := NewURLFromRaw(schema, "/objtest/id1")
+		url, _ := NewURLFromRaw(schema, "/objtest/id1?fields[objtest]=obj,objarr,"+
+			"objptr,objptrarr")
 		doc := &Document{Data: objRes}
 
 		payload, err := MarshalDocument(doc, url)
@@ -930,7 +932,8 @@ func TestUnmarshalDocument(t *testing.T) {
 	t.Run("collection with inclusions", func(t *testing.T) {
 		assert := assert.New(t)
 
-		url, _ := NewURLFromRaw(schema, "/mocktype/id1")
+		url, _ := NewURLFromRaw(schema, "/mocktype/id1?fields[mocktype]="+
+			strings.Join(typ.Fields(), ","))
 		url.Params.Fields["mocktype4"] = typ4.Fields()
 		url.Params.Fields["mocktype5"] = typ5.Fields()
 		url.Params.Fields["mocktype6"] = typ6.Fields()

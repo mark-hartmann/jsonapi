@@ -118,14 +118,6 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		}
 	}
 
-	for t := range params.Fields {
-		if len(params.Fields[t]) == 0 {
-			typ := schema.GetType(t)
-			params.Fields[t] = make([]string, len(typ.Fields()))
-			copy(params.Fields[t], typ.Fields())
-		}
-	}
-
 	// Attrs and Rels
 	for typeName, fields := range params.Fields {
 		// This should always return a type since
@@ -135,6 +127,7 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		params.Attrs[typeName] = make([]Attr, 0, len(typ.Attrs))
 		params.Rels[typeName] = make([]Rel, 0, len(typ.Attrs))
 
+		// Get Attrs and Rels for the requested fields
 		for _, field := range typ.Fields() {
 			for _, field2 := range fields {
 				if field == field2 {
@@ -176,7 +169,6 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	if isCol {
 		typ := schema.GetType(resType)
 		sortingRules := make([]string, 0, len(typ.Attrs))
-		idFound := false
 
 		for _, rule := range su.SortingRules {
 			urule := rule
@@ -184,14 +176,13 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 				urule = urule[1:]
 			}
 
+			// The id is not an Attr and must be handled separately.
 			if urule == "id" {
-				idFound = true
-
 				sortingRules = append(sortingRules, rule)
-
 				break
 			}
 
+			// todo: should we return an error if a sort attribute is not found?
 			for _, attr := range typ.Attrs {
 				if urule == attr.Name {
 					sortingRules = append(sortingRules, rule)
@@ -200,36 +191,8 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 			}
 		}
 
-		// Add 1 because of id
-		restOfRules := make([]string, 0, len(typ.Attrs)+1-len(sortingRules))
-
-		for _, attr := range typ.Attrs {
-			found := false
-
-			for _, rule := range sortingRules {
-				urule := rule
-				if urule[0] == '-' {
-					urule = urule[1:]
-				}
-
-				if urule == attr.Name {
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				restOfRules = append(restOfRules, attr.Name)
-			}
-		}
-
-		sort.Strings(restOfRules)
-		sortingRules = append(sortingRules, restOfRules...)
-
-		if !idFound {
-			sortingRules = append(sortingRules, "id")
-		}
-
+		// Sorting sort rules is probably a very bad idea
+		// sort.Strings(sortingRules)
 		params.SortingRules = sortingRules
 	}
 
@@ -244,10 +207,17 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 
 // A Params object represents all the query parameters from the URL.
 type Params struct {
-	// Fields
+	// Fields contains the names of all attributes and relationships that are included in the
+	// sparse field sets.
 	Fields map[string][]string
-	Attrs  map[string][]Attr
-	Rels   map[string][]Rel
+
+	// Attrs contains all attributes found in Fields, grouped by the name of the resource type
+	// they belong to.
+	Attrs map[string][]Attr
+
+	// Rels contains all relationships found in Fields, grouped by the name of the resource type
+	// they belong to.
+	Rels map[string][]Rel
 
 	// Filter
 	Filter map[string][]string
@@ -258,6 +228,6 @@ type Params struct {
 	// Pagination
 	Page map[string]string
 
-	// Include
+	// Include contains cleaned up relationship paths.
 	Include [][]Rel
 }

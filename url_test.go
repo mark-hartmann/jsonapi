@@ -248,8 +248,6 @@ func TestParseURL(t *testing.T) {
 }
 
 func TestParseParams(t *testing.T) {
-	assert := assert.New(t)
-
 	// Schema
 	schema := newMockSchema()
 	mockTypes1 := schema.GetType("mocktypes1")
@@ -287,6 +285,37 @@ func TestParseParams(t *testing.T) {
 			},
 			expectedError: false,
 		}, {
+			name: "sort and pagination",
+			url: `/mocktypes1?fields[mocktypes1]=bool,str,uint8&sort=str,-bool,to-many-from-one
+&fields[mocktypes2]=intptr,strptr&page[number]=20&page[size]=50&include=to-many-from-one`,
+			colType: "mocktypes1",
+			expectedParams: Params{
+				// mocktypes1 was requested, but without sparse fieldset. Since no relationship
+				// was requested to be included, mocktypes2 does not appear in the maps.
+				Fields: map[string][]string{
+					"mocktypes1": {"bool", "str", "uint8"},
+					"mocktypes2": {"intptr", "strptr"},
+				},
+				Attrs: map[string][]Attr{
+					"mocktypes1": {},
+					"mocktypes2": {},
+				},
+				Rels: map[string][]Rel{
+					"mocktypes1": {},
+					"mocktypes2": {},
+				},
+				// SportingRules does not contain to-many-from-one because it's a relationship and
+				// not an attribute.
+				SortingRules: []string{"str", "-bool"},
+				Page:         map[string]string{"number": "20", "size": "50"},
+				Include: [][]Rel{
+					{
+						mockTypes1.Rels["to-many-from-one"],
+					},
+				},
+			},
+			expectedError: false,
+		}, {
 			name: "include, sort, pagination in multiple parts",
 			url: `
 				?include=
@@ -303,11 +332,17 @@ func TestParseParams(t *testing.T) {
 			colType: "mocktypes1",
 			expectedParams: Params{
 				Fields: map[string][]string{
-					"mocktypes1": mockTypes1.Fields(),
-					"mocktypes2": mockTypes2.Fields(),
+					"mocktypes1": {},
+					"mocktypes2": {},
 				},
-				Attrs:        map[string][]Attr{},
-				Rels:         map[string][]Rel{},
+				Attrs: map[string][]Attr{
+					"mocktypes1": {},
+					"mocktypes2": {},
+				},
+				Rels: map[string][]Rel{
+					"mocktypes1": {},
+					"mocktypes2": {},
+				},
 				SortingRules: []string{},
 				Page:         map[string]string{"size": "50", "number": "3"},
 				Include: [][]Rel{
@@ -344,11 +379,17 @@ func TestParseParams(t *testing.T) {
 			colType: "mocktypes1",
 			expectedParams: Params{
 				Fields: map[string][]string{
-					"mocktypes1": mockTypes1.Fields(),
-					"mocktypes2": mockTypes2.Fields(),
+					"mocktypes1": {},
+					"mocktypes2": {},
 				},
-				Attrs:        map[string][]Attr{},
-				Rels:         map[string][]Rel{},
+				Attrs: map[string][]Attr{
+					"mocktypes1": {},
+					"mocktypes2": {},
+				},
+				Rels: map[string][]Rel{
+					"mocktypes1": {},
+					"mocktypes2": {},
+				},
 				SortingRules: []string{},
 				Page:         map[string]string{"size": "50", "number": "3"},
 				Include: [][]Rel{
@@ -384,10 +425,14 @@ func TestParseParams(t *testing.T) {
 			colType: "mocktypes1",
 			expectedParams: Params{
 				Fields: map[string][]string{
-					"mocktypes1": mockTypes1.Fields(),
+					"mocktypes1": {},
 				},
-				Attrs:        map[string][]Attr{},
-				Rels:         map[string][]Rel{},
+				Attrs: map[string][]Attr{
+					"mocktypes1": {},
+				},
+				Rels: map[string][]Rel{
+					"mocktypes1": {},
+				},
 				SortingRules: []string{},
 				Page:         map[string]string{"size": "90", "number": "110"},
 				Include: [][]Rel{
@@ -399,17 +444,19 @@ func TestParseParams(t *testing.T) {
 			},
 			expectedError: false,
 		}, {
-			name: "filter label",
-			url: `
-				?filter=label
-			`,
+			name:    "filter label",
+			url:     `?filter=label`,
 			colType: "mocktypes1",
 			expectedParams: Params{
 				Fields: map[string][]string{
-					"mocktypes1": mockTypes1.Fields(),
+					"mocktypes1": {},
 				},
-				Attrs: map[string][]Attr{},
-				Rels:  map[string][]Rel{},
+				Attrs: map[string][]Attr{
+					"mocktypes1": {},
+				},
+				Rels: map[string][]Rel{
+					"mocktypes1": {},
+				},
 				Filter: map[string][]string{
 					"filter": {"label"},
 				},
@@ -418,17 +465,19 @@ func TestParseParams(t *testing.T) {
 			},
 			expectedError: false,
 		}, {
-			name: "multiple filter labels",
-			url: `
-				?filter=label&filter=label2&filter[foo]=bar&filter[10%257]=3
-			`,
+			name:    "multiple filter labels",
+			url:     `?filter=label&filter=label2&filter[foo]=bar&filter[10%257]=3`,
 			colType: "mocktypes1",
 			expectedParams: Params{
 				Fields: map[string][]string{
-					"mocktypes1": mockTypes1.Fields(),
+					"mocktypes1": {},
 				},
-				Attrs: map[string][]Attr{},
-				Rels:  map[string][]Rel{},
+				Attrs: map[string][]Attr{
+					"mocktypes1": {},
+				},
+				Rels: map[string][]Rel{
+					"mocktypes1": {},
+				},
 				Filter: map[string][]string{
 					"filter":       {"label", "label2"},
 					"filter[foo]":  {"bar"},
@@ -439,21 +488,21 @@ func TestParseParams(t *testing.T) {
 			},
 			expectedError: false,
 		}, {
-			name: "sorting rules without id",
-			url: `
-				/mocktypes1
-				?sort=str,-int
-			`,
+			name:    "sorting rules without id",
+			url:     `/mocktypes1?sort=str,-int`,
 			colType: "mocktypes1",
 			expectedParams: Params{
 				Fields: map[string][]string{
-					"mocktypes1": mockTypes1.Fields(),
+					"mocktypes1": {},
 				},
-				Attrs: map[string][]Attr{},
-				Rels:  map[string][]Rel{},
+				Attrs: map[string][]Attr{
+					"mocktypes1": {},
+				},
+				Rels: map[string][]Rel{
+					"mocktypes1": {},
+				},
 				SortingRules: []string{
-					"str", "-int", "bool", "int16", "int32", "int64", "int8",
-					"time", "uint", "uint16", "uint32", "uint64", "uint8", "id",
+					"str", "-int",
 				},
 				Include: [][]Rel{},
 			},
@@ -462,18 +511,24 @@ func TestParseParams(t *testing.T) {
 			name: "sorting rules with id",
 			url: `
 				/mocktypes1
-				?sort=str,-int,id
+				?fields[mocktypes1]=bool,int,int16,int32,int64,int8,str,time,to-many,
+to-many-from-many,to-many-from-one,to-one,to-one-from-many,to-one-from-one,uint,uint16,uint32,
+uint64,uint8
+				&sort=str,-int,id
 			`,
 			colType: "mocktypes1",
 			expectedParams: Params{
 				Fields: map[string][]string{
 					"mocktypes1": mockTypes1.Fields(),
 				},
-				Attrs: map[string][]Attr{},
-				Rels:  map[string][]Rel{},
+				Attrs: map[string][]Attr{
+					"mocktypes1": {},
+				},
+				Rels: map[string][]Rel{
+					"mocktypes1": {},
+				},
 				SortingRules: []string{
-					"str", "-int", "id", "bool", "int16", "int32", "int64", "int8",
-					"time", "uint", "uint16", "uint32", "uint64", "uint8",
+					"str", "-int", "id",
 				},
 				Include: [][]Rel{},
 			},
@@ -506,56 +561,57 @@ func TestParseParams(t *testing.T) {
 				Fields: map[string][]string{
 					"mocktypes1": {"str", "id"},
 				},
-				Attrs: map[string][]Attr{},
+				Attrs: map[string][]Attr{
+					"mocktypes1": {},
+				},
 				Rels: map[string][]Rel{
 					"mocktypes1": {},
 				},
-				SortingRules: []string{
-					"bool", "int", "int16", "int32", "int64", "int8", "str",
-					"time", "uint", "uint16", "uint32", "uint64", "uint8", "id",
-				},
-				Include: [][]Rel{},
+				SortingRules: []string{},
+				Include:      [][]Rel{},
 			},
 			expectedError: false,
 		},
 	}
 
 	for _, test := range tests {
-		u, err := url.Parse(makeOneLineNoSpaces(test.url))
-		assert.NoError(err, test.name)
+		t.Run(test.name, func(t *testing.T) {
+			u, err := url.Parse(makeOneLineNoSpaces(test.url))
+			assert.NoError(t, err, test.name)
 
-		su, err := NewSimpleURL(u)
-		assert.NoError(err, test.name)
+			su, err := NewSimpleURL(u)
+			assert.NoError(t, err, test.name)
 
-		params, err := NewParams(schema, su, test.colType)
+			params, err := NewParams(schema, su, test.colType)
 
-		// Set Attrs and Rels
-		for colType, fields := range test.expectedParams.Fields {
-			for _, field := range fields {
-				if typ := schema.GetType(colType); typ.Name != "" {
-					if _, ok := typ.Attrs[field]; ok {
-						test.expectedParams.Attrs[colType] = append(
-							test.expectedParams.Attrs[colType],
-							typ.Attrs[field],
-						)
-					} else if typ := schema.GetType(colType); typ.Name != "" {
-						if _, ok := typ.Rels[field]; ok {
-							test.expectedParams.Rels[colType] = append(
-								test.expectedParams.Rels[colType],
-								typ.Rels[field],
+			// Set Attrs and Rels if mentioned in Fields
+			for colType, fields := range test.expectedParams.Fields {
+				for _, field := range fields {
+					if typ := schema.GetType(colType); typ.Name != "" {
+						if _, ok := typ.Attrs[field]; ok {
+							test.expectedParams.Attrs[colType] = append(
+								test.expectedParams.Attrs[colType],
+								typ.Attrs[field],
 							)
+						} else if typ := schema.GetType(colType); typ.Name != "" {
+							if _, ok := typ.Rels[field]; ok {
+								test.expectedParams.Rels[colType] = append(
+									test.expectedParams.Rels[colType],
+									typ.Rels[field],
+								)
+							}
 						}
 					}
 				}
 			}
-		}
 
-		if test.expectedError {
-			assert.Error(err, test.name)
-		} else {
-			assert.NoError(err, test.name)
-			assert.Equal(test.expectedParams, *params, test.name)
-		}
+			if test.expectedError {
+				assert.Error(t, err, test.name)
+			} else {
+				assert.NoError(t, err, test.name)
+				assert.Equal(t, test.expectedParams, *params, test.name)
+			}
+		})
 	}
 }
 
@@ -577,6 +633,7 @@ func TestURLEscaping(t *testing.T) {
 				&page[size]=10
 				&page[abc]
 				&filter=a_label
+				&sort=bool,int,int16,uint8,id
 			`,
 			escaped: `
 				/mocktypes1
@@ -585,8 +642,7 @@ func TestURLEscaping(t *testing.T) {
 				&page%5Babc%5D=
 				&page%5Bnumber%5D=2
 				&page%5Bsize%5D=10
-				&sort=bool%2Cint%2Cint16%2Cint32%2Cint64%2Cint8%2Cstr%2Ctime%2C
-				uint%2Cuint16%2Cuint32%2Cuint64%2Cuint8%2Cid
+				&sort=bool%2Cint%2Cint16%2Cuint8%2Cid
 				`,
 			unescaped: `
 				/mocktypes1
@@ -595,8 +651,7 @@ func TestURLEscaping(t *testing.T) {
 				&page[abc]=
 				&page[number]=2
 				&page[size]=10
-				&sort=bool,int,int16,int32,int64,int8,str,time,uint,uint16,
-					uint32,uint64,uint8,id
+				&sort=bool,int,int16,uint8,id
 			`,
 		},
 	}
@@ -618,13 +673,27 @@ func TestURLEscaping(t *testing.T) {
 func TestURLString(t *testing.T) {
 	assert := assert.New(t)
 
-	// Simple test
-	raw := `
+	tests := map[string]struct {
+		raw, expected string
+	}{
+		"simple resource collection": {
+			raw:      "/mocktypes1",
+			expected: "/mocktypes1",
+		},
+		"overlapping inclusions and sorting rules": {
+			raw: `/mocktypes1?include=to-many-from-one.to-one-from-many&sort=uint8&include=
+		to-many-from-one&sort=-str`,
+			expected: "/mocktypes1?include=to-many-from-one.to-one-from-many&sort=uint8,-str",
+		},
+		"complete example": {
+			raw: `
 		/mocktypes1
-		?include=
+		?fields[mocktypes1]=bool,int,int16,int32,int64,int8,str,time,to-many,to-many-from-many
+		&include=
 			to-many-from-one.to-one-from-many.to-one.to-many-from-many%2C
 			to-one-from-one.to-many-from-many
 		&sort=to-many%2Cstr,%2C%2C-bool
+		&fields[mocktypes2]=boolptr,int16ptr,int32ptr
 		&page[number]=3
 		&sort=uint8
 		&include=
@@ -632,24 +701,27 @@ func TestURLString(t *testing.T) {
 			to-many-from-many
 		&page[size]=50
 		&filter={"f":"str","o":"=","v":"abc"}
-	`
-	expected := `
+	`,
+			expected: `
 		/mocktypes1
-		?fields[mocktypes1]=bool,int,int16,int32,int64,int8,str,time,to-many,
-			to-many-from-many,to-many-from-one,to-one,to-one-from-many,
-			to-one-from-one,uint,uint16,uint32,uint64,uint8
-		&fields[mocktypes2]=boolptr,int16ptr,int32ptr,int64ptr,int8ptr,intptr,
-			strptr,timeptr,to-many-from-many,to-many-from-one,to-one-from-many,
-			to-one-from-one,uint16ptr,uint32ptr,uint64ptr,uint8ptr,uintptr
+		?fields[mocktypes1]=bool,int,int16,int32,int64,int8,str,time,to-many,to-many-from-many
+		&fields[mocktypes2]=boolptr,int16ptr,int32ptr
+		&include=to-many-from-many,to-many-from-one.to-one-from-many.to-one.to-many-from-many,
+		to-one-from-one.to-many-from-many
 		&filter={"f":"str","o":"=","v":"abc"}
 		&page[number]=3
 		&page[size]=50
-		&sort=str,-bool,uint8,int,int16,int32,int64,int8,time,uint,uint16,
-			uint32,uint64,id
-		`
+		&sort=str,-bool,uint8
+		`,
+		},
+	}
 
-	url, err := NewURLFromRaw(newMockSchema(), makeOneLineNoSpaces(raw))
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			u, err := NewURLFromRaw(newMockSchema(), makeOneLineNoSpaces(test.raw))
 
-	assert.NoError(err)
-	assert.Equal(makeOneLineNoSpaces(expected), url.UnescapedString())
+			assert.NoError(err)
+			assert.Equal(makeOneLineNoSpaces(test.expected), u.UnescapedString())
+		})
+	}
 }

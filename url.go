@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strings"
 )
 
 // NewURL builds a URL from a SimpleURL and a schema for validating and
@@ -144,6 +145,10 @@ func (u *URL) String() string {
 	sort.Strings(fields)
 
 	for _, typ := range fields {
+		if len(u.Params.Fields[typ]) == 0 {
+			continue
+		}
+
 		sort.Strings(u.Params.Fields[typ])
 
 		param := "fields%5B" + typ + "%5D="
@@ -153,6 +158,25 @@ func (u *URL) String() string {
 
 		param = param[:len(param)-3]
 
+		urlParams = append(urlParams, param)
+	}
+
+	// Inclusions
+	if len(u.Params.Include) > 0 {
+		param := "include="
+		inclusions := make([]string, 0, len(u.Params.Include))
+
+		for _, rels := range u.Params.Include {
+			var r string
+			for _, rel := range rels {
+				r += rel.FromName + "."
+			}
+
+			inclusions = append(inclusions, r[:len(r)-1])
+		}
+
+		sort.Strings(inclusions)
+		param += strings.Join(inclusions, "%2C")
 		urlParams = append(urlParams, param)
 	}
 
