@@ -12,12 +12,12 @@ import (
 // object with NewSimpleURL.
 func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	params := &Params{
-		Fields:       map[string][]string{},
-		Attrs:        map[string][]Attr{},
-		Rels:         map[string][]Rel{},
-		Filter:       nil,
-		SortingRules: []string{},
-		Include:      [][]Rel{},
+		Fields:    map[string][]string{},
+		Attrs:     map[string][]Attr{},
+		Rels:      map[string][]Rel{},
+		Filter:    nil,
+		SortRules: []SortRule{},
+		Include:   [][]Rel{},
 	}
 
 	// Include
@@ -168,32 +168,72 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 
 	if isCol {
 		typ := schema.GetType(resType)
-		sortingRules := make([]string, 0, len(typ.Attrs))
 
 		for _, rule := range su.SortingRules {
-			urule := rule
-			if urule[0] == '-' {
-				urule = urule[1:]
+			sr := SortRule{}
+
+			if rule[0] == '-' {
+				rule = rule[1:]
+				sr.Desc = true
 			}
 
-			// The id is not an Attr and must be handled separately.
-			if urule == "id" {
-				sortingRules = append(sortingRules, rule)
-				break
+			parts := strings.Split(rule, ".")
+			if len(parts) == 1 {
+				sr.Name = parts[0]
+				if _, ok := typ.Attrs[sr.Name]; !ok && sr.Name != "id" {
+					return nil, NewErrUnknownSortField(typ.Name, sr.Name)
+				}
+
+				params.SortRules = append(params.SortRules, sr)
+
+				continue
 			}
 
-			// todo: should we return an error if a sort attribute is not found?
-			for _, attr := range typ.Attrs {
-				if urule == attr.Name {
-					sortingRules = append(sortingRules, rule)
-					break
+			var path []Rel
+
+			st := typ
+			for i := 0; i < len(parts)-1; i++ {
+				rel, ok := st.Rels[parts[i]]
+				if !ok {
+					return nil, NewErrUnknownSortRelationship(st.Name, parts[i])
+				}
+
+				if !rel.ToOne {
+					return nil, NewErrInvalidSortRelationship(st.Name, parts[i])
+				}
+
+				path = append(path, rel)
+				st = schema.GetType(rel.ToType)
+			}
+
+			sr.Name = parts[len(parts)-1]
+			if _, ok := st.Attrs[sr.Name]; !ok && sr.Name != "id" {
+				return nil, NewErrUnknownSortField(st.Name, sr.Name)
+			}
+
+			// Removes all redundant relationship paths. For example, a path of [a->b,b->a,a->c]
+			// would be reduced to [a-c]. Self-relationships like [a->a] are removed.
+			// todo: research if this can be implemented more effectively
+			// todo: find a way to test this without having to use dozens of url with sort params
+			for i := len(path) - 1; i >= 0; i-- {
+				for j := 0; j <= i; j++ {
+					if path[j].FromType == path[i].ToType {
+						path = append(path[:j], path[i+1:]...)
+						i = j
+
+						break
+					}
 				}
 			}
-		}
 
-		// Sorting sort rules is probably a very bad idea
-		// sort.Strings(sortingRules)
-		params.SortingRules = sortingRules
+			if len(path) != 0 {
+				sr.Path = path
+			} else {
+				sr.Path = nil
+			}
+
+			params.SortRules = append(params.SortRules, sr)
+		}
 	}
 
 	// Filter
@@ -222,8 +262,8 @@ type Params struct {
 	// Filter
 	Filter map[string][]string
 
-	// Sorting
-	SortingRules []string
+	// SortRules contains all sorting rules.
+	SortRules []SortRule
 
 	// Pagination
 	Page map[string]string

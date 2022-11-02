@@ -264,29 +264,29 @@ func TestParseParams(t *testing.T) {
 			name: "slash only",
 			url:  `/`,
 			expectedParams: Params{
-				Fields:       map[string][]string{},
-				Attrs:        map[string][]Attr{},
-				Rels:         map[string][]Rel{},
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      [][]Rel{},
+				Fields:    map[string][]string{},
+				Attrs:     map[string][]Attr{},
+				Rels:      map[string][]Rel{},
+				SortRules: []SortRule{},
+				Page:      nil,
+				Include:   [][]Rel{},
 			},
 			expectedError: false,
 		}, {
 			name: "question mark",
 			url:  `?`,
 			expectedParams: Params{
-				Fields:       map[string][]string{},
-				Attrs:        map[string][]Attr{},
-				Rels:         map[string][]Rel{},
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      [][]Rel{},
+				Fields:    map[string][]string{},
+				Attrs:     map[string][]Attr{},
+				Rels:      map[string][]Rel{},
+				SortRules: []SortRule{},
+				Page:      nil,
+				Include:   [][]Rel{},
 			},
 			expectedError: false,
 		}, {
 			name: "sort and pagination",
-			url: `/mocktypes1?fields[mocktypes1]=bool,str,uint8&sort=str,-bool,to-many-from-one
+			url: `/mocktypes1?fields[mocktypes1]=bool,str,uint8&sort=str,-bool
 &fields[mocktypes2]=intptr,strptr&page[number]=20&page[size]=50&include=to-many-from-one`,
 			colType: "mocktypes1",
 			expectedParams: Params{
@@ -306,8 +306,8 @@ func TestParseParams(t *testing.T) {
 				},
 				// SportingRules does not contain to-many-from-one because it's a relationship and
 				// not an attribute.
-				SortingRules: []string{"str", "-bool"},
-				Page:         map[string]string{"number": "20", "size": "50"},
+				SortRules: []SortRule{{Name: "str"}, {Name: "bool", Desc: true}},
+				Page:      map[string]string{"number": "20", "size": "50"},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-one"],
@@ -343,8 +343,8 @@ func TestParseParams(t *testing.T) {
 					"mocktypes1": {},
 					"mocktypes2": {},
 				},
-				SortingRules: []string{},
-				Page:         map[string]string{"size": "50", "number": "3"},
+				SortRules: []SortRule{},
+				Page:      map[string]string{"size": "50", "number": "3"},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-many"],
@@ -370,7 +370,7 @@ func TestParseParams(t *testing.T) {
 					to-one-from-one.to-many-from-many
 				&sort=to-many%2Cstr,%2C%2C-bool
 				&page[number]=3
-				&sort=uint8
+				&sort=uint8,-to-one-from-one.int16Ptr
 				&include=
 					to-many-from-one,
 					to-many-from-many
@@ -390,8 +390,8 @@ func TestParseParams(t *testing.T) {
 					"mocktypes1": {},
 					"mocktypes2": {},
 				},
-				SortingRules: []string{},
-				Page:         map[string]string{"size": "50", "number": "3"},
+				SortRules: []SortRule{},
+				Page:      map[string]string{"size": "50", "number": "3"},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-many"],
@@ -433,8 +433,8 @@ func TestParseParams(t *testing.T) {
 				Rels: map[string][]Rel{
 					"mocktypes1": {},
 				},
-				SortingRules: []string{},
-				Page:         map[string]string{"size": "90", "number": "110"},
+				SortRules: []SortRule{},
+				Page:      map[string]string{"size": "90", "number": "110"},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-one"],
@@ -460,8 +460,8 @@ func TestParseParams(t *testing.T) {
 				Filter: map[string][]string{
 					"filter": {"label"},
 				},
-				SortingRules: []string{},
-				Include:      [][]Rel{},
+				SortRules: []SortRule{},
+				Include:   [][]Rel{},
 			},
 			expectedError: false,
 		}, {
@@ -483,8 +483,8 @@ func TestParseParams(t *testing.T) {
 					"filter[foo]":  {"bar"},
 					"filter[10%7]": {"3"},
 				},
-				SortingRules: []string{},
-				Include:      [][]Rel{},
+				SortRules: []SortRule{},
+				Include:   [][]Rel{},
 			},
 			expectedError: false,
 		}, {
@@ -501,10 +501,11 @@ func TestParseParams(t *testing.T) {
 				Rels: map[string][]Rel{
 					"mocktypes1": {},
 				},
-				SortingRules: []string{
-					"str", "-int",
-				},
 				Include: [][]Rel{},
+				SortRules: []SortRule{
+					{Name: "str"},
+					{Name: "int", Desc: true},
+				},
 			},
 			expectedError: false,
 		}, {
@@ -514,7 +515,7 @@ func TestParseParams(t *testing.T) {
 				?fields[mocktypes1]=bool,int,int16,int32,int64,int8,str,time,to-many,
 to-many-from-many,to-many-from-one,to-one,to-one-from-many,to-one-from-one,uint,uint16,uint32,
 uint64,uint8
-				&sort=str,-int,id
+				&sort=str,-int,id,-to-one-from-one.int16ptr,to-one-from-one.to-one-from-many.str
 			`,
 			colType: "mocktypes1",
 			expectedParams: Params{
@@ -527,12 +528,79 @@ uint64,uint8
 				Rels: map[string][]Rel{
 					"mocktypes1": {},
 				},
-				SortingRules: []string{
-					"str", "-int", "id",
+				SortRules: []SortRule{
+					{Name: "str"},
+					{Name: "int", Desc: true},
+					{Name: "id"},
+					{
+						Path: []Rel{
+							mockTypes1.Rels["to-one-from-one"],
+						},
+						Name: "int16ptr",
+						Desc: true,
+					},
+					{
+						Path: nil,
+						Name: "str",
+					},
 				},
 				Include: [][]Rel{},
 			},
 			expectedError: false,
+		}, {
+			name: "invalid sort path (to-many)",
+			url: `
+				/mocktypes1
+				?fields[mocktypes1]=bool,int,int16&sort=str,-int,id,-to-many-from-one.int16ptr
+			`,
+			colType: "mocktypes1",
+			expectedParams: Params{
+				Fields:    map[string][]string{},
+				Attrs:     map[string][]Attr{},
+				Rels:      map[string][]Rel{},
+				SortRules: []SortRule{},
+				Include:   [][]Rel{},
+			},
+			expectedError: true,
+		}, {
+			name: "invalid sort path (unknown relationship)",
+			url: `
+				/mocktypes1
+				?fields[mocktypes1]=bool,int,int16&sort=str,-int,id,-doesnotexist.int16ptr
+			`,
+			colType: "mocktypes1",
+			expectedParams: Params{
+				Fields:    map[string][]string{},
+				Attrs:     map[string][]Attr{},
+				Rels:      map[string][]Rel{},
+				SortRules: []SortRule{},
+				Include:   [][]Rel{},
+			},
+			expectedError: true,
+		}, {
+			name:    "unknown sort field",
+			url:     `/mocktypes1?sort=doesnotexist`,
+			colType: "mocktypes1",
+			expectedParams: Params{
+				Fields:    map[string][]string{},
+				Attrs:     map[string][]Attr{},
+				Rels:      map[string][]Rel{},
+				SortRules: []SortRule{},
+				Include:   [][]Rel{},
+			},
+			expectedError: true,
+		}, {
+			name:    "unknown sort field (deep)",
+			url:     `/mocktypes1?sort=to-one-from-one.doesnotexist`,
+			colType: "mocktypes1",
+			expectedParams: Params{
+				Fields:    map[string][]string{},
+				Attrs:     map[string][]Attr{},
+				Rels:      map[string][]Rel{},
+				SortRules: []SortRule{},
+				Include:   [][]Rel{},
+			},
+			expectedError: true,
 		}, {
 			name: "fields with duplicates",
 			url: `
@@ -544,10 +612,9 @@ uint64,uint8
 				Fields: map[string][]string{
 					"mocktypes1": mockTypes1.Fields(),
 				},
-				Attrs:        map[string][]Attr{},
-				Rels:         map[string][]Rel{},
-				SortingRules: []string{},
-				Include:      [][]Rel{},
+				Attrs:   map[string][]Attr{},
+				Rels:    map[string][]Rel{},
+				Include: [][]Rel{},
 			},
 			expectedError: true,
 		}, {
@@ -567,8 +634,8 @@ uint64,uint8
 				Rels: map[string][]Rel{
 					"mocktypes1": {},
 				},
-				SortingRules: []string{},
-				Include:      [][]Rel{},
+				SortRules: []SortRule{},
+				Include:   [][]Rel{},
 			},
 			expectedError: false,
 		},
@@ -633,7 +700,7 @@ func TestURLEscaping(t *testing.T) {
 				&page[size]=10
 				&page[abc]
 				&filter=a_label
-				&sort=bool,int,int16,uint8,id
+				&sort=bool,int,int16,uint8,id,-to-one.boolptr
 			`,
 			escaped: `
 				/mocktypes1
@@ -642,7 +709,7 @@ func TestURLEscaping(t *testing.T) {
 				&page%5Babc%5D=
 				&page%5Bnumber%5D=2
 				&page%5Bsize%5D=10
-				&sort=bool%2Cint%2Cint16%2Cuint8%2Cid
+				&sort=bool%2Cint%2Cint16%2Cuint8%2Cid%2C-to-one.boolptr
 				`,
 			unescaped: `
 				/mocktypes1
@@ -651,7 +718,7 @@ func TestURLEscaping(t *testing.T) {
 				&page[abc]=
 				&page[number]=2
 				&page[size]=10
-				&sort=bool,int,int16,uint8,id
+				&sort=bool,int,int16,uint8,id,-to-one.boolptr
 			`,
 		},
 	}
@@ -692,10 +759,10 @@ func TestURLString(t *testing.T) {
 		&include=
 			to-many-from-one.to-one-from-many.to-one.to-many-from-many%2C
 			to-one-from-one.to-many-from-many
-		&sort=to-many%2Cstr,%2C%2C-bool
+		&sort=str,%2C%2C-bool
 		&fields[mocktypes2]=boolptr,int16ptr,int32ptr
 		&page[number]=3
-		&sort=uint8
+		&sort=uint8,to-one-from-one.to-one-from-one.str,-to-one-from-one.boolptr
 		&include=
 			to-many-from-one,
 			to-many-from-many
@@ -711,7 +778,7 @@ func TestURLString(t *testing.T) {
 		&filter={"f":"str","o":"=","v":"abc"}
 		&page[number]=3
 		&page[size]=50
-		&sort=str,-bool,uint8
+		&sort=str,-bool,uint8,str,-to-one-from-one.boolptr
 		`,
 		},
 	}

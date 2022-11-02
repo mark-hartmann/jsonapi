@@ -211,14 +211,26 @@ func (u *URL) String() string {
 	}
 
 	// Sorting
-	if len(u.Params.SortingRules) > 0 {
+	if len(u.Params.SortRules) > 0 {
 		param := "sort="
-		for _, attr := range u.Params.SortingRules {
-			param += attr + "%2C"
+
+		for _, sr := range u.Params.SortRules {
+			rule := sr.Name
+
+			if len(sr.Path) > 0 {
+				for _, rel := range sr.Path {
+					rule = rel.FromName + "." + rule
+				}
+			}
+
+			if sr.Desc {
+				rule = "-" + rule
+			}
+
+			param += rule + "%2C"
 		}
 
 		param = param[:len(param)-3]
-
 		urlParams = append(urlParams, param)
 	}
 

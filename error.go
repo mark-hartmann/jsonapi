@@ -322,6 +322,49 @@ func NewErrUnknownFilterParameterLabel(label string) Error {
 	return e
 }
 
+// NewErrUnknownSortField (400) returns the corresponding error.
+func NewErrUnknownSortField(typ, field string) Error {
+	e := NewError()
+
+	e.Status = strconv.Itoa(http.StatusBadRequest)
+	e.Title = "Unknown sort field"
+	e.Detail = fmt.Sprintf("%q is not a known sort field of %q.", field, typ)
+	e.Source["parameter"] = "sort"
+	e.Meta["type"] = typ
+	e.Meta["unknown-sort-field"] = field
+
+	return e
+}
+
+// NewErrUnknownSortRelationship (400) returns the corresponding error.
+func NewErrUnknownSortRelationship(typ, rel string) Error {
+	e := NewError()
+
+	e.Status = strconv.Itoa(http.StatusBadRequest)
+	e.Title = "Unknown relationship"
+	e.Detail = fmt.Sprintf("Relationship %q of %q does not exist.", rel, typ)
+	e.Source["parameter"] = "sort"
+	e.Meta["type"] = typ
+	e.Meta["unknown-relationship-name"] = rel
+
+	return e
+}
+
+// NewErrInvalidSortRelationship (400) returns the corresponding error.
+func NewErrInvalidSortRelationship(typ, rel string) Error {
+	e := NewError()
+
+	e.Status = strconv.Itoa(http.StatusBadRequest)
+	e.Title = "Invalid relationship type"
+	e.Detail = fmt.Sprintf("Relationship %q of %q is not to-one.", rel, typ)
+	e.Source["parameter"] = "sort"
+	e.Meta["type"] = typ
+	e.Meta["relationship-name"] = rel
+	e.Meta["invalid-relationship-type"] = "to-many"
+
+	return e
+}
+
 // NewErrUnauthorized (401) returns the corresponding error.
 func NewErrUnauthorized() Error {
 	e := NewError()

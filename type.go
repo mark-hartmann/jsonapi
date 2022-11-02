@@ -657,6 +657,18 @@ func (r Rel) String() string {
 	return id
 }
 
+// SortRule is a representation of a sorting rule.
+//
+// SPEC 6.5
+type SortRule struct {
+	// Path contains, if it is a relationship attribute based sorting rule, the
+	// complete relationship path.
+	Path []Rel
+	// Name is the name of the sort field (attribute)
+	Name string
+	Desc bool
+}
+
 // GetAttrType returns the attribute type as int (see constants) and whether
 // the type is an array and/or nullable (ptr).
 func GetAttrType(t string) (typ int, array bool, nullable bool) {
