@@ -242,6 +242,9 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	// Pagination
 	params.Page = su.Page
 
+	// Off-Spec query params
+	params.Params = su.Params
+
 	return params, nil
 }
 
@@ -270,4 +273,7 @@ type Params struct {
 
 	// Include contains cleaned up relationship paths.
 	Include [][]Rel
+
+	// Params contains all off-spec query parameters.
+	Params map[string][]string
 }

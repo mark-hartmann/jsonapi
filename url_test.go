@@ -270,6 +270,7 @@ func TestParseParams(t *testing.T) {
 				SortRules: []SortRule{},
 				Page:      nil,
 				Include:   [][]Rel{},
+				Params:    map[string][]string{},
 			},
 			expectedError: false,
 		}, {
@@ -282,12 +283,14 @@ func TestParseParams(t *testing.T) {
 				SortRules: []SortRule{},
 				Page:      nil,
 				Include:   [][]Rel{},
+				Params:    map[string][]string{},
 			},
 			expectedError: false,
 		}, {
-			name: "sort and pagination",
+			name: "sort, pagination and offspec query params",
 			url: `/mocktypes1?fields[mocktypes1]=bool,str,uint8&sort=str,-bool
-&fields[mocktypes2]=intptr,strptr&page[number]=20&page[size]=50&include=to-many-from-one`,
+&fields[mocktypes2]=intptr,strptr&page[number]=20&page[size]=50&include=to-many-from-one
+&foo=foo&foo=bar&foo=baz&test[a]=b&test[b]=c&test[b]=d`,
 			colType: "mocktypes1",
 			expectedParams: Params{
 				// mocktypes1 was requested, but without sparse fieldset. Since no relationship
@@ -312,6 +315,11 @@ func TestParseParams(t *testing.T) {
 					{
 						mockTypes1.Rels["to-many-from-one"],
 					},
+				},
+				Params: map[string][]string{
+					"foo":     {"foo", "bar", "baz"},
+					"test[a]": {"b"},
+					"test[b]": {"c", "d"},
 				},
 			},
 			expectedError: false,
@@ -360,6 +368,7 @@ func TestParseParams(t *testing.T) {
 						mockTypes2.Rels["to-many-from-many"],
 					},
 				},
+				Params: map[string][]string{},
 			},
 			expectedError: false,
 		}, {
@@ -407,6 +416,7 @@ func TestParseParams(t *testing.T) {
 						mockTypes2.Rels["to-many-from-many"],
 					},
 				},
+				Params: map[string][]string{},
 			},
 			expectedError: false,
 		}, {
@@ -441,6 +451,7 @@ func TestParseParams(t *testing.T) {
 						mockTypes2.Rels["to-one-from-many"],
 					},
 				},
+				Params: map[string][]string{},
 			},
 			expectedError: false,
 		}, {
@@ -462,6 +473,7 @@ func TestParseParams(t *testing.T) {
 				},
 				SortRules: []SortRule{},
 				Include:   [][]Rel{},
+				Params:    map[string][]string{},
 			},
 			expectedError: false,
 		}, {
@@ -485,6 +497,7 @@ func TestParseParams(t *testing.T) {
 				},
 				SortRules: []SortRule{},
 				Include:   [][]Rel{},
+				Params:    map[string][]string{},
 			},
 			expectedError: false,
 		}, {
@@ -506,6 +519,7 @@ func TestParseParams(t *testing.T) {
 					{Name: "str"},
 					{Name: "int", Desc: true},
 				},
+				Params: map[string][]string{},
 			},
 			expectedError: false,
 		}, {
@@ -545,6 +559,7 @@ uint64,uint8
 					},
 				},
 				Include: [][]Rel{},
+				Params:  map[string][]string{},
 			},
 			expectedError: false,
 		}, {
@@ -636,6 +651,7 @@ uint64,uint8
 				},
 				SortRules: []SortRule{},
 				Include:   [][]Rel{},
+				Params:    map[string][]string{},
 			},
 			expectedError: false,
 		},
