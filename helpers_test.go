@@ -127,3 +127,121 @@ type invalidReType struct {
 }
 
 type missingID struct{}
+
+func TestReduceRels(t *testing.T) {
+	tests := map[string]struct {
+		in     []Rel
+		result []Rel
+	}{
+		"no change": {
+			in: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->c", FromType: "b", ToType: "c"},
+				{FromName: "c->d", FromType: "c", ToType: "d"},
+			},
+			result: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->c", FromType: "b", ToType: "c"},
+				{FromName: "c->d", FromType: "c", ToType: "d"},
+			},
+		},
+		"very simple cycle": {
+			in: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->a", FromType: "b", ToType: "a"},
+			},
+			result: []Rel{},
+		},
+		"simple cycle": {
+			in: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->c", FromType: "b", ToType: "c"},
+				{FromName: "c->f", FromType: "c", ToType: "f"},
+				{FromName: "f->c", FromType: "f", ToType: "c"},
+			},
+			result: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->c", FromType: "b", ToType: "c"},
+			},
+		},
+		"full blown loop": {
+			in: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"}, // 0
+				{FromName: "b->a", FromType: "b", ToType: "a"}, // 1
+				{FromName: "a->b", FromType: "a", ToType: "b"}, // 2
+				{FromName: "b->a", FromType: "b", ToType: "a"}, // 3
+				{FromName: "a->b", FromType: "a", ToType: "b"}, // 4
+				{FromName: "b->a", FromType: "b", ToType: "a"}, // 5
+			},
+			result: []Rel{},
+		},
+		"full blown loop 2": {
+			in: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->a", FromType: "b", ToType: "a"},
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+			},
+			result: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+			},
+		},
+		"multiple redundant connections": {
+			in: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->c", FromType: "b", ToType: "c"},
+				{FromName: "c->f", FromType: "c", ToType: "f"},
+				{FromName: "f->b", FromType: "f", ToType: "b"},
+				{FromName: "b->x", FromType: "b", ToType: "x"},
+				{FromName: "x->y", FromType: "x", ToType: "y"},
+			},
+			result: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->x", FromType: "b", ToType: "x"},
+				{FromName: "x->y", FromType: "x", ToType: "y"},
+			},
+		},
+		"self-rel only": {
+			in: []Rel{
+				{FromName: "a->a", FromType: "a", ToType: "a"},
+			},
+			result: []Rel{},
+		},
+		"self-rel first": {
+			in: []Rel{
+				{FromName: "a->a", FromType: "a", ToType: "a"},
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+			},
+			result: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+			},
+		},
+		"self-rel between": {
+			in: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->b", FromType: "b", ToType: "b"},
+				{FromName: "b->c", FromType: "b", ToType: "c"},
+			},
+			result: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->c", FromType: "b", ToType: "c"},
+			},
+		},
+		"self-rel last": {
+			in: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->c", FromType: "b", ToType: "c"},
+				{FromName: "c->c", FromType: "c", ToType: "c"},
+			},
+			result: []Rel{
+				{FromName: "a->b", FromType: "a", ToType: "b"},
+				{FromName: "b->c", FromType: "b", ToType: "c"},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.result, ReduceRels(test.in))
+		})
+	}
+}
