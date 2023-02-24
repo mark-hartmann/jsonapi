@@ -1,6 +1,7 @@
 package jsonapi_test
 
 import (
+	"math/big"
 	"reflect"
 	"testing"
 	"time"
@@ -37,6 +38,25 @@ func TestWrap(t *testing.T) {
 		s := time.Now()
 		_ = Wrap(&s)
 	}, "panic when not a valid struct")
+
+	assert.Panics(func() {
+		s := struct {
+			ID   string  `json:"id" api:"test-struct"`
+			Test big.Int `json:"test" api:"attr,some-unknown-type"`
+		}{}
+
+		_ = Wrap(s)
+	})
+
+	// Empty tag == no tag
+	assert.NotPanics(func() {
+		s := struct {
+			ID   string `json:"id" api:"test-struct"`
+			Test string `json:"test" api:""`
+		}{}
+
+		_ = Wrap(s)
+	})
 }
 
 func TestWrapStruct(t *testing.T) {

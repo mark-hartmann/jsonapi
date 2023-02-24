@@ -38,7 +38,7 @@ type mocktype struct {
 	Float64 float64   `json:"float64" api:"attr"`
 	Bool    bool      `json:"bool" api:"attr"`
 	Time    time.Time `json:"time" api:"attr"`
-	Bytes   []byte    `json:"bytes" api:"attr" bytes:"true"`
+	Bytes   []byte    `json:"bytes" api:"attr,bytes"`
 
 	// Relationships
 	To1      string   `json:"to-1" api:"rel,mocktype"`

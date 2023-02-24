@@ -1,10 +1,123 @@
 package jsonapi_test
 
 import (
+	"encoding/json"
 	"time"
 
 	. "github.com/mark-hartmann/jsonapi"
 )
+
+const (
+	AttrTypeTestObject = iota + 1
+	AttrTypeFloat32Matrix
+)
+
+func float32MatrixZeroValue(_ int, array, nullable bool) interface{} {
+	switch {
+	case array && nullable:
+		return (*[][][]float32)(nil)
+	case array:
+		return [][][]float32{}
+	case nullable:
+		return (*[][]float32)(nil)
+	default:
+		return [][]float32{}
+	}
+}
+
+func float32MatrixUnmarshaler(data []byte, attr Attr) (interface{}, error) {
+	if attr.Nullable && string(data) == "null" {
+		return float32MatrixZeroValue(attr.Type, attr.Array, attr.Nullable), nil
+	}
+
+	var (
+		val interface{}
+		err error
+	)
+
+	if attr.Array {
+		var ta [][][]float32
+		err = json.Unmarshal(data, &ta)
+
+		if attr.Nullable {
+			val = &ta
+		} else {
+			val = ta
+		}
+	} else {
+		var tObj [][]float32
+		err = json.Unmarshal(data, &tObj)
+
+		if attr.Nullable {
+			val = &tObj
+		} else {
+			val = tObj
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return val, nil
+}
+
+func testObjectZeroValue(_ int, array, nullable bool) interface{} {
+	switch {
+	case array && nullable:
+		return (*[]testObjType)(nil)
+	case array:
+		return []testObjType{}
+	case nullable:
+		return (*testObjType)(nil)
+	default:
+		return testObjType{}
+	}
+}
+
+func testObjectUnmarshaler(data []byte, attr Attr) (interface{}, error) {
+	if attr.Nullable && string(data) == "null" {
+		return testObjectZeroValue(attr.Type, attr.Array, attr.Nullable), nil
+	}
+
+	var (
+		val interface{}
+		err error
+	)
+
+	if attr.Array {
+		var ta []testObjType
+		err = json.Unmarshal(data, &ta)
+
+		if attr.Nullable {
+			val = &ta
+		} else {
+			val = ta
+		}
+	} else {
+		var tObj testObjType
+		err = json.Unmarshal(data, &tObj)
+
+		if attr.Nullable {
+			val = &tObj
+		} else {
+			val = tObj
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return val, nil
+}
+
+func init() {
+	RegisterAttrType(AttrTypeTestObject, "testObject", testObjectZeroValue,
+		testObjectUnmarshaler)
+	RegisterAttrType(AttrTypeFloat32Matrix, "float32Matrix", float32MatrixZeroValue,
+		float32MatrixUnmarshaler)
+}
 
 // newMockSchema ...
 func newMockSchema() *Schema {
@@ -112,7 +225,7 @@ type mockType4 struct {
 	Int32Arr   []int32     `json:"int32arr" api:"attr"`
 	Int64Arr   []int64     `json:"int64arr" api:"attr"`
 	UintArr    []uint      `json:"uintarr" api:"attr"`
-	Uint8Arr   []uint8     `json:"uint8arr" api:"attr" bytes:"true"`
+	Uint8Arr   []uint8     `json:"uint8arr" api:"attr,bytes"`
 	Uint16Arr  []uint16    `json:"uint16arr" api:"attr"`
 	Uint32Arr  []uint32    `json:"uint32arr" api:"attr"`
 	Uint64Arr  []uint64    `json:"uint64arr" api:"attr"`
@@ -133,7 +246,7 @@ type mockType5 struct {
 	Int32ArrPtr   *[]int32     `json:"int32arrptr" api:"attr"`
 	Int64ArrPtr   *[]int64     `json:"int64arrptr" api:"attr"`
 	UintArrPtr    *[]uint      `json:"uintarrptr" api:"attr"`
-	Uint8ArrPtr   *[]uint8     `json:"uint8arrptr" api:"attr" bytes:"true"`
+	Uint8ArrPtr   *[]uint8     `json:"uint8arrptr" api:"attr,bytes"`
 	Uint16ArrPtr  *[]uint16    `json:"uint16arrptr" api:"attr"`
 	Uint32ArrPtr  *[]uint32    `json:"uint32arrptr" api:"attr"`
 	Uint64ArrPtr  *[]uint64    `json:"uint64arrptr" api:"attr"`
@@ -150,9 +263,9 @@ type mockType6 struct {
 	StrPtr        *string        `json:"strPtr" api:"attr"`
 	StrArr        []string       `json:"strArr" api:"attr"`
 	StrPtrArr     *[]string      `json:"strPtrArr" api:"attr"`
-	Obj           testObjType    `json:"obj" api:"attr"`
-	ObjPtr        *testObjType   `json:"objPtr" api:"attr"`
-	ObjArr        []testObjType  `json:"objArr" api:"attr"`
-	ObjArrPtr     *[]testObjType `json:"objArrPtr" api:"attr"`
-	Float32Matrix [][]float32    `json:"float32Matrix" api:"attr" array:"false"`
+	Obj           testObjType    `json:"obj" api:"attr,testObject"`
+	ObjPtr        *testObjType   `json:"objPtr" api:"attr,testObject"`
+	ObjArr        []testObjType  `json:"objArr" api:"attr,testObject"`
+	ObjArrPtr     *[]testObjType `json:"objArrPtr" api:"attr,testObject"`
+	Float32Matrix [][]float32    `json:"float32Matrix" api:"attr,float32Matrix,no-array"`
 }

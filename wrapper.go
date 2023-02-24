@@ -48,6 +48,12 @@ func Wrap(v interface{}) *Wrapper {
 	}
 
 	typ, attrs, rels := getTypeInfo(val)
+	for _, attr := range attrs {
+		if attr.Type == AttrTypeInvalid {
+			panic(fmt.Sprintf("jsonapi: unable to resolve attribute type for \"%s.%s\"",
+				typ, attr.Name))
+		}
+	}
 
 	w := &Wrapper{
 		val: val,
@@ -191,14 +197,11 @@ func (w *Wrapper) getField(key string) interface{} {
 		sf := w.val.Type().Field(i)
 
 		if key == sf.Tag.Get("json") && sf.Tag.Get("api") != "" {
-			attr := w.typ.Attrs[key]
-
-			if (attr.Array || attr.Nullable) && field.IsNil() {
-				if attr.Unmarshaler != nil {
-					return attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
-				}
-
-				return GetZeroValue(attr.Type, attr.Array, attr.Nullable)
+			// If a key does not exist in the attribute map, it's an relationship and does not have
+			// a "zero value".
+			if attr, ok := w.typ.Attrs[key]; ok && isNil(field.Interface()) {
+				zv, _ := GetZeroValue(attr.Type, attr.Array, attr.Nullable)
+				return zv
 			}
 
 			return field.Interface()
