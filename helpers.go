@@ -181,12 +181,9 @@ func getTypeInfo(val reflect.Value) (string, map[string]Attr, map[string]Rel) {
 			typ, arr, null := GetAttrType(fs.Type.String())
 
 			if len(attr) >= 2 {
-				newTyp, ok := registry.namesR[attr[1]]
-				if !ok {
-					typ = AttrTypeInvalid
-				}
-
-				typ = newTyp
+				// If the attribute type is not registered, typ equals 0, which is the same
+				// as AttrTypeInvalid.
+				typ = registry.namesR[attr[1]]
 			}
 
 			if len(attr) >= 3 {
