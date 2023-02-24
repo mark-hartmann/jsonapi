@@ -262,7 +262,7 @@ func (u ReflectTypeUnmarshaler) typ(array, nullable bool) reflect.Type {
 	return u.Type
 }
 
-func (u ReflectTypeUnmarshaler) GetZeroValue(array, nullable bool) interface{} {
+func (u ReflectTypeUnmarshaler) GetZeroValue(_ int, array, nullable bool) interface{} {
 	var typ reflect.Type
 
 	switch {
@@ -289,13 +289,13 @@ func (u ReflectTypeUnmarshaler) GetZeroValue(array, nullable bool) interface{} {
 	return reflect.Zero(typ).Interface()
 }
 
-func (u ReflectTypeUnmarshaler) UnmarshalToType(data []byte, array, nullable bool) (interface{}, error) {
-	if data == nil || (!nullable && string(data) == "null") {
+func (u ReflectTypeUnmarshaler) UnmarshalToType(data []byte, attr Attr) (interface{}, error) {
+	if data == nil || (!attr.Nullable && string(data) == "null") {
 		return nil, fmt.Errorf("type is not nullable")
 	}
 
-	if nullable && string(data) == "null" {
-		return u.GetZeroValue(array, nullable), nil
+	if attr.Nullable && string(data) == "null" {
+		return u.GetZeroValue(attr.Type, attr.Array, attr.Nullable), nil
 	}
 
 	var (
@@ -303,11 +303,11 @@ func (u ReflectTypeUnmarshaler) UnmarshalToType(data []byte, array, nullable boo
 		err error
 	)
 
-	if array {
+	if attr.Array {
 		tv := reflect.New(u.typ(true, false))
 		err = json.Unmarshal(data, tv.Interface())
 
-		if nullable {
+		if attr.Nullable {
 			val = tv.Interface()
 		} else {
 			val = tv.Elem().Interface()
@@ -316,7 +316,7 @@ func (u ReflectTypeUnmarshaler) UnmarshalToType(data []byte, array, nullable boo
 		tv := reflect.New(u.typ(false, false))
 		err = json.Unmarshal(data, tv.Interface())
 
-		if nullable {
+		if attr.Nullable {
 			val = tv.Interface()
 		} else {
 			val = tv.Elem().Interface()

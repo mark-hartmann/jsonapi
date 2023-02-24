@@ -2,11 +2,12 @@ package jsonapi_test
 
 import (
 	"encoding/json"
-	. "github.com/mark-hartmann/jsonapi"
-	"github.com/stretchr/testify/assert"
 	"math"
 	"testing"
 	"time"
+
+	. "github.com/mark-hartmann/jsonapi"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetZeroValue(t *testing.T) {

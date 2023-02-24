@@ -606,7 +606,7 @@ func TestReflectTypeUnmarshaler_GetZeroValue(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			ru := ReflectTypeUnmarshaler{Type: test.Type}
-			assert.Equal(t, test.ZeroValue, ru.GetZeroValue(test.Array, test.Nullable))
+			assert.Equal(t, test.ZeroValue, ru.GetZeroValue(0, test.Array, test.Nullable))
 		})
 	}
 }
@@ -738,7 +738,7 @@ func TestReflectTypeUnmarshaler_UnmarshalToType(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			ru := ReflectTypeUnmarshaler{Type: test.Type}
-			v, e := ru.UnmarshalToType(test.Data, test.Array, test.Nullable)
+			v, e := ru.UnmarshalToType(test.Data, Attr{Array: test.Array, Nullable: test.Nullable})
 
 			assert.NoError(t, e)
 			assert.Equal(t, test.Value, v)
@@ -748,41 +748,41 @@ func TestReflectTypeUnmarshaler_UnmarshalToType(t *testing.T) {
 	t.Run("errors", func(t *testing.T) {
 		ru := ReflectTypeUnmarshaler{Type: reflect.TypeOf((*[]string)(nil))}
 
-		v, err := ru.UnmarshalToType(nil, false, false)
+		v, err := ru.UnmarshalToType(nil, Attr{Array: false, Nullable: false})
 		assert.Nil(t, v)
 		assert.Error(t, err)
 
-		v, err = ru.UnmarshalToType(nil, false, true)
+		v, err = ru.UnmarshalToType(nil, Attr{Array: false, Nullable: true})
 		assert.Nil(t, v)
 		assert.Error(t, err)
 
-		v, err = ru.UnmarshalToType([]byte("null"), false, false)
+		v, err = ru.UnmarshalToType([]byte("null"), Attr{Array: false, Nullable: false})
 		assert.Nil(t, v)
 		assert.Error(t, err)
 
-		v, err = ru.UnmarshalToType([]byte("null"), true, false)
+		v, err = ru.UnmarshalToType([]byte("null"), Attr{Array: true, Nullable: false})
 		assert.Nil(t, v)
 		assert.Error(t, err)
 
 		ru = ReflectTypeUnmarshaler{Type: reflect.TypeOf((*[]testObjType)(nil))}
 
-		v, err = ru.UnmarshalToType(nil, false, false)
+		v, err = ru.UnmarshalToType(nil, Attr{Array: false, Nullable: false})
 		assert.Nil(t, v)
 		assert.Error(t, err)
 
-		v, err = ru.UnmarshalToType(nil, false, true)
+		v, err = ru.UnmarshalToType(nil, Attr{Array: false, Nullable: true})
 		assert.Nil(t, v)
 		assert.Error(t, err)
 
-		v, err = ru.UnmarshalToType([]byte("null"), false, false)
+		v, err = ru.UnmarshalToType([]byte("null"), Attr{Array: false, Nullable: false})
 		assert.Nil(t, v)
 		assert.Error(t, err)
 
-		v, err = ru.UnmarshalToType([]byte("null"), true, false)
+		v, err = ru.UnmarshalToType([]byte("null"), Attr{Array: true, Nullable: false})
 		assert.Nil(t, v)
 		assert.Error(t, err)
 
-		v, err = ru.UnmarshalToType([]byte("\"test\""), true, false)
+		v, err = ru.UnmarshalToType([]byte("\"test\""), Attr{Array: true, Nullable: false})
 		assert.Nil(t, v)
 		assert.Error(t, err)
 	})
