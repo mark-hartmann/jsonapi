@@ -8,7 +8,6 @@ linters:
     - errcheck
     - exportloopref
     - gochecknoglobals
-    - gochecknoinits
     - gocritic
     - gofmt
     - goimports
@@ -50,3 +49,11 @@ issues:
     - source: ^var update =
       linters:
         - gochecknoglobals
+
+    - source: ^var registry =
+      linters:
+        - gochecknoglobals
+
+    - path: registry_test.go
+      linters:
+        - dupl
