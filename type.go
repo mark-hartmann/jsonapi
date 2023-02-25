@@ -8,29 +8,15 @@ import (
 	"strings"
 )
 
-// Attribute types are the possible types for attributes.
+// Attribute types are the possible data types for Attr.Type. Projects can register their own
+// attribute types using RegisterAttrType, starting at iota + 1, since the values below 1 are
+// reserved for this library.
 //
-// Those constants are numbers that represent the types. Each type has a string
-// representation which should be used instead of the numbers when storing
-// that information. The numbers can change between any version of this library,
-// even if it potentially can break existing code.
+// All attribute types are supported as array, nullable and nullable array. Any additionally
+// registered attribute type must also be representable as array, nullable or nullable array.
 //
-// The names are as follow:
-//   - string
-//   - int, int8, int16, int32, int64
-//   - uint, uint8, uint16, uint32, uint64
-//   - float32, float64
-//   - bool
-//   - time (Go type is time.Time)
-//   - []byte
-//
-// An asterisk is present as a prefix if the type is nullable (like *string), brackets
-// if it is an array (e.g. []string). Nullable arrays combine asterisk and
-// brackets (e.g. *[]string). Byte arrays are represented by []uint8, which are output
-// as a base64 encoded string if the attribute type is equal to AttrTypeBytes.
-//
-// Developers are encouraged to use the constants, the Type struct, and other
-// tools to handle attribute types instead of dealing with strings.
+// Developers are encouraged to use the constants because their values may change between
+// any version of this library.
 const (
 	AttrTypeInvalid = (0 ^ iota) * -1
 	AttrTypeString
@@ -47,7 +33,15 @@ const (
 	AttrTypeFloat32
 	AttrTypeFloat64
 	AttrTypeBool
+
+	// AttrTypeTime corresponds to the go-type time.Time and output the time as an
+	// RFC 3339 datetime string.
 	AttrTypeTime
+
+	// AttrTypeBytes is a special attribute type which represents a byte/uint8 array as a
+	// base64 string in the generated json responses. If the individual bytes are to be
+	// displayed as number array, AttrTypeUint8 must be used. AttrTypeBytes is always
+	// processed as an array, even if Attr.Array is false.
 	AttrTypeBytes
 )
 
