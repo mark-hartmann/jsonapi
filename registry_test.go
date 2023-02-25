@@ -296,11 +296,13 @@ func TestGetAttrTypeName(t *testing.T) {
 	assert.Error(t, err)
 
 	SetAttrTypeNameFunc(nil)
+
 	name, err = GetAttrTypeName(AttrTypeString, true, true)
 	assert.NoError(t, err)
 	assert.Equal(t, "string", name)
 
 	SetAttrTypeNameFunc(goLikeNameFunc)
+
 	name, err = GetAttrTypeName(AttrTypeString, true, true)
 	assert.NoError(t, err)
 	assert.Equal(t, "*[]string", name)
@@ -309,12 +311,13 @@ func TestGetAttrTypeName(t *testing.T) {
 }
 
 func goLikeNameFunc(name string, array, nullable bool) string {
-	if array && nullable {
-		return "*[]" + name
-	} else if nullable {
-		return "*" + name
-	} else if array {
-		return "[]" + name
+	if array {
+		name = "[]" + name
 	}
+
+	if nullable {
+		name = "*" + name
+	}
+
 	return name
 }

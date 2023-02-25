@@ -131,13 +131,14 @@ func attrTypeRegistered(typ int) bool {
 //	DefaultNameFunc("string", true, false)  // "string[]"
 //	DefaultNameFunc("string", true, true)   // "string[] (nullable)"
 func DefaultNameFunc(name string, array, nullable bool) string {
-	if array && nullable {
-		return name + "[] (nullable)"
-	} else if nullable {
-		return name + " (nullable)"
-	} else if array {
-		return name + "[]"
+	if array {
+		name += "[]"
 	}
+
+	if nullable {
+		name += " (nullable)"
+	}
+
 	return name
 }
 
