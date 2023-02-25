@@ -167,7 +167,7 @@ func IDAndType(v interface{}) (string, string) {
 }
 
 func getTypeInfo(val reflect.Value) (string, map[string]Attr, map[string]Rel) {
-	_, typ := IDAndType(val.Interface())
+	_, typeName := IDAndType(val.Interface())
 
 	attrs := map[string]Attr{}
 
@@ -175,53 +175,26 @@ func getTypeInfo(val reflect.Value) (string, map[string]Attr, map[string]Rel) {
 		fs := val.Type().Field(i)
 		jsonTag := fs.Tag.Get("json")
 		apiTag := fs.Tag.Get("api")
-		byteTag := fs.Tag.Get("bytes")
-		arrTag := fs.Tag.Get("array")
 
-		if apiTag == "attr" {
+		attr := strings.Split(apiTag, ",")
+		if attr[0] == "attr" {
 			typ, arr, null := GetAttrType(fs.Type.String())
-			if typ == AttrTypeUint8 && arr && byteTag == "true" {
-				typ = AttrTypeBytes
+
+			if len(attr) >= 2 {
+				// If the attribute type is not registered, typ equals 0, which is the same
+				// as AttrTypeInvalid.
+				typ = registry.namesR[attr[1]]
 			}
 
-			// If the type is not handled by default, create a reflection based TypeUnmarshaler for
-			// this type.
-			var typU TypeUnmarshaler
-
-			if typ == AttrTypeInvalid {
-				typ = AttrTypeOther
-				t := fs.Type
-
-				if t.Kind() == reflect.Ptr {
-					t = t.Elem()
-					null = true
-
-					if arrTag != "true" &&
-						(t.Kind() == reflect.Slice || t.Kind() == reflect.Array) {
-						t = t.Elem()
-						arr = true
-					}
-				} else if arrTag != "true" &&
-					(t.Kind() == reflect.Slice || t.Kind() == reflect.Array) {
-					t = t.Elem()
-					arr = true
-					null = false
-				}
-
-				ru := ReflectTypeUnmarshaler{Type: t}
-				if fs.Type.Implements(reflect.TypeOf((*TypeUnmarshaler)(nil)).Elem()) {
-					typU = ru.GetZeroValue(false, false).(TypeUnmarshaler)
-				} else {
-					typU = ru
-				}
+			if len(attr) >= 3 {
+				arr = arr && attr[2] != "no-array"
 			}
 
 			attrs[jsonTag] = Attr{
-				Name:        jsonTag,
-				Type:        typ,
-				Array:       arr,
-				Nullable:    null,
-				Unmarshaler: typU,
+				Name:     jsonTag,
+				Type:     typ,
+				Array:    arr,
+				Nullable: null,
 			}
 		}
 	}
@@ -250,10 +223,29 @@ func getTypeInfo(val reflect.Value) (string, map[string]Attr, map[string]Rel) {
 				ToType:   relTag[1],
 				ToOne:    toOne,
 				ToName:   invName,
-				FromType: typ,
+				FromType: typeName,
 			}
 		}
 	}
 
-	return typ, attrs, rels
+	return typeName, attrs, rels
+}
+
+// ReduceRels removes redundant relationship paths.
+func ReduceRels(rels []Rel) []Rel {
+	r := make([]Rel, len(rels))
+	copy(r, rels)
+
+	for i := len(r) - 1; i >= 0; i-- {
+		for j := 0; j <= i; j++ {
+			if r[j].FromType == r[i].ToType {
+				r = append(r[:j], r[i+1:]...)
+				i = j
+
+				break
+			}
+		}
+	}
+
+	return r
 }

@@ -234,10 +234,8 @@ func UnmarshalResource(data []byte, schema *Schema) (Resource, error) {
 	err := json.Unmarshal(data, &rske)
 
 	if err != nil {
-		return nil, NewErrBadRequest(
-			"Invalid JSON",
-			"The provided JSON body could not be read.",
-		)
+		return nil, NewErrBadRequest("Invalid JSON",
+			"The provided JSON body could not be read.")
 	}
 
 	typ := schema.GetType(rske.Type)
@@ -246,31 +244,19 @@ func UnmarshalResource(data []byte, schema *Schema) (Resource, error) {
 	res.Set("id", rske.ID)
 
 	for a, v := range rske.Attributes {
-		if attr, ok := typ.Attrs[a]; ok {
-			var val interface{}
-			if attr.Unmarshaler != nil {
-				val, err = attr.Unmarshaler.UnmarshalToType(v, attr.Array, attr.Nullable)
-			} else {
-				val, err = attr.UnmarshalToType(v)
-			}
-
-			if err != nil {
-				var ts string
-				// Prevent implementation details (in this case the underlying data type) from
-				// being leaked.
-				if tExp, ok := attr.Unmarshaler.(TypeNameExposer); ok {
-					ts = tExp.PublicTypeName()
-				} else {
-					ts = GetAttrTypeString(attr.Type, attr.Array, attr.Nullable)
-				}
-
-				return nil, NewErrInvalidFieldValueInBody(attr.Name, string(data), ts)
-			}
-
-			res.Set(attr.Name, val)
-		} else {
+		attr, ok := typ.Attrs[a]
+		if !ok {
 			return nil, NewErrUnknownFieldInBody(typ.Name, a)
 		}
+
+		var val interface{}
+
+		if val, err = UnmarshalToType(v, attr); err != nil {
+			name, _ := GetAttrTypeName(attr.Type, attr.Array, attr.Nullable)
+			return nil, NewErrInvalidFieldValueInBody(attr.Name, string(data), name)
+		}
+
+		res.Set(attr.Name, val)
 	}
 
 	for r, v := range rske.Relationships {
@@ -343,32 +329,20 @@ func UnmarshalPartialResource(data []byte, schema *Schema) (*SoftResource, error
 	}
 
 	for a, v := range rske.Attributes {
-		if attr, ok := typ.Attrs[a]; ok {
-			var val interface{}
-			if attr.Unmarshaler != nil {
-				val, err = attr.Unmarshaler.UnmarshalToType(v, attr.Array, attr.Nullable)
-			} else {
-				val, err = attr.UnmarshalToType(v)
-			}
-
-			if err != nil {
-				var ts string
-				// Prevent implementation details (in this case the underlying data type) from
-				// being leaked.
-				if tExp, ok := attr.Unmarshaler.(TypeNameExposer); ok {
-					ts = tExp.PublicTypeName()
-				} else {
-					ts = GetAttrTypeString(attr.Type, attr.Array, attr.Nullable)
-				}
-
-				return nil, NewErrInvalidFieldValueInBody(attr.Name, string(v), ts)
-			}
-
-			_ = newType.AddAttr(attr)
-			res.Set(attr.Name, val)
-		} else {
+		attr, ok := typ.Attrs[a]
+		if !ok {
 			return nil, NewErrUnknownFieldInBody(typ.Name, a)
 		}
+
+		var val interface{}
+
+		if val, err = UnmarshalToType(v, attr); err != nil {
+			name, _ := GetAttrTypeName(attr.Type, attr.Array, attr.Nullable)
+			return nil, NewErrInvalidFieldValueInBody(attr.Name, string(v), name)
+		}
+
+		_ = newType.AddAttr(attr)
+		res.Set(attr.Name, val)
 	}
 
 	for r, v := range rske.Relationships {
@@ -451,10 +425,14 @@ func Equal(r1, r2 Resource) bool {
 			// TODO Fix the following condition one day. Basically, all
 			// nils (nil pointer, nil slice, etc) should be considered
 			// equal to a nil empty interface.
-			if fmt.Sprintf("%v", r1.Get(attr1.Name)) == "<nil>" &&
-				fmt.Sprintf("%v", r2.Get(attr1.Name)) == "<nil>" {
+			v1 := r1.Get(attr1.Name) //
+			v2 := r2.Get(attr1.Name)
+
+			if fmt.Sprintf("%v", v1) == "<nil>" && fmt.Sprintf("%v", v2) == "<nil>" {
 				continue
 			}
+
+			fmt.Println(r1.GetType().Name, attr1.Name, fmt.Sprintf("%v", v1), fmt.Sprintf("%v", v2))
 
 			return false
 		}

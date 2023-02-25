@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"math"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -314,27 +313,23 @@ func TestMarshalDocument(t *testing.T) {
 		Name: "objtest",
 		Attrs: map[string]Attr{
 			"obj": {
-				Name:        "obj",
-				Type:        AttrTypeOther,
-				Unmarshaler: testObjType{},
+				Name: "obj",
+				Type: AttrTypeTestObject,
 			},
 			"objarr": {
-				Name:        "objarr",
-				Type:        AttrTypeOther,
-				Array:       true,
-				Unmarshaler: testObjType{},
+				Name:  "objarr",
+				Type:  AttrTypeTestObject,
+				Array: true,
 			},
 			"objptr": {
-				Name:        "objptr",
-				Type:        AttrTypeOther,
-				Nullable:    true,
-				Unmarshaler: testObjType{},
+				Name:     "objptr",
+				Type:     AttrTypeTestObject,
+				Nullable: true,
 			},
 			"float32MatrixArr": {
-				Name:        "float32MatrixArr",
-				Type:        AttrTypeOther,
-				Array:       true,
-				Unmarshaler: ReflectTypeUnmarshaler{Type: reflect.TypeOf([][]float32{})},
+				Name:  "float32MatrixArr",
+				Type:  AttrTypeFloat32Matrix,
+				Array: true,
 			},
 		},
 	}}
@@ -806,28 +801,24 @@ func TestUnmarshalDocument(t *testing.T) {
 		Name: "objtest",
 		Attrs: map[string]Attr{
 			"obj": {
-				Name:        "obj",
-				Type:        AttrTypeOther,
-				Unmarshaler: testObjType{},
+				Name: "obj",
+				Type: AttrTypeTestObject,
 			},
 			"objarr": {
-				Name:        "objarr",
-				Type:        AttrTypeOther,
-				Array:       true,
-				Unmarshaler: testObjType{},
+				Name:  "objarr",
+				Type:  AttrTypeTestObject,
+				Array: true,
 			},
 			"objptr": {
-				Name:        "objptr",
-				Type:        AttrTypeOther,
-				Nullable:    true,
-				Unmarshaler: testObjType{},
+				Name:     "objptr",
+				Type:     AttrTypeTestObject,
+				Nullable: true,
 			},
 			"objptrarr": {
-				Name:        "objptrarr",
-				Type:        AttrTypeOther,
-				Array:       true,
-				Nullable:    true,
-				Unmarshaler: testObjType{},
+				Name:     "objptrarr",
+				Type:     AttrTypeTestObject,
+				Array:    true,
+				Nullable: true,
 			},
 		},
 	})

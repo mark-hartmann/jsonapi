@@ -103,7 +103,7 @@ If you are familiar with the specification, reading the `Request` struct and its
 
 ### Schema
 
-A `Schema` contains all the schema information for an API, like types, fields, relationships between types, and so on. See `schema.go` and `type.go` for more details.
+A `Schema` contains all the schema information for an API, like resource types, fields, relationships between types, and so on. See `schema.go` and `type.go` for more details.
 
 This is really useful for many uses cases:
 
@@ -112,7 +112,7 @@ This is really useful for many uses cases:
 * Parsing documents and URLs
 * And probably many more...
 
-For example, when a request comes in, a `Document` and a `URL` can be created by parsing the request. By providing a schema, the parsing can fail if it finds some errors like a type that does not exist, a field of the wrong kind, etc. After that step, valid data can be assumed.
+For example, when a request comes in, a `Document` and a `URL` can be created by parsing the request. By providing a schema, the parsing can fail if it finds some errors like a resource type that does not exist, a field of the wrong kind, etc. After that step, valid data can be assumed.
 
 ### Type
 
@@ -121,8 +121,13 @@ A JSON:API type is generally defined with a struct.
 There needs to be an ID field of type string. The `api` tag represents the name of the type.
 
 ```go
+package main
+
+import "time"
+
 type User struct {
-  ID string `json:"id" api:"users"` // ID is mandatory and the api tag sets the type
+  // ID is mandatory and the api tag sets the resource type
+  ID string `json:"id" api:"users"`
 
   // Attributes
   Name string      `json:"name" api:"attr"` // attr means it is an attribute
@@ -145,9 +150,36 @@ uint, uint8, uint16, uint32, uint64,
 float32, float64,
 bool, time.Time, bytes
 ```
-Other types besides the above can be used, but must be configured manually. For example, if you want to use a struct or a matrix as attribute type, you have to define a `TypeUnmarshaler`.
 
-All types can be nullable (pointer) and/or represented as array (`[]`/`*[]`).
+Other attribute types can be used, but must be registered separately. For example, if you want to 
+have an attribute that represents a matrix, you would do this as follows:
+
+```go
+package main
+
+import "github.com/mark-hartmann/jsonapi"
+
+const (
+  AttrTypeIntMatrix = iota + 1
+)
+
+func main() {
+  // The type name "int-matrix" is the "public" type name and may be shown 
+  // in error responses.
+  jsonapi.RegisterAttrType(AttrTypeIntMatrix, "int-matrix", zeroValueFn, typeUnmarshalerFn)
+}
+```
+
+where `zeroValueFn` and `unmarshalerFn` correspond to the following functions:
+
+```go
+// ZeroValueFunc returns the null value of the attribute type for any possible combination of the
+// nullable and array parameters.
+type ZeroValueFunc func(typ int, array, nullable bool) interface{}
+
+// TypeUnmarshalerFunc will unmarshal attribute payload to an appropriate golang type.
+type TypeUnmarshalerFunc func(data []byte, attr Attr) (interface{}, error)
+```
 
 #### Relationship
 
@@ -180,9 +212,12 @@ fmt.Printf(user.Name) // Output: Mike
 type Obj struct {
     ID    string `json:"ID" api:"objs"`
     
-    // Special cases
-    Bytes  []uint8 `json:"bytes" api:"attr" bytes:"true"` // Output: base64 encoded
-    Matrix [][]int `json:"matrix" api:"attr" array:"false"`
+    // Bytes value is marshaled to base64 encoded binary data
+    Bytes  []uint8 `json:"bytes" api:"attr,bytes"`
+    // Matrix uses a user-registered attribute type. Since jsonapi cannot know via 
+    // reflection whether this is an array or a matrix, we must explicitly append
+    // no-array. 
+    Matrix [][]int `json:"matrix" api:"attr,int-matrix,no-array"`
 }
 ```
 

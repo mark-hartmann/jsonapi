@@ -48,6 +48,12 @@ func Wrap(v interface{}) *Wrapper {
 	}
 
 	typ, attrs, rels := getTypeInfo(val)
+	for _, attr := range attrs {
+		if attr.Type == AttrTypeInvalid {
+			panic(fmt.Sprintf("jsonapi: unable to resolve attribute type for \"%s.%s\"",
+				typ, attr.Name))
+		}
+	}
 
 	w := &Wrapper{
 		val: val,
@@ -191,14 +197,11 @@ func (w *Wrapper) getField(key string) interface{} {
 		sf := w.val.Type().Field(i)
 
 		if key == sf.Tag.Get("json") && sf.Tag.Get("api") != "" {
-			attr := w.typ.Attrs[key]
-
-			if (attr.Array || attr.Nullable) && field.IsNil() {
-				if attr.Unmarshaler != nil {
-					return attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
-				}
-
-				return GetZeroValue(attr.Type, attr.Array, attr.Nullable)
+			// If a key does not exist in the attribute map, it's an relationship and does not have
+			// a "zero value".
+			if attr, ok := w.typ.Attrs[key]; ok && isNil(field.Interface()) {
+				zv, _ := GetZeroValue(attr.Type, attr.Array, attr.Nullable)
+				return zv
 			}
 
 			return field.Interface()
@@ -259,7 +262,7 @@ func (u ReflectTypeUnmarshaler) typ(array, nullable bool) reflect.Type {
 	return u.Type
 }
 
-func (u ReflectTypeUnmarshaler) GetZeroValue(array, nullable bool) interface{} {
+func (u ReflectTypeUnmarshaler) GetZeroValue(_ int, array, nullable bool) interface{} {
 	var typ reflect.Type
 
 	switch {
@@ -286,13 +289,13 @@ func (u ReflectTypeUnmarshaler) GetZeroValue(array, nullable bool) interface{} {
 	return reflect.Zero(typ).Interface()
 }
 
-func (u ReflectTypeUnmarshaler) UnmarshalToType(data []byte, array, nullable bool) (interface{}, error) {
-	if data == nil || (!nullable && string(data) == "null") {
+func (u ReflectTypeUnmarshaler) UnmarshalToType(data []byte, attr Attr) (interface{}, error) {
+	if data == nil || (!attr.Nullable && string(data) == "null") {
 		return nil, fmt.Errorf("type is not nullable")
 	}
 
-	if nullable && string(data) == "null" {
-		return u.GetZeroValue(array, nullable), nil
+	if attr.Nullable && string(data) == "null" {
+		return u.GetZeroValue(attr.Type, attr.Array, attr.Nullable), nil
 	}
 
 	var (
@@ -300,11 +303,11 @@ func (u ReflectTypeUnmarshaler) UnmarshalToType(data []byte, array, nullable boo
 		err error
 	)
 
-	if array {
+	if attr.Array {
 		tv := reflect.New(u.typ(true, false))
 		err = json.Unmarshal(data, tv.Interface())
 
-		if nullable {
+		if attr.Nullable {
 			val = tv.Interface()
 		} else {
 			val = tv.Elem().Interface()
@@ -313,7 +316,7 @@ func (u ReflectTypeUnmarshaler) UnmarshalToType(data []byte, array, nullable boo
 		tv := reflect.New(u.typ(false, false))
 		err = json.Unmarshal(data, tv.Interface())
 
-		if nullable {
+		if attr.Nullable {
 			val = tv.Interface()
 		} else {
 			val = tv.Elem().Interface()

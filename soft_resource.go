@@ -152,24 +152,10 @@ func (sr *SoftResource) Set(key string, v interface{}) {
 	}
 
 	if attr, ok := sr.Type.Attrs[key]; ok {
+		zv, _ := GetZeroValue(attr.Type, attr.Array, attr.Nullable)
 		if isNil(v) {
-			if attr.Unmarshaler != nil {
-				sr.data[key] = attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
-			} else {
-				sr.data[key] = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
-			}
-
-			return
-		}
-
-		var zv interface{}
-		if attr.Unmarshaler != nil {
-			zv = attr.Unmarshaler.GetZeroValue(attr.Array, attr.Nullable)
-		} else {
-			zv = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
-		}
-
-		if reflect.TypeOf(v) == reflect.TypeOf(zv) {
+			sr.data[key] = zv
+		} else if reflect.TypeOf(v) == reflect.TypeOf(zv) {
 			sr.data[key] = v
 		}
 	} else if rel, ok := sr.Type.Rels[key]; ok {
@@ -246,13 +232,9 @@ func (sr *SoftResource) check() {
 
 	for i := range sr.Type.Attrs {
 		attr := sr.Type.Attrs[i]
-
 		if _, ok := sr.data[attr.Name]; !ok {
-			if attr.Type == AttrTypeBytes {
-				sr.data[attr.Name] = GetZeroValue(attr.Type, true, attr.Nullable)
-			} else {
-				sr.data[attr.Name] = GetZeroValue(attr.Type, attr.Array, attr.Nullable)
-			}
+			sr.data[attr.Name], _ = GetZeroValue(attr.Type, attr.Array ||
+				attr.Type == AttrTypeBytes, attr.Nullable)
 		}
 	}
 
