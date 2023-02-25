@@ -13,16 +13,7 @@ var registry = typeRegistry{
 	namesR:      map[string]int{},
 	values:      map[int]ZeroValueFunc{},
 	unmarshaler: map[int]TypeUnmarshalerFunc{},
-	nameFunc: func(name string, array, nullable bool) string {
-		if array && nullable {
-			return name + "[] (nullable)"
-		} else if nullable {
-			return name + " (nullable)"
-		} else if array {
-			return name + "[]"
-		}
-		return name
-	},
+	nameFunc:    DefaultNameFunc,
 }
 
 func init() {
@@ -129,6 +120,25 @@ func SetAttrTypeNameFunc(fn NameFunc) {
 func attrTypeRegistered(typ int) bool {
 	_, ok := registry.names[typ]
 	return ok
+}
+
+// DefaultNameFunc appends to the attribute type in human-readable form whether this is
+// an array, nullable, or both. Arrays are suffixed with "[]", if the type is nullable
+// "(nullable)" is appended.
+//
+//	DefaultNameFunc("string", false, false) // "string"
+//	DefaultNameFunc("string", false, true)  // "string (nullable)"
+//	DefaultNameFunc("string", true, false)  // "string[]"
+//	DefaultNameFunc("string", true, true)   // "string[] (nullable)"
+func DefaultNameFunc(name string, array, nullable bool) string {
+	if array && nullable {
+		return name + "[] (nullable)"
+	} else if nullable {
+		return name + " (nullable)"
+	} else if array {
+		return name + "[]"
+	}
+	return name
 }
 
 // basicUnmarshalerFunc is the default TypeUnmarshalerFunc for all attribute types that are
