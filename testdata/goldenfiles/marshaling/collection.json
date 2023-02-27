@@ -40,16 +40,6 @@
 		},
 		{
 			"attributes": {
-				"str": "str with \u003chtml\u003e chars"
-			},
-			"id": "id1",
-			"links": {
-				"self": "https://example.org/mocktypes1/id1"
-			},
-			"type": "mocktypes1"
-		},
-		{
-			"attributes": {
 				"bool": false,
 				"int": -42,
 				"str": "漢語",
@@ -143,6 +133,16 @@
 				}
 			},
 			"type": "mocktype"
+		},
+		{
+			"attributes": {
+				"str": "str with \u003chtml\u003e chars"
+			},
+			"id": "id1",
+			"links": {
+				"self": "https://example.org/mocktypes1/id1"
+			},
+			"type": "mocktypes1"
 		},
 		{
 			"attributes": {

@@ -478,7 +478,7 @@ func TestMarshalDocument(t *testing.T) {
 		}, {
 			name: "collection",
 			doc: &Document{
-				Data: Range(col, nil, nil, []string{}, 10, 0),
+				Data: col,
 				RelData: map[string][]string{
 					"mocktype": {"to-1", "to-x-from-1"},
 				},
@@ -492,7 +492,7 @@ func TestMarshalDocument(t *testing.T) {
 		}, {
 			name: "collection with links",
 			doc: &Document{
-				Data: Range(col, nil, nil, []string{}, 10, 0),
+				Data: col,
 				RelData: map[string][]string{
 					"mocktype": {"to-1", "to-x-from-1"},
 				},
