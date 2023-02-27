@@ -10,8 +10,6 @@ import (
 )
 
 func TestSimpleURL(t *testing.T) {
-	assert := assert.New(t)
-
 	tests := []struct {
 		name          string
 		url           string
@@ -146,6 +144,28 @@ func TestSimpleURL(t *testing.T) {
 			},
 			expectedError: nil,
 		}, {
+			name: "fields in separate definitions",
+			url: `https://api.example.com/type
+				?fields[type]=attr1,attr2,rel1
+				&fields[type2]=attr3,attr4,rel2,rel3
+				&fields[type]=attr3,attr4,rel2
+			`,
+			expectedURL: SimpleURL{
+				Fragments: []string{"type"},
+				Route:     "/type",
+
+				Fields: map[string][]string{
+					"type":  {"attr1", "attr2", "rel1", "attr3", "attr4", "rel2"},
+					"type2": {"attr3", "attr4", "rel2", "rel3"},
+				},
+				Filter:       nil,
+				SortingRules: []string{},
+				Page:         nil,
+				Include:      []string{},
+				Params:       map[string][]string{},
+			},
+			expectedError: nil,
+		}, {
 			name: "filter label",
 			url: `
 				http://api.example.com/type/id/rel
@@ -264,25 +284,27 @@ func TestSimpleURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		u, err := url.Parse(makeOneLineNoSpaces(test.url))
-		assert.NoError(err, test.name)
+		t.Run(test.name, func(t *testing.T) {
+			u, err := url.Parse(makeOneLineNoSpaces(test.url))
+			assert.NoError(t, err)
 
-		url, err := NewSimpleURL(u)
+			su, err := NewSimpleURL(u)
 
-		if test.expectedError != nil {
-			jaErr := test.expectedError.(Error)
-			jaErr.ID = ""
-			test.expectedError = jaErr
-		}
+			if test.expectedError != nil {
+				jaErr := test.expectedError.(Error)
+				jaErr.ID = ""
+				test.expectedError = jaErr
+			}
 
-		if err != nil {
-			jaErr := err.(Error)
-			jaErr.ID = ""
-			err = jaErr
-		}
+			if err != nil {
+				jaErr := err.(Error)
+				jaErr.ID = ""
+				err = jaErr
+			}
 
-		assert.Equal(test.expectedURL, url, test.name)
-		assert.Equal(test.expectedError, err, test.name)
+			assert.Equal(t, test.expectedURL, su)
+			assert.Equal(t, test.expectedError, err)
+		})
 	}
 }
 

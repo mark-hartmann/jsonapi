@@ -51,9 +51,8 @@ func NewSimpleURL(u *url.URL) (SimpleURL, error) {
 		switch {
 		case strings.HasPrefix(name, "fields[") && strings.HasSuffix(name, "]") && len(name) > 8:
 			resType := name[7 : len(name)-1]
-
-			if len(values.Get(name)) > 0 {
-				sURL.Fields[resType] = parseCommaList(values.Get(name))
+			for _, fields := range values[name] {
+				sURL.Fields[resType] = append(sURL.Fields[resType], parseCommaList(fields)...)
 			}
 		case strings.HasPrefix(name, "page[") && strings.HasSuffix(name, "]") && len(name) > 6:
 			if sURL.Page == nil {
