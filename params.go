@@ -40,9 +40,6 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 
 		for _, word := range words {
 			typ := schema.GetType(incRel.ToType)
-			if typ.Name == "" {
-				continue
-			}
 
 			var ok bool
 			if incRel, ok = typ.Rels[word]; ok {
