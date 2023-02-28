@@ -427,7 +427,7 @@ func TestParseParams(t *testing.T) {
 				&sort=to-many,str,,,-bool
 				&sort=uint8
 				&include=
-					to-many-from-many
+					to-many-from-many.
 					to-many-from-one,
 				&page[number]=110
 				&page[size]=90
@@ -436,16 +436,23 @@ func TestParseParams(t *testing.T) {
 			expectedParams: Params{
 				Fields: map[string][]string{
 					"mocktypes1": {},
+					"mocktypes2": {},
 				},
 				Attrs: map[string][]Attr{
 					"mocktypes1": {},
+					"mocktypes2": {},
 				},
 				Rels: map[string][]Rel{
 					"mocktypes1": {},
+					"mocktypes2": {},
 				},
 				SortRules: []SortRule{},
 				Page:      map[string]string{"size": "90", "number": "110"},
 				Include: [][]Rel{
+					{
+						mockTypes1.Rels["to-many-from-many"],
+						mockTypes2.Rels["to-many-from-one"],
+					},
 					{
 						mockTypes1.Rels["to-many-from-one"],
 						mockTypes2.Rels["to-one-from-many"],
@@ -566,6 +573,13 @@ uint64,uint8
 			name: "duplicate fields in sparse fieldset",
 			url: `/mocktypes1?fields[mocktypes1]=bool,str,uint8&foo=bar
 &fields[mocktypes1]=some-unknown-field`,
+			expectedError: true,
+		}, {
+			name: "inclusion of unknown relationship",
+			url: `
+				?include=some-unknown-relationship
+			`,
+			colType:       "mocktypes1",
 			expectedError: true,
 		}, {
 			name: "invalid sort path (to-many)",

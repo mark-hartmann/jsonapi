@@ -36,24 +36,29 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	for i := 0; i < len(incs); i++ {
 		words := strings.Split(incs[i], ".")
 
+		// incRel and typ are overridden for each "part" of the relationship path. This way we can
+		// ensure that the complete relationship path is valid.
 		incRel := Rel{ToType: resType}
-
 		for _, word := range words {
 			typ := schema.GetType(incRel.ToType)
 
 			var ok bool
-			if incRel, ok = typ.Rels[word]; ok {
-				params.Fields[incRel.ToType] = []string{}
-			} else {
-				incs = append(incs[:i], incs[i+1:]...)
-				break
+			if incRel, ok = typ.Rels[word]; !ok {
+				return nil, NewErrInvalidRelationshipPath(incRel.ToType, word)
 			}
+
+			// For each resource encountered in the multipart path, an empty fields slice added so
+			// the fields can be populated with default fields if needed.
+			// SPEC (v1.0) 6.3, second note block
+			params.Fields[incRel.ToType] = []string{}
 		}
 	}
 
 	// Build params.Include
 	params.Include = make([][]Rel, len(incs))
 
+	// todo: This loop can or should be merged with the previous loop to avoid unnecessary
+	//       complexity
 	for i := range incs {
 		words := strings.Split(incs[i], ".")
 		params.Include[i] = make([]Rel, len(words))
