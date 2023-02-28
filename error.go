@@ -245,6 +245,21 @@ func NewErrUnknownRelationshipInPath(typ, rel, path string) Error {
 	return e
 }
 
+// NewErrInvalidRelationshipPath (400) is returned if a relationship path is invalid, i.e. is or
+// contains a relationship that does not exist for the underlying type.
+func NewErrInvalidRelationshipPath(typ, rel string) Error {
+	e := NewError()
+
+	e.Status = strconv.Itoa(http.StatusBadRequest)
+	e.Title = "Invalid relationship path"
+	e.Detail = fmt.Sprintf("%q is not a relationship of %q.", rel, typ)
+	e.Meta["unknown-relationship"] = rel
+	e.Meta["type"] = typ
+	e.Source["parameter"] = "include"
+
+	return e
+}
+
 // NewErrUnknownTypeInURL (400) returns the corresponding error.
 func NewErrUnknownTypeInURL(typ string) Error {
 	e := NewError()
