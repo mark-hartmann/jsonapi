@@ -563,6 +563,11 @@ uint64,uint8
 			},
 			expectedError: false,
 		}, {
+			name: "duplicate fields in sparse fieldset",
+			url: `/mocktypes1?fields[mocktypes1]=bool,str,uint8&foo=bar
+&fields[mocktypes1]=some-unknown-field`,
+			expectedError: true,
+		}, {
 			name: "invalid sort path (to-many)",
 			url: `
 				/mocktypes1

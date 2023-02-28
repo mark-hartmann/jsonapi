@@ -27,10 +27,8 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 
 	// Remove duplicates and unnecessary includes
 	for i := len(incs) - 1; i >= 0; i-- {
-		if i > 0 {
-			if strings.HasPrefix(incs[i], incs[i-1]) {
-				incs = append(incs[:i-1], incs[i:]...)
-			}
+		if i > 0 && strings.HasPrefix(incs[i], incs[i-1]) {
+			incs = append(incs[:i-1], incs[i:]...)
 		}
 	}
 
@@ -41,14 +39,17 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		incRel := Rel{ToType: resType}
 
 		for _, word := range words {
-			if typ := schema.GetType(incRel.ToType); typ.Name != "" {
-				var ok bool
-				if incRel, ok = typ.Rels[word]; ok {
-					params.Fields[incRel.ToType] = []string{}
-				} else {
-					incs = append(incs[:i], incs[i+1:]...)
-					break
-				}
+			typ := schema.GetType(incRel.ToType)
+			if typ.Name == "" {
+				continue
+			}
+
+			var ok bool
+			if incRel, ok = typ.Rels[word]; ok {
+				params.Fields[incRel.ToType] = []string{}
+			} else {
+				incs = append(incs[:i], incs[i+1:]...)
+				break
 			}
 		}
 	}
@@ -58,7 +59,6 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 
 	for i := range incs {
 		words := strings.Split(incs[i], ".")
-
 		params.Include[i] = make([]Rel, len(words))
 
 		var incRel Rel
@@ -82,43 +82,27 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		params.Fields[resType] = []string{}
 	}
 
-	// Fields
-	for t, fields := range su.Fields {
-		if t != resType {
-			if typ := schema.GetType(t); typ.Name == "" {
-				return nil, NewErrUnknownTypeInURL(t)
-			}
+	// After these checks, only valid fields remain, representing either the resource ID or one of
+	// the attributes or relations.
+	for typeName, fields := range su.Fields {
+		typ := schema.GetType(typeName)
+		if typeName != resType && typ.Name == "" {
+			return nil, NewErrUnknownTypeInURL(typeName)
 		}
 
-		if typ := schema.GetType(t); typ.Name != "" {
-			params.Fields[t] = []string{}
-
-			for _, f := range fields {
-				if f == "id" {
-					params.Fields[t] = append(params.Fields[t], "id")
-				} else {
-					for _, ff := range typ.Fields() {
-						if f == ff {
-							params.Fields[t] = append(params.Fields[t], f)
-						}
-					}
-				}
-			}
-			// Check for duplicates
-			for i := range params.Fields[t] {
-				for j := i + 1; j < len(params.Fields[t]); j++ {
-					if params.Fields[t][i] == params.Fields[t][j] {
-						return nil, NewErrDuplicateFieldInFieldsParameter(
-							typ.Name,
-							params.Fields[t][i],
-						)
-					}
-				}
-			}
+		// Check if the sparse fieldset contains any fields that does not exist on the type.
+		if field := findFirstDifference(fields, typ.Fields()); field != "" && field != "id" {
+			return nil, NewErrUnknownFieldInURL(field)
 		}
+
+		if field := findFirstDuplicate(fields); field != "" {
+			return nil, NewErrDuplicateFieldInFieldsParameter(typ.Name, field)
+		}
+
+		params.Fields[typeName] = fields
 	}
 
-	// Attrs and Rels
+	// Separate the passed fields into attributes and relationships.
 	for typeName, fields := range params.Fields {
 		// This should always return a type since
 		// it is checked earlier.
@@ -130,22 +114,21 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		// Get Attrs and Rels for the requested fields
 		for _, field := range typ.Fields() {
 			for _, field2 := range fields {
-				if field == field2 {
-					if typ = schema.GetType(typeName); typ.Name != "" {
-						if attr, ok := typ.Attrs[field]; ok {
-							// Append to list of attributes
-							params.Attrs[typeName] = append(
-								params.Attrs[typeName],
-								attr,
-							)
-						} else if rel, ok := typ.Rels[field]; ok {
-							// Append to list of relationships
-							params.Rels[typeName] = append(
-								params.Rels[typeName],
-								rel,
-							)
-						}
-					}
+				if field != field2 {
+					continue
+				}
+
+				typ = schema.GetType(typeName)
+				if typ.Name == "" {
+					continue
+				}
+
+				if attr, ok := typ.Attrs[field]; ok {
+					// Append to list of attributes
+					params.Attrs[typeName] = append(params.Attrs[typeName], attr)
+				} else if rel, ok := typ.Rels[field]; ok {
+					// Append to list of relationships
+					params.Rels[typeName] = append(params.Rels[typeName], rel)
 				}
 			}
 		}
@@ -211,21 +194,7 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 				return nil, NewErrUnknownSortField(st.Name, sr.Name)
 			}
 
-			// Removes all redundant relationship paths. For example, a path of [a->b,b->a,a->c]
-			// would be reduced to [a-c]. Self-relationships like [a->a] are removed.
-			// todo: research if this can be implemented more effectively
-			// todo: find a way to test this without having to use dozens of url with sort params
-			for i := len(path) - 1; i >= 0; i-- {
-				for j := 0; j <= i; j++ {
-					if path[j].FromType == path[i].ToType {
-						path = append(path[:j], path[i+1:]...)
-						i = j
-
-						break
-					}
-				}
-			}
-
+			path = ReduceRels(path)
 			if len(path) != 0 {
 				sr.Path = path
 			} else {
@@ -248,7 +217,35 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	return params, nil
 }
 
-// A Params object represents all the query parameters from the URL.
+func findFirstDuplicate(s []string) string {
+	m := make(map[string]bool, len(s))
+	for _, v := range s {
+		if m[v] {
+			return v
+		}
+
+		m[v] = true
+	}
+
+	return ""
+}
+
+func findFirstDifference(a, b []string) string {
+	mb := make(map[string]struct{}, len(b))
+	for _, x := range b {
+		mb[x] = struct{}{}
+	}
+
+	for _, x := range a {
+		if _, found := mb[x]; !found {
+			return x
+		}
+	}
+
+	return ""
+}
+
+// Params represents all the query parameters from the URL.
 type Params struct {
 	// Fields contains the names of all attributes and relationships that are included in the
 	// sparse field sets.
