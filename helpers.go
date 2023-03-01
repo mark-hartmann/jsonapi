@@ -232,6 +232,8 @@ func getTypeInfo(val reflect.Value) (string, map[string]Attr, map[string]Rel) {
 }
 
 // ReduceRels removes redundant relationship paths.
+//
+// DO NOT use this for non-static relationship paths, such as filters or inclusions.
 func ReduceRels(rels []Rel) []Rel {
 	r := make([]Rel, len(rels))
 	copy(r, rels)
