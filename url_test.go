@@ -673,6 +673,27 @@ uint64,uint8
 				Params:    map[string][]string{},
 			},
 			expectedError: false,
+		}, {
+			name: "conflicting sort rules",
+			url: `
+				/mocktypes1?sort=str,int,-str,int8
+			`,
+			colType:       "mocktypes1",
+			expectedError: true,
+		}, {
+			name: "invalid sort rule",
+			url: `
+				/mocktypes1?sort=-
+			`,
+			colType:       "mocktypes1",
+			expectedError: true,
+		}, {
+			name: "conflicting sort rules relationship path",
+			url: `
+				/mocktypes1?sort=to-one-from-one.strptr,-to-one-from-one.strptr
+			`,
+			colType:       "mocktypes1",
+			expectedError: true,
 		},
 	}
 

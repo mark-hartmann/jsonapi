@@ -351,6 +351,19 @@ func NewErrUnknownSortField(typ, field string) Error {
 	return e
 }
 
+// NewErrConflictingSortField (400) returns the corresponding error.
+func NewErrConflictingSortField(field string) Error {
+	e := NewError()
+
+	e.Status = strconv.Itoa(http.StatusBadRequest)
+	e.Title = "Conflicting sort field"
+	e.Detail = fmt.Sprintf("sort-field %q cannot be asc and desc at the same.", field)
+	e.Source["parameter"] = "sort"
+	e.Meta["conflicting-sort-field"] = field
+
+	return e
+}
+
 // NewErrUnknownSortRelationship (400) returns the corresponding error.
 func NewErrUnknownSortRelationship(typ, rel string) Error {
 	e := NewError()

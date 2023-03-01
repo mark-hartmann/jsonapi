@@ -131,6 +131,18 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	if isCol {
 		typ := schema.GetType(resType)
 
+		// Check for conflicting sort fields.
+		set := make(map[string]struct{}, len(su.SortingRules))
+
+		for _, sr := range su.SortingRules {
+			sr = strings.TrimPrefix(sr, "-")
+			if _, ok := set[sr]; ok {
+				return nil, NewErrConflictingSortField(sr)
+			}
+
+			set[sr] = struct{}{}
+		}
+
 		for _, rule := range su.SortingRules {
 			sr := SortRule{}
 
@@ -156,12 +168,8 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 			st := typ
 			for i := 0; i < len(parts)-1; i++ {
 				rel, ok := st.Rels[parts[i]]
-				if !ok {
+				if !ok || !rel.ToOne {
 					return nil, NewErrUnknownSortRelationship(st.Name, parts[i])
-				}
-
-				if !rel.ToOne {
-					return nil, NewErrInvalidSortRelationship(st.Name, parts[i])
 				}
 
 				path = append(path, rel)
