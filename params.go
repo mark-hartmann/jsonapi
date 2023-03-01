@@ -33,13 +33,15 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	}
 
 	// Check inclusions
+	params.Include = make([][]Rel, len(incs))
+
 	for i := 0; i < len(incs); i++ {
 		words := strings.Split(incs[i], ".")
+		params.Include[i] = make([]Rel, len(words))
 
-		// incRel and typ are overridden for each "part" of the relationship path. This way we can
-		// ensure that the complete relationship path is valid.
+		// incRel and typ are overridden for each "part" of the relationship path.
 		incRel := Rel{ToType: resType}
-		for _, word := range words {
+		for j, word := range words {
 			typ := schema.GetType(incRel.ToType)
 
 			var ok bool
@@ -51,32 +53,7 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 			// the fields can be populated with default fields if needed.
 			// SPEC (v1.0) 6.3, second note block
 			params.Fields[incRel.ToType] = []string{}
-		}
-	}
-
-	// Build params.Include
-	params.Include = make([][]Rel, len(incs))
-
-	// todo: This loop can or should be merged with the previous loop to avoid unnecessary
-	//       complexity
-	for i := range incs {
-		words := strings.Split(incs[i], ".")
-		params.Include[i] = make([]Rel, len(words))
-
-		var incRel Rel
-
-		for w := range words {
-			if w == 0 {
-				typ := schema.GetType(resType)
-				incRel = typ.Rels[words[0]]
-			}
-
-			params.Include[i][w] = incRel
-
-			if w < len(words)-1 {
-				typ := schema.GetType(incRel.ToType)
-				incRel = typ.Rels[words[w+1]]
-			}
+			params.Include[i][j] = incRel
 		}
 	}
 
@@ -196,6 +173,8 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 				return nil, NewErrUnknownSortField(st.Name, sr.Name)
 			}
 
+			// By reducing the relationship path, we may be able to eliminate unnecessary
+			// nodes.
 			path = ReduceRels(path)
 			if len(path) != 0 {
 				sr.Path = path
