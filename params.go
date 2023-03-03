@@ -11,104 +11,117 @@ import (
 // If validation is not expected, it is recommended to simply build a SimpleURL
 // object with NewSimpleURL.
 func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
-	params := &Params{
-		Fields:    map[string][]string{},
-		Attrs:     map[string][]Attr{},
-		Rels:      map[string][]Rel{},
-		Filter:    nil,
-		SortRules: []SortRule{},
-		Include:   [][]Rel{},
-	}
+	params := &Params{}
 
 	// Include
-	incs := make([]string, len(su.Include))
-	copy(incs, su.Include)
-	sort.Strings(incs)
+	if su.Include != nil {
+		incs := make([]string, len(su.Include))
+		copy(incs, su.Include)
+		sort.Strings(incs)
 
-	// Remove duplicates and unnecessary includes
-	for i := len(incs) - 1; i >= 0; i-- {
-		if i > 0 && strings.HasPrefix(incs[i], incs[i-1]) {
-			incs = append(incs[:i-1], incs[i:]...)
+		// Remove duplicates and unnecessary includes
+		for i := len(incs) - 1; i >= 0; i-- {
+			if i > 0 && strings.HasPrefix(incs[i], incs[i-1]) {
+				incs = append(incs[:i-1], incs[i:]...)
+			}
+		}
+
+		// Check inclusions
+		params.Include = make([][]Rel, len(incs))
+
+		for i := 0; i < len(incs); i++ {
+			words := strings.Split(incs[i], ".")
+			params.Include[i] = make([]Rel, len(words))
+
+			// incRel and typ are overridden for each "part" of the relationship path.
+			incRel := Rel{ToType: resType}
+			for j, word := range words {
+				typ := schema.GetType(incRel.ToType)
+
+				var ok bool
+				if incRel, ok = typ.Rels[word]; !ok {
+					return nil, NewErrInvalidRelationshipPath(incRel.ToType, word)
+				}
+
+				// For each resource encountered in the multipart path, an empty fields slice added
+				// so the fields can be populated with default fields if needed.
+				// SPEC (v1.0) 6.3, second note block
+				params.Include[i][j] = incRel
+			}
 		}
 	}
 
-	// Check inclusions
-	params.Include = make([][]Rel, len(incs))
-
-	for i := 0; i < len(incs); i++ {
-		words := strings.Split(incs[i], ".")
-		params.Include[i] = make([]Rel, len(words))
-
-		// incRel and typ are overridden for each "part" of the relationship path.
-		incRel := Rel{ToType: resType}
-		for j, word := range words {
-			typ := schema.GetType(incRel.ToType)
-
-			var ok bool
-			if incRel, ok = typ.Rels[word]; !ok {
-				return nil, NewErrInvalidRelationshipPath(incRel.ToType, word)
+	// Fields
+	if len(su.Fields) != 0 {
+		// After these checks, only valid fields remain, representing either the resource ID or
+		// one of the attributes or relations.
+		for typeName, fields := range su.Fields {
+			typ := schema.GetType(typeName)
+			if typeName != resType && typ.Name == "" {
+				return nil, NewErrUnknownTypeInURL(typeName)
 			}
 
-			// For each resource encountered in the multipart path, an empty fields slice added so
-			// the fields can be populated with default fields if needed.
-			// SPEC (v1.0) 6.3, second note block
-			params.Fields[incRel.ToType] = []string{}
-			params.Include[i][j] = incRel
-		}
-	}
+			// Check if the sparse fieldset contains any fields that does not exist on the type.
+			if field := findFirstDifference(fields, typ.Fields()); field != "" && field != "id" {
+				return nil, NewErrUnknownFieldInURL(field)
+			}
 
-	if resType != "" {
-		params.Fields[resType] = []string{}
-	}
+			if field := findFirstDuplicate(fields); field != "" {
+				return nil, NewErrDuplicateFieldInFieldsParameter(typ.Name, field)
+			}
 
-	// After these checks, only valid fields remain, representing either the resource ID or one of
-	// the attributes or relations.
-	for typeName, fields := range su.Fields {
-		typ := schema.GetType(typeName)
-		if typeName != resType && typ.Name == "" {
-			return nil, NewErrUnknownTypeInURL(typeName)
+			if len(params.Fields) == 0 {
+				params.Fields = map[string][]string{}
+			}
+
+			params.Fields[typeName] = fields
 		}
 
-		// Check if the sparse fieldset contains any fields that does not exist on the type.
-		if field := findFirstDifference(fields, typ.Fields()); field != "" && field != "id" {
-			return nil, NewErrUnknownFieldInURL(field)
-		}
+		// Separate the passed fields into attributes and relationships.
+		for typeName, fields := range params.Fields {
+			// This should always return a type since
+			// it is checked earlier.
+			typ := schema.GetType(typeName)
 
-		if field := findFirstDuplicate(fields); field != "" {
-			return nil, NewErrDuplicateFieldInFieldsParameter(typ.Name, field)
-		}
+			rels := make([]Rel, 0, len(typ.Attrs))
+			attrs := make([]Attr, 0, len(typ.Attrs))
 
-		params.Fields[typeName] = fields
-	}
+			// Get Attrs and Rels for the requested fields
+			for _, field := range typ.Fields() {
+				for _, field2 := range fields {
+					if field != field2 {
+						continue
+					}
 
-	// Separate the passed fields into attributes and relationships.
-	for typeName, fields := range params.Fields {
-		// This should always return a type since
-		// it is checked earlier.
-		typ := schema.GetType(typeName)
+					typ = schema.GetType(typeName)
+					if typ.Name == "" {
+						continue
+					}
 
-		params.Attrs[typeName] = make([]Attr, 0, len(typ.Attrs))
-		params.Rels[typeName] = make([]Rel, 0, len(typ.Attrs))
+					if attr, ok := typ.Attrs[field]; ok {
+						// Append to list of attributes
+						attrs = append(attrs, attr)
+					} else if rel, ok := typ.Rels[field]; ok {
+						// Append to list of relationships
+						rels = append(rels, rel)
+					}
+				}
+			}
 
-		// Get Attrs and Rels for the requested fields
-		for _, field := range typ.Fields() {
-			for _, field2 := range fields {
-				if field != field2 {
-					continue
+			if len(attrs) != 0 {
+				if len(params.Attrs) == 0 {
+					params.Attrs = map[string][]Attr{}
 				}
 
-				typ = schema.GetType(typeName)
-				if typ.Name == "" {
-					continue
+				params.Attrs[typeName] = attrs
+			}
+
+			if len(rels) != 0 {
+				if len(params.Rels) == 0 {
+					params.Rels = map[string][]Rel{}
 				}
 
-				if attr, ok := typ.Attrs[field]; ok {
-					// Append to list of attributes
-					params.Attrs[typeName] = append(params.Attrs[typeName], attr)
-				} else if rel, ok := typ.Rels[field]; ok {
-					// Append to list of relationships
-					params.Rels[typeName] = append(params.Rels[typeName], rel)
-				}
+				params.Rels[typeName] = rels
 			}
 		}
 	}

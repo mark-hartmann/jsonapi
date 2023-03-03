@@ -24,24 +24,11 @@ func TestSimpleURL(t *testing.T) {
 				sURL, _ := NewSimpleURL(nil)
 				return sURL
 			}(),
-			expectedError: nil,
 		}, {
 			name: "empty path",
 			url: `
 				http://api.example.com
 			`,
-			expectedURL: SimpleURL{
-				Fragments: []string{},
-				Route:     "",
-
-				Fields:       map[string][]string{},
-				Filter:       nil,
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      []string{},
-				Params:       map[string][]string{},
-			},
-			expectedError: nil,
 		}, {
 			name: "collection",
 			url: `
@@ -50,15 +37,7 @@ func TestSimpleURL(t *testing.T) {
 			expectedURL: SimpleURL{
 				Fragments: []string{"type"},
 				Route:     "/type",
-
-				Fields:       map[string][]string{},
-				Filter:       nil,
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      []string{},
-				Params:       map[string][]string{},
 			},
-			expectedError: nil,
 		}, {
 			name: "resource",
 			url: `
@@ -67,15 +46,7 @@ func TestSimpleURL(t *testing.T) {
 			expectedURL: SimpleURL{
 				Fragments: []string{"type", "id"},
 				Route:     "/type/:id",
-
-				Fields:       map[string][]string{},
-				Filter:       nil,
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      []string{},
-				Params:       map[string][]string{},
 			},
-			expectedError: nil,
 		}, {
 			name: "relationship",
 			url: `
@@ -84,15 +55,7 @@ func TestSimpleURL(t *testing.T) {
 			expectedURL: SimpleURL{
 				Fragments: []string{"type", "id", "rel"},
 				Route:     "/type/:id/rel",
-
-				Fields:       map[string][]string{},
-				Filter:       nil,
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      []string{},
-				Params:       map[string][]string{},
 			},
-			expectedError: nil,
 		}, {
 			name: "self relationship",
 			url: `
@@ -101,15 +64,7 @@ func TestSimpleURL(t *testing.T) {
 			expectedURL: SimpleURL{
 				Fragments: []string{"type", "id", "relationships", "rel"},
 				Route:     "/type/:id/relationships/rel",
-
-				Fields:       map[string][]string{},
-				Filter:       nil,
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      []string{},
-				Params:       map[string][]string{},
 			},
-			expectedError: nil,
 		}, {
 			name: "fields, sort, pagination, include",
 			url: `
@@ -133,16 +88,13 @@ func TestSimpleURL(t *testing.T) {
 					"type3": {"attr5", "attr6", "rel4"},
 					"type4": {"attr7", "rel5", "rel6"},
 				},
-				Filter:       nil,
 				SortingRules: []string{"attr2", "-attr1"},
 				Page: map[string]string{
 					"size":   "20",
 					"number": "1",
 				},
 				Include: []string{"type2.type3", "type4"},
-				Params:  map[string][]string{},
 			},
-			expectedError: nil,
 		}, {
 			name: "fields in separate definitions",
 			url: `https://api.example.com/type
@@ -158,13 +110,7 @@ func TestSimpleURL(t *testing.T) {
 					"type":  {"attr1", "attr2", "rel1", "attr3", "attr4", "rel2"},
 					"type2": {"attr3", "attr4", "rel2", "rel3"},
 				},
-				Filter:       nil,
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      []string{},
-				Params:       map[string][]string{},
 			},
-			expectedError: nil,
 		}, {
 			name: "filter label",
 			url: `
@@ -175,14 +121,8 @@ func TestSimpleURL(t *testing.T) {
 				Fragments: []string{"type", "id", "rel"},
 				Route:     "/type/:id/rel",
 
-				Fields:       map[string][]string{},
-				Filter:       map[string][]string{"filter": {"label"}},
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      []string{},
-				Params:       map[string][]string{},
+				Filter: map[string][]string{"filter": {"label"}},
 			},
-			expectedError: nil,
 		}, {
 			name: "negative page size",
 			url: `
@@ -193,14 +133,8 @@ func TestSimpleURL(t *testing.T) {
 				Fragments: []string{"type", "id", "rel"},
 				Route:     "/type/:id/rel",
 
-				Fields:       map[string][]string{},
-				Filter:       nil,
-				SortingRules: []string{},
-				Page:         map[string]string{"size": "-1"},
-				Include:      []string{},
-				Params:       map[string][]string{},
+				Page: map[string]string{"size": "-1"},
 			},
-			expectedError: nil,
 		}, {
 			name: "empty page query param",
 			url: `
@@ -211,14 +145,8 @@ func TestSimpleURL(t *testing.T) {
 				Fragments: []string{"type", "id", "rel"},
 				Route:     "/type/:id/rel",
 
-				Fields:       map[string][]string{},
-				Filter:       nil,
-				SortingRules: []string{},
-				Page:         map[string]string{"test": "", "size": "40"},
-				Include:      []string{},
-				Params:       map[string][]string{},
+				Page: map[string]string{"test": "", "size": "40"},
 			},
-			expectedError: nil,
 		}, {
 			name: "unknown parameter",
 			url: `
@@ -229,12 +157,7 @@ func TestSimpleURL(t *testing.T) {
 				Fragments: []string{"type", "id", "rel"},
 				Route:     "/type/:id/rel",
 
-				Fields:       map[string][]string{},
-				Filter:       nil,
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      []string{},
-				Params:       map[string][]string{"unknownparam": {"somevalue"}},
+				Params: map[string][]string{"unknownparam": {"somevalue"}},
 			},
 		}, {
 			name: "filter query",
@@ -250,18 +173,12 @@ func TestSimpleURL(t *testing.T) {
 				Fragments: []string{"type", "id", "rel"},
 				Route:     "/type/:id/rel",
 
-				Fields: map[string][]string{},
 				Filter: map[string][]string{
 					"filter": {
 						"{\"f\":\"field\",\"o\":\"=\",\"v\":\"abc\"}",
 					},
 				},
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      []string{},
-				Params:       map[string][]string{},
 			},
-			expectedError: nil,
 		}, {
 			name: "filter query",
 			url: `
@@ -272,14 +189,8 @@ func TestSimpleURL(t *testing.T) {
 				Fragments: []string{"type", "id", "rel"},
 				Route:     "/type/:id/rel",
 
-				Fields:       map[string][]string{},
-				Filter:       map[string][]string{"filter": {"{\"thisis:afilter\"}"}},
-				SortingRules: []string{},
-				Page:         nil,
-				Include:      []string{},
-				Params:       map[string][]string{},
+				Filter: map[string][]string{"filter": {"{\"thisis:afilter\"}"}},
 			},
-			expectedError: nil,
 		},
 	}
 

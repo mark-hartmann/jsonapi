@@ -263,29 +263,9 @@ func TestParseParams(t *testing.T) {
 		{
 			name: "slash only",
 			url:  `/`,
-			expectedParams: Params{
-				Fields:    map[string][]string{},
-				Attrs:     map[string][]Attr{},
-				Rels:      map[string][]Rel{},
-				SortRules: []SortRule{},
-				Page:      nil,
-				Include:   [][]Rel{},
-				Params:    map[string][]string{},
-			},
-			expectedError: false,
 		}, {
 			name: "question mark",
 			url:  `?`,
-			expectedParams: Params{
-				Fields:    map[string][]string{},
-				Attrs:     map[string][]Attr{},
-				Rels:      map[string][]Rel{},
-				SortRules: []SortRule{},
-				Page:      nil,
-				Include:   [][]Rel{},
-				Params:    map[string][]string{},
-			},
-			expectedError: false,
 		}, {
 			name: "sort, pagination and offspec query params",
 			url: `/mocktypes1?fields[mocktypes1]=bool,str,uint8&sort=str,-bool
@@ -299,18 +279,16 @@ func TestParseParams(t *testing.T) {
 					"mocktypes1": {"bool", "str", "uint8"},
 					"mocktypes2": {"intptr", "strptr"},
 				},
-				Attrs: map[string][]Attr{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
-				Rels: map[string][]Rel{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
 				// SportingRules does not contain to-many-from-one because it's a relationship and
 				// not an attribute.
-				SortRules: []SortRule{{Name: "str"}, {Name: "bool", Desc: true}},
-				Page:      map[string]string{"number": "20", "size": "50"},
+				SortRules: []SortRule{
+					{Name: "str"},
+					{Name: "bool", Desc: true},
+				},
+				Page: map[string]string{
+					"number": "20",
+					"size":   "50",
+				},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-one"],
@@ -322,7 +300,6 @@ func TestParseParams(t *testing.T) {
 					"test[b]": {"c", "d"},
 				},
 			},
-			expectedError: false,
 		}, {
 			name: "include, sort, pagination in multiple parts",
 			url: `
@@ -339,20 +316,7 @@ func TestParseParams(t *testing.T) {
 			`,
 			colType: "mocktypes1",
 			expectedParams: Params{
-				Fields: map[string][]string{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
-				Attrs: map[string][]Attr{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
-				Rels: map[string][]Rel{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
-				SortRules: []SortRule{},
-				Page:      map[string]string{"size": "50", "number": "3"},
+				Page: map[string]string{"size": "50", "number": "3"},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-many"],
@@ -368,9 +332,7 @@ func TestParseParams(t *testing.T) {
 						mockTypes2.Rels["to-many-from-many"],
 					},
 				},
-				Params: map[string][]string{},
 			},
-			expectedError: false,
 		}, {
 			name: "sort param with many escaped commas",
 			url: `
@@ -387,20 +349,7 @@ func TestParseParams(t *testing.T) {
 			`,
 			colType: "mocktypes1",
 			expectedParams: Params{
-				Fields: map[string][]string{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
-				Attrs: map[string][]Attr{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
-				Rels: map[string][]Rel{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
-				SortRules: []SortRule{},
-				Page:      map[string]string{"size": "50", "number": "3"},
+				Page: map[string]string{"size": "50", "number": "3"},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-many"],
@@ -416,9 +365,7 @@ func TestParseParams(t *testing.T) {
 						mockTypes2.Rels["to-many-from-many"],
 					},
 				},
-				Params: map[string][]string{},
 			},
-			expectedError: false,
 		}, {
 			name: "sort param with many unescaped commas",
 			url: `
@@ -434,20 +381,7 @@ func TestParseParams(t *testing.T) {
 			`,
 			colType: "mocktypes1",
 			expectedParams: Params{
-				Fields: map[string][]string{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
-				Attrs: map[string][]Attr{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
-				Rels: map[string][]Rel{
-					"mocktypes1": {},
-					"mocktypes2": {},
-				},
-				SortRules: []SortRule{},
-				Page:      map[string]string{"size": "90", "number": "110"},
+				Page: map[string]string{"size": "90", "number": "110"},
 				Include: [][]Rel{
 					{
 						mockTypes1.Rels["to-many-from-many"],
@@ -458,77 +392,37 @@ func TestParseParams(t *testing.T) {
 						mockTypes2.Rels["to-one-from-many"],
 					},
 				},
-				Params: map[string][]string{},
 			},
-			expectedError: false,
 		}, {
 			name:    "filter label",
 			url:     `?filter=label`,
 			colType: "mocktypes1",
 			expectedParams: Params{
-				Fields: map[string][]string{
-					"mocktypes1": {},
-				},
-				Attrs: map[string][]Attr{
-					"mocktypes1": {},
-				},
-				Rels: map[string][]Rel{
-					"mocktypes1": {},
-				},
 				Filter: map[string][]string{
 					"filter": {"label"},
 				},
-				SortRules: []SortRule{},
-				Include:   [][]Rel{},
-				Params:    map[string][]string{},
 			},
-			expectedError: false,
 		}, {
 			name:    "multiple filter labels",
 			url:     `?filter=label&filter=label2&filter[foo]=bar&filter[10%257]=3`,
 			colType: "mocktypes1",
 			expectedParams: Params{
-				Fields: map[string][]string{
-					"mocktypes1": {},
-				},
-				Attrs: map[string][]Attr{
-					"mocktypes1": {},
-				},
-				Rels: map[string][]Rel{
-					"mocktypes1": {},
-				},
 				Filter: map[string][]string{
 					"filter":       {"label", "label2"},
 					"filter[foo]":  {"bar"},
 					"filter[10%7]": {"3"},
 				},
-				SortRules: []SortRule{},
-				Include:   [][]Rel{},
-				Params:    map[string][]string{},
 			},
-			expectedError: false,
 		}, {
 			name:    "sorting rules without id",
 			url:     `/mocktypes1?sort=str,-int`,
 			colType: "mocktypes1",
 			expectedParams: Params{
-				Fields: map[string][]string{
-					"mocktypes1": {},
-				},
-				Attrs: map[string][]Attr{
-					"mocktypes1": {},
-				},
-				Rels: map[string][]Rel{
-					"mocktypes1": {},
-				},
-				Include: [][]Rel{},
 				SortRules: []SortRule{
 					{Name: "str"},
 					{Name: "int", Desc: true},
 				},
-				Params: map[string][]string{},
 			},
-			expectedError: false,
 		}, {
 			name: "sorting rules with id",
 			url: `
@@ -543,12 +437,6 @@ uint64,uint8
 				Fields: map[string][]string{
 					"mocktypes1": mockTypes1.Fields(),
 				},
-				Attrs: map[string][]Attr{
-					"mocktypes1": {},
-				},
-				Rels: map[string][]Rel{
-					"mocktypes1": {},
-				},
 				SortRules: []SortRule{
 					{Name: "str"},
 					{Name: "int", Desc: true},
@@ -560,15 +448,9 @@ uint64,uint8
 						Name: "int16ptr",
 						Desc: true,
 					},
-					{
-						Path: nil,
-						Name: "str",
-					},
+					{Name: "str"},
 				},
-				Include: [][]Rel{},
-				Params:  map[string][]string{},
 			},
-			expectedError: false,
 		}, {
 			name: "duplicate fields in sparse fieldset",
 			url: `/mocktypes1?fields[mocktypes1]=bool,str,uint8&foo=bar
@@ -587,14 +469,7 @@ uint64,uint8
 				/mocktypes1
 				?fields[mocktypes1]=bool,int,int16&sort=str,-int,id,-to-many-from-one.int16ptr
 			`,
-			colType: "mocktypes1",
-			expectedParams: Params{
-				Fields:    map[string][]string{},
-				Attrs:     map[string][]Attr{},
-				Rels:      map[string][]Rel{},
-				SortRules: []SortRule{},
-				Include:   [][]Rel{},
-			},
+			colType:       "mocktypes1",
 			expectedError: true,
 		}, {
 			name: "invalid sort path (unknown relationship)",
@@ -602,38 +477,17 @@ uint64,uint8
 				/mocktypes1
 				?fields[mocktypes1]=bool,int,int16&sort=str,-int,id,-doesnotexist.int16ptr
 			`,
-			colType: "mocktypes1",
-			expectedParams: Params{
-				Fields:    map[string][]string{},
-				Attrs:     map[string][]Attr{},
-				Rels:      map[string][]Rel{},
-				SortRules: []SortRule{},
-				Include:   [][]Rel{},
-			},
+			colType:       "mocktypes1",
 			expectedError: true,
 		}, {
-			name:    "unknown sort field",
-			url:     `/mocktypes1?sort=doesnotexist`,
-			colType: "mocktypes1",
-			expectedParams: Params{
-				Fields:    map[string][]string{},
-				Attrs:     map[string][]Attr{},
-				Rels:      map[string][]Rel{},
-				SortRules: []SortRule{},
-				Include:   [][]Rel{},
-			},
+			name:          "unknown sort field",
+			url:           `/mocktypes1?sort=doesnotexist`,
+			colType:       "mocktypes1",
 			expectedError: true,
 		}, {
-			name:    "unknown sort field (deep)",
-			url:     `/mocktypes1?sort=to-one-from-one.doesnotexist`,
-			colType: "mocktypes1",
-			expectedParams: Params{
-				Fields:    map[string][]string{},
-				Attrs:     map[string][]Attr{},
-				Rels:      map[string][]Rel{},
-				SortRules: []SortRule{},
-				Include:   [][]Rel{},
-			},
+			name:          "unknown sort field (deep)",
+			url:           `/mocktypes1?sort=to-one-from-one.doesnotexist`,
+			colType:       "mocktypes1",
 			expectedError: true,
 		}, {
 			name: "fields with duplicates",
@@ -641,15 +495,7 @@ uint64,uint8
 				/mocktypes1
 				?fields[mocktypes1]=str,int16,bool,str
 			`,
-			colType: "mocktypes1",
-			expectedParams: Params{
-				Fields: map[string][]string{
-					"mocktypes1": mockTypes1.Fields(),
-				},
-				Attrs:   map[string][]Attr{},
-				Rels:    map[string][]Rel{},
-				Include: [][]Rel{},
-			},
+			colType:       "mocktypes1",
 			expectedError: true,
 		}, {
 			name: "fields with id",
@@ -662,17 +508,7 @@ uint64,uint8
 				Fields: map[string][]string{
 					"mocktypes1": {"str", "id"},
 				},
-				Attrs: map[string][]Attr{
-					"mocktypes1": {},
-				},
-				Rels: map[string][]Rel{
-					"mocktypes1": {},
-				},
-				SortRules: []SortRule{},
-				Include:   [][]Rel{},
-				Params:    map[string][]string{},
 			},
-			expectedError: false,
 		}, {
 			name: "conflicting sort rules",
 			url: `
@@ -712,12 +548,20 @@ uint64,uint8
 				for _, field := range fields {
 					if typ := schema.GetType(colType); typ.Name != "" {
 						if _, ok := typ.Attrs[field]; ok {
+							if len(test.expectedParams.Attrs) == 0 {
+								test.expectedParams.Attrs = map[string][]Attr{}
+							}
+
 							test.expectedParams.Attrs[colType] = append(
 								test.expectedParams.Attrs[colType],
 								typ.Attrs[field],
 							)
 						} else if typ := schema.GetType(colType); typ.Name != "" {
 							if _, ok := typ.Rels[field]; ok {
+								if len(test.expectedParams.Rels) == 0 {
+									test.expectedParams.Rels = map[string][]Rel{}
+								}
+
 								test.expectedParams.Rels[colType] = append(
 									test.expectedParams.Rels[colType],
 									typ.Rels[field],

@@ -81,14 +81,14 @@ func MarshalDocument(doc *Document, url *URL) ([]byte, error) {
 
 	// Data
 	var data json.RawMessage
+
 	switch d := doc.Data.(type) {
 	case Resource:
-		data = MarshalResource(
-			d,
-			doc.PrePath,
-			url.Params.Fields[d.GetType().Name],
-			doc.RelData,
-		)
+		if url.Params.Fields != nil {
+			data = MarshalResource(d, doc.PrePath, url.Params.Fields[d.GetType().Name], doc.RelData)
+		} else {
+			data = MarshalResource(d, doc.PrePath, nil, doc.RelData)
+		}
 	case Collection:
 		data = MarshalCollection(
 			d,
