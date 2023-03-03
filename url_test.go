@@ -495,8 +495,12 @@ uint64,uint8
 				/mocktypes1
 				?fields[mocktypes1]=str,int16,bool,str
 			`,
-			colType:       "mocktypes1",
-			expectedError: true,
+			colType: "mocktypes1",
+			expectedParams: Params{
+				Fields: map[string][]string{
+					"mocktypes1": {"bool", "int16", "str"},
+				},
+			},
 		}, {
 			name: "fields with id",
 			url: `
@@ -506,7 +510,7 @@ uint64,uint8
 			colType: "mocktypes1",
 			expectedParams: Params{
 				Fields: map[string][]string{
-					"mocktypes1": {"str", "id"},
+					"mocktypes1": {"id", "str"},
 				},
 			},
 		}, {

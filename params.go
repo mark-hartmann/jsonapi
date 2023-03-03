@@ -56,6 +56,8 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		// After these checks, only valid fields remain, representing either the resource ID or
 		// one of the attributes or relations.
 		for typeName, fields := range su.Fields {
+			fields = removeDuplicates(fields)
+
 			typ := schema.GetType(typeName)
 			if typeName != resType && typ.Name == "" {
 				return nil, NewErrUnknownTypeInURL(typeName)
@@ -64,10 +66,6 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 			// Check if the sparse fieldset contains any fields that does not exist on the type.
 			if field := findFirstDifference(fields, typ.Fields()); field != "" && field != "id" {
 				return nil, NewErrUnknownFieldInURL(field)
-			}
-
-			if field := findFirstDuplicate(fields); field != "" {
-				return nil, NewErrDuplicateFieldInFieldsParameter(typ.Name, field)
 			}
 
 			if len(params.Fields) == 0 {
@@ -219,17 +217,19 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	return params, nil
 }
 
-func findFirstDuplicate(s []string) string {
-	m := make(map[string]bool, len(s))
-	for _, v := range s {
-		if m[v] {
-			return v
-		}
+// removeDuplicates creates a sorted copy of s without duplicates.
+func removeDuplicates(s []string) []string {
+	s2 := make([]string, len(s))
+	copy(s2, s)
+	sort.Strings(s2)
 
-		m[v] = true
+	for i := len(s2) - 1; i >= 0; i-- {
+		if i > 0 && s2[i] == s2[i-1] {
+			s2 = append(s2[:i-1], s2[i:]...)
+		}
 	}
 
-	return ""
+	return s2
 }
 
 func findFirstDifference(a, b []string) string {
