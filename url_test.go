@@ -9,14 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseURLPOC(t *testing.T) {
-	assert := assert.New(t)
-
-	// path := "/"
-
-	assert.Equal(true, true, "obviously")
-}
-
 func TestParseURL(t *testing.T) {
 	assert := assert.New(t)
 
