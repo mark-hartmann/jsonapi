@@ -10,116 +10,100 @@ import (
 )
 
 func TestParseURL(t *testing.T) {
-	assert := assert.New(t)
-
 	// Schema
 	schema := newMockSchema()
 
-	tests := []struct {
-		name          string
+	tests := map[string]struct {
 		url           string
 		expectedURL   URL
 		expectedError bool
 	}{
-
-		{
-			name:          "empty",
+		"empty": {
 			url:           ``,
-			expectedURL:   URL{},
 			expectedError: true,
-		}, {
-			name:          "empty path",
+		},
+		"empty path": {
 			url:           `https://example.com`,
-			expectedURL:   URL{},
 			expectedError: true,
-		}, {
-			name: "collection name only",
-			url:  `mocktypes1`,
-			expectedURL: URL{
-				Fragments:       []string{"mocktypes1"},
-				Route:           "/mocktypes1",
-				BelongsToFilter: BelongsToFilter{},
-				ResType:         "mocktypes1",
-				IsCol:           true,
-			},
-			expectedError: false,
-		}, {
-			name:          "type not found",
+		},
+		"type not found": {
 			url:           "/mocktypes99",
 			expectedError: true,
-		}, {
-			name:          "relationship not found",
+		},
+		"relationship not found": {
 			url:           "/mocktypes1/abc/relnotfound",
 			expectedError: true,
-		}, {
-			name: "bad params",
-			url: `
-				/mocktypes1
-				?fields[invalid]=attr1,attr2
-			`,
+		},
+		"bad params": {
+			url:           `/mocktypes1?fields[invalid]=attr1,attr2`,
 			expectedError: true,
-		}, {
-			name:          "invalid raw url",
+		},
+		"invalid raw url": {
 			url:           "%z",
 			expectedError: true,
-		}, {
-			name: "string value page param",
-			url: `
-				/mocktypes1/abc123
-				?page[size]=valid
-			`,
+		},
+		"collection name only": {
+			url: `mocktypes1`,
 			expectedURL: URL{
-				Fragments:       []string{"mocktypes1", "abc123"},
-				Route:           "/mocktypes1/:id",
-				BelongsToFilter: BelongsToFilter{},
-				ResType:         "mocktypes1",
-				IsCol:           false,
-				ResID:           "abc123",
+				Fragments: []string{
+					"mocktypes1",
+				},
+				Route:   "/mocktypes1",
+				ResType: "mocktypes1",
+				IsCol:   true,
 			},
-			expectedError: false,
-		}, {
-			name: "invalid simpleurl",
-			url: `
-				/mocktypes1/abc123
-				?page=no-page-param
-			`,
+		},
+		"string value page param": {
+			url: `/mocktypes1/abc123?page[size]=valid`,
 			expectedURL: URL{
-				Fragments:       []string{"mocktypes1", "abc123"},
-				Route:           "/mocktypes1/:id",
-				BelongsToFilter: BelongsToFilter{},
-				ResType:         "mocktypes1",
-				IsCol:           false,
-				ResID:           "abc123",
+				Fragments: []string{
+					"mocktypes1", "abc123",
+				},
+				Route:   "/mocktypes1/:id",
+				ResType: "mocktypes1",
+				ResID:   "abc123",
 			},
-			expectedError: false,
-		}, {
-			name: "full url for collection",
-			url:  `https://api.example.com/mocktypes1`,
+		},
+		"invalid simple url": {
+			url: `/mocktypes1/abc123?page=no-page-param`,
 			expectedURL: URL{
-				Fragments:       []string{"mocktypes1"},
-				Route:           "/mocktypes1",
-				BelongsToFilter: BelongsToFilter{},
-				ResType:         "mocktypes1",
-				IsCol:           true,
+				Fragments: []string{
+					"mocktypes1", "abc123",
+				},
+				Route:   "/mocktypes1/:id",
+				ResType: "mocktypes1",
+				ResID:   "abc123",
 			},
-			expectedError: false,
-		}, {
-			name: "full url for resource",
-			url:  `https://example.com/mocktypes1/mc1-1`,
+		},
+		"full url for collection": {
+			url: `https://api.example.com/mocktypes1`,
 			expectedURL: URL{
-				Fragments:       []string{"mocktypes1", "mc1-1"},
-				Route:           "/mocktypes1/:id",
-				BelongsToFilter: BelongsToFilter{},
-				ResType:         "mocktypes1",
-				ResID:           "mc1-1",
+				Fragments: []string{
+					"mocktypes1",
+				},
+				Route:   "/mocktypes1",
+				ResType: "mocktypes1",
+				IsCol:   true,
 			},
-			expectedError: false,
-		}, {
-			name: "full url for related relationship",
-			url:  `https://example.com/mocktypes1/mc1-1/to-one`,
+		},
+		"full url for resource": {
+			url: `https://example.com/mocktypes1/mc1-1`,
 			expectedURL: URL{
-				Fragments: []string{"mocktypes1", "mc1-1", "to-one"},
-				Route:     "/mocktypes1/:id/to-one",
+				Fragments: []string{
+					"mocktypes1", "mc1-1",
+				},
+				Route:   "/mocktypes1/:id",
+				ResType: "mocktypes1",
+				ResID:   "mc1-1",
+			},
+		},
+		"full url for related relationship": {
+			url: `https://example.com/mocktypes1/mc1-1/to-one`,
+			expectedURL: URL{
+				Fragments: []string{
+					"mocktypes1", "mc1-1", "to-one",
+				},
+				Route: "/mocktypes1/:id/to-one",
 				BelongsToFilter: BelongsToFilter{
 					Type: "mocktypes1",
 					ID:   "mc1-1",
@@ -136,12 +120,9 @@ func TestParseURL(t *testing.T) {
 					FromOne:  false,
 				},
 			},
-			expectedError: false,
-		}, {
-			name: "full url for self relationships",
-			url: `
-				https://example.com/mocktypes1/mc1-1/relationships/to-many-from-one
-			`,
+		},
+		"full url for self relationships": {
+			url: `https://example.com/mocktypes1/mc1-1/relationships/to-many-from-one`,
 			expectedURL: URL{
 				Fragments: []string{
 					"mocktypes1", "mc1-1", "relationships", "to-many-from-one",
@@ -165,10 +146,9 @@ func TestParseURL(t *testing.T) {
 				},
 				IsCol: true,
 			},
-			expectedError: false,
-		}, {
-			name: "path for self relationship",
-			url:  `/mocktypes1/mc1-1/relationships/to-many-from-one`,
+		},
+		"path for self relationship": {
+			url: `/mocktypes1/mc1-1/relationships/to-many-from-one`,
 			expectedURL: URL{
 				Fragments: []string{
 					"mocktypes1", "mc1-1", "relationships", "to-many-from-one",
@@ -192,13 +172,10 @@ func TestParseURL(t *testing.T) {
 				},
 				IsCol: true,
 			},
-			expectedError: false,
-		}, {
-			name: "path for self relationship with params",
-			url: `
-				/mocktypes1/mc1-1/relationships/to-many-from-one
-				?fields[mocktypes2]=boolptr%2Cint8ptr
-			`,
+		},
+		"path for self relationship with params": {
+			url: `/mocktypes1/mc1-1/relationships/to-many-from-one
+?fields[mocktypes2]=boolptr%2Cint8ptr`,
 			expectedURL: URL{
 				Fragments: []string{
 					"mocktypes1", "mc1-1", "relationships", "to-many-from-one",
@@ -222,20 +199,21 @@ func TestParseURL(t *testing.T) {
 				},
 				IsCol: true,
 			},
-			expectedError: false,
 		},
 	}
 
-	for _, test := range tests {
-		url, err := NewURLFromRaw(schema, makeOneLineNoSpaces(test.url))
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			u, err := NewURLFromRaw(schema, makeOneLineNoSpaces(test.url))
 
-		if test.expectedError {
-			assert.Error(err, test.name)
-		} else {
-			assert.NoError(err, test.name)
-			url.Params = nil
-			assert.Equal(test.expectedURL, *url, test.name)
-		}
+			if test.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				u.Params = nil
+				assert.Equal(t, test.expectedURL, *u)
+			}
+		})
 	}
 }
 
