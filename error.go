@@ -378,21 +378,6 @@ func NewErrUnknownSortRelationship(typ, rel string) Error {
 	return e
 }
 
-// NewErrInvalidSortRelationship (400) returns the corresponding error.
-func NewErrInvalidSortRelationship(typ, rel string) Error {
-	e := NewError()
-
-	e.Status = strconv.Itoa(http.StatusBadRequest)
-	e.Title = "Invalid relationship type"
-	e.Detail = fmt.Sprintf("Relationship %q of %q is not to-one.", rel, typ)
-	e.Source["parameter"] = "sort"
-	e.Meta["type"] = typ
-	e.Meta["relationship-name"] = rel
-	e.Meta["invalid-relationship-type"] = "to-many"
-
-	return e
-}
-
 // NewErrUnauthorized (401) returns the corresponding error.
 func NewErrUnauthorized() Error {
 	e := NewError()
