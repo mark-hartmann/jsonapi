@@ -43,84 +43,75 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 					return nil, NewErrInvalidRelationshipPath(incRel.ToType, word)
 				}
 
-				// For each resource encountered in the multipart path, an empty fields slice added
-				// so the fields can be populated with default fields if needed.
-				// SPEC (v1.0) 6.3, second note block
 				params.Include[i][j] = incRel
 			}
 		}
 	}
 
-	// Fields
-	if len(su.Fields) != 0 {
-		// After these checks, only valid fields remain, representing either the resource ID or
-		// one of the attributes or relations.
-		for typeName, fields := range su.Fields {
-			fields = removeDuplicates(fields)
+	// After these checks, only valid fields remain, representing either the resource ID or
+	// one of the attributes or relations.
+	for typeName, fields := range su.Fields {
+		fields = removeDuplicates(fields)
 
-			typ := schema.GetType(typeName)
-			if typeName != resType && typ.Name == "" {
-				return nil, NewErrUnknownTypeInURL(typeName)
-			}
-
-			// Check if the sparse fieldset contains any fields that does not exist on the type.
-			if field := findFirstDifference(fields, typ.Fields()); field != "" && field != "id" {
-				return nil, NewErrUnknownFieldInURL(field)
-			}
-
-			if len(params.Fields) == 0 {
-				params.Fields = map[string][]string{}
-			}
-
-			params.Fields[typeName] = fields
+		typ := schema.GetType(typeName)
+		if typeName != resType && typ.Name == "" {
+			return nil, NewErrUnknownTypeInURL(typeName)
 		}
 
-		// Separate the passed fields into attributes and relationships.
-		for typeName, fields := range params.Fields {
-			// This should always return a type since
-			// it is checked earlier.
-			typ := schema.GetType(typeName)
+		// Check if the sparse fieldset contains any fields that does not exist on the type.
+		if field := findFirstDifference(fields, typ.Fields()); field != "" && field != "id" {
+			return nil, NewErrUnknownFieldInURL(field)
+		}
 
-			rels := make([]Rel, 0, len(typ.Attrs))
-			attrs := make([]Attr, 0, len(typ.Attrs))
+		if len(params.Fields) == 0 {
+			params.Fields = map[string][]string{}
+		}
 
-			// Get Attrs and Rels for the requested fields
-			for _, field := range typ.Fields() {
-				for _, field2 := range fields {
-					if field != field2 {
-						continue
-					}
+		params.Fields[typeName] = fields
+	}
 
-					typ = schema.GetType(typeName)
-					if typ.Name == "" {
-						continue
-					}
+	// Separate the passed fields into attributes and relationships.
+	for typeName, fields := range params.Fields {
+		// This should always return a type since
+		// it is checked earlier.
+		typ := schema.GetType(typeName)
 
-					if attr, ok := typ.Attrs[field]; ok {
-						// Append to list of attributes
-						attrs = append(attrs, attr)
-					} else if rel, ok := typ.Rels[field]; ok {
-						// Append to list of relationships
-						rels = append(rels, rel)
-					}
-				}
-			}
+		rels := make([]Rel, 0, len(typ.Attrs))
+		attrs := make([]Attr, 0, len(typ.Attrs))
 
-			if len(attrs) != 0 {
-				if len(params.Attrs) == 0 {
-					params.Attrs = map[string][]Attr{}
+		// Get Attrs and Rels for the requested fields
+		for _, field := range typ.Fields() {
+			for _, field2 := range fields {
+				if field != field2 {
+					continue
 				}
 
-				params.Attrs[typeName] = attrs
-			}
+				typ = schema.GetType(typeName)
 
-			if len(rels) != 0 {
-				if len(params.Rels) == 0 {
-					params.Rels = map[string][]Rel{}
+				if attr, ok := typ.Attrs[field]; ok {
+					// Append to list of attributes
+					attrs = append(attrs, attr)
+				} else if rel, ok := typ.Rels[field]; ok {
+					// Append to list of relationships
+					rels = append(rels, rel)
 				}
-
-				params.Rels[typeName] = rels
 			}
+		}
+
+		if len(attrs) != 0 {
+			if len(params.Attrs) == 0 {
+				params.Attrs = map[string][]Attr{}
+			}
+
+			params.Attrs[typeName] = attrs
+		}
+
+		if len(rels) != 0 {
+			if len(params.Rels) == 0 {
+				params.Rels = map[string][]Rel{}
+			}
+
+			params.Rels[typeName] = rels
 		}
 	}
 
