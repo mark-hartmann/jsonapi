@@ -79,22 +79,11 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		rels := make([]Rel, 0, len(typ.Attrs))
 		attrs := make([]Attr, 0, len(typ.Attrs))
 
-		// Get Attrs and Rels for the requested fields
-		for _, field := range typ.Fields() {
-			for _, field2 := range fields {
-				if field != field2 {
-					continue
-				}
-
-				typ = schema.GetType(typeName)
-
-				if attr, ok := typ.Attrs[field]; ok {
-					// Append to list of attributes
-					attrs = append(attrs, attr)
-				} else if rel, ok := typ.Rels[field]; ok {
-					// Append to list of relationships
-					rels = append(rels, rel)
-				}
+		for _, field := range fields {
+			if attr, ok := typ.Attrs[field]; ok {
+				attrs = append(attrs, attr)
+			} else if rel, ok := typ.Rels[field]; ok {
+				rels = append(rels, rel)
 			}
 		}
 
