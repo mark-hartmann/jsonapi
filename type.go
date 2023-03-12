@@ -303,6 +303,50 @@ type SortRule struct {
 	Desc bool
 }
 
+// ParseSortRule parses a string to a SortRule using the Schema. If the sort rule contains a
+// relationship path, it is checked for correctness and simplified if possible.
+func ParseSortRule(schema *Schema, typ Type, rule string) (SortRule, error) {
+	sr := SortRule{}
+
+	if rule == "" {
+		return SortRule{}, NewErrUnknownSortField(typ.Name, "")
+	}
+
+	if rule[0] == '-' {
+		rule = rule[1:]
+		sr.Desc = true
+	}
+
+	parts := strings.Split(rule, ".")
+	path := make([]Rel, 0, len(parts)-1)
+
+	for i := 0; i < len(parts)-1; i++ {
+		rel, ok := typ.Rels[parts[i]]
+		if !ok || !rel.ToOne {
+			return sr, NewErrUnknownSortRelationship(typ.Name, parts[i])
+		}
+
+		path = append(path, rel)
+		typ = schema.GetType(rel.ToType)
+	}
+
+	sr.Name = parts[len(parts)-1]
+	if _, ok := typ.Attrs[sr.Name]; !ok && sr.Name != "id" {
+		return sr, NewErrUnknownSortField(typ.Name, sr.Name)
+	}
+
+	// By reducing the relationship path, we may be able to eliminate unnecessary
+	// nodes.
+	path = ReduceRels(path)
+	if len(path) != 0 {
+		sr.Path = path
+	} else {
+		sr.Path = nil
+	}
+
+	return sr, nil
+}
+
 // GetAttrType returns the attribute type as int (see constants) and whether
 // the type is an array and/or nullable (ptr).
 //

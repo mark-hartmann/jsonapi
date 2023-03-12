@@ -278,6 +278,86 @@ func TestRelString(t *testing.T) {
 	assert.Equal("type1_rel1_type2_rel2", rel.Invert().String())
 }
 
+func TestParseSortRule(t *testing.T) {
+	schema := newMockSchema()
+
+	testData := []struct {
+		raw string
+		typ Type
+		res SortRule
+		err bool
+	}{
+		{
+			raw: "",
+			typ: schema.GetType("mocktypes1"),
+			err: true,
+		},
+		{
+			raw: "-",
+			typ: schema.GetType("mocktypes1"),
+			err: true,
+		},
+		{
+			raw: "uint16",
+			typ: schema.GetType("mocktypes1"),
+			res: SortRule{
+				Name: "uint16",
+			},
+		},
+		{
+			raw: "-uint16",
+			typ: schema.GetType("mocktypes1"),
+			res: SortRule{
+				Name: "uint16",
+				Desc: true,
+			},
+		},
+		{
+			raw: "to-one-from-one.uint16",
+			typ: schema.GetType("mocktypes1"),
+			res: SortRule{
+				Name: "uint16",
+			},
+			err: true,
+		},
+		{
+			raw: "-to-one-from-one.int16ptr",
+			typ: schema.GetType("mocktypes1"),
+			res: SortRule{
+				Path: []Rel{
+					schema.GetType("mocktypes1").Rels["to-one-from-one"],
+				},
+				Name: "int16ptr",
+				Desc: true,
+			},
+		},
+		{
+			raw: "-to-one-from-one.to-one-from-many.int8",
+			typ: schema.GetType("mocktypes1"),
+			res: SortRule{
+				Name: "int8",
+				Desc: true,
+			},
+		},
+		{
+			raw: "-to-one-from-one.unknown-relationship.some-prop",
+			typ: schema.GetType("mocktypes1"),
+			err: true,
+		},
+	}
+
+	for _, test := range testData {
+		rule, err := ParseSortRule(schema, test.typ, test.raw)
+
+		if test.err {
+			assert.Error(t, err, test.raw)
+		} else {
+			assert.NoError(t, err, test.raw)
+			assert.Equal(t, test.res, rule, test.raw)
+		}
+	}
+}
+
 func TestGetAttrType(t *testing.T) {
 	testData := []struct {
 		str      string

@@ -135,50 +135,9 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		}
 
 		for _, rule := range su.SortingRules {
-			sr := SortRule{}
-
-			if rule[0] == '-' {
-				rule = rule[1:]
-				sr.Desc = true
-			}
-
-			parts := strings.Split(rule, ".")
-			if len(parts) == 1 {
-				sr.Name = parts[0]
-				if _, ok := typ.Attrs[sr.Name]; !ok && sr.Name != "id" {
-					return nil, NewErrUnknownSortField(typ.Name, sr.Name)
-				}
-
-				params.SortRules = append(params.SortRules, sr)
-
-				continue
-			}
-
-			var path []Rel
-
-			st := typ
-			for i := 0; i < len(parts)-1; i++ {
-				rel, ok := st.Rels[parts[i]]
-				if !ok || !rel.ToOne {
-					return nil, NewErrUnknownSortRelationship(st.Name, parts[i])
-				}
-
-				path = append(path, rel)
-				st = schema.GetType(rel.ToType)
-			}
-
-			sr.Name = parts[len(parts)-1]
-			if _, ok := st.Attrs[sr.Name]; !ok && sr.Name != "id" {
-				return nil, NewErrUnknownSortField(st.Name, sr.Name)
-			}
-
-			// By reducing the relationship path, we may be able to eliminate unnecessary
-			// nodes.
-			path = ReduceRels(path)
-			if len(path) != 0 {
-				sr.Path = path
-			} else {
-				sr.Path = nil
+			sr, err := ParseSortRule(schema, typ, rule)
+			if err != nil {
+				return nil, err
 			}
 
 			params.SortRules = append(params.SortRules, sr)
