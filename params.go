@@ -128,13 +128,30 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	}
 
 	// Filter
-	params.Filter = su.Filter
+	if len(su.Filter) > 0 {
+		params.Filter = make(map[string][]string, len(su.Filter))
+		for n, f := range su.Filter {
+			params.Filter[n] = make([]string, len(f))
+			copy(params.Filter[n], f)
+		}
+	}
 
 	// Pagination
-	params.Page = su.Page
+	if len(su.Page) > 0 {
+		params.Page = make(map[string]string, len(su.Page))
+		for k, v := range su.Page {
+			params.Page[k] = v
+		}
+	}
 
 	// Off-Spec query params
-	params.Params = su.Params
+	if len(su.Params) > 0 {
+		params.Params = make(map[string][]string, len(su.Params))
+		for n, p := range su.Params {
+			params.Params[n] = make([]string, len(p))
+			copy(params.Params[n], p)
+		}
+	}
 
 	return params, nil
 }

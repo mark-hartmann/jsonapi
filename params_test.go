@@ -318,6 +318,11 @@ func TestNewParams(t *testing.T) {
 			colType:       "mocktypes1",
 			expectedError: true,
 		},
+		"unknown type in sparse fieldset": {
+			url:           `?fields[unknown-type]=foo,bar,baz`,
+			colType:       "mocktypes1",
+			expectedError: true,
+		},
 	}
 
 	for name, test := range tests {
@@ -343,6 +348,26 @@ func TestNewParams(t *testing.T) {
 			}
 		})
 	}
+
+	// Make sure that modifying the SimpleURL data does not affect the Params data.
+	rawURL := `/mocktypes1?page[number]=110&filter=label2&off-spec-param-1`
+
+	u, err := url.Parse(makeOneLineNoSpaces(rawURL))
+	assert.NoError(t, err)
+
+	su, err := NewSimpleURL(u)
+	assert.NoError(t, err)
+
+	params, err := NewParams(schema, su, "mockType1")
+	assert.NoError(t, err)
+
+	params.Page["foo"] = "bar"
+	params.Filter["foo"] = []string{"bar"}
+	params.Params["foo"] = []string{"bar"}
+
+	assert.NotEqual(t, len(su.Page), len(params.Page))
+	assert.NotEqual(t, len(su.Filter), len(params.Filter))
+	assert.NotEqual(t, len(su.Params), len(params.Params))
 }
 
 func getExpectedAttrsAndRels(schema *Schema, fieldMap map[string][]string) (
