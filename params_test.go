@@ -29,7 +29,6 @@ func TestNewParams(t *testing.T) {
 		},
 		"sort, pagination and off-spec query params": {
 			url: `
-				/mocktypes1
 				?fields[mocktypes1]=bool,str,uint8
 				&sort=str,-bool
 				&fields[mocktypes2]=intptr,strptr
@@ -77,7 +76,7 @@ func TestNewParams(t *testing.T) {
 				?include=
 					to-many-from-one.to-one-from-many.to-one.to-many-from-many,
 					to-one-from-one.to-many-from-many
-				&sort=to-many,str,,-bool
+				&sort=str,,-bool
 				&page[number]=3
 				&sort=uint8
 				&include=
@@ -103,6 +102,11 @@ func TestNewParams(t *testing.T) {
 						mockTypes2.Rels["to-many-from-many"],
 					},
 				},
+				SortRules: []SortRule{
+					{Name: "str"},
+					{Name: "bool", Desc: true},
+					{Name: "uint8"},
+				},
 			},
 		},
 		"sort param with many escaped commas": {
@@ -110,9 +114,9 @@ func TestNewParams(t *testing.T) {
 				?include=
 					to-many-from-one.to-one-from-many.to-one.to-many-from-many%2C
 					to-one-from-one.to-many-from-many
-				&sort=to-many%2Cstr,%2C%2C-bool
+				&sort=str,%2C%2C-bool
 				&page[number]=3
-				&sort=uint8,-to-one-from-one.int16Ptr
+				&sort=uint8,-to-one-from-one.int16ptr
 				&include=
 					to-many-from-one,
 					to-many-from-many
@@ -136,13 +140,25 @@ func TestNewParams(t *testing.T) {
 						mockTypes2.Rels["to-many-from-many"],
 					},
 				},
+				SortRules: []SortRule{
+					{Name: "str"},
+					{Name: "bool", Desc: true},
+					{Name: "uint8"},
+					{
+						Path: []Rel{
+							mockTypes1.Rels["to-one-from-one"],
+						},
+						Name: "int16ptr",
+						Desc: true,
+					},
+				},
 			},
 		},
 		"sort param with many unescaped commas": {
 			url: `
 				?include=
 					to-many-from-one.to-one-from-many
-				&sort=to-many,str,,,-bool
+				&sort=,str,,,-bool
 				&sort=uint8
 				&include=
 					to-many-from-many.
@@ -162,6 +178,11 @@ func TestNewParams(t *testing.T) {
 						mockTypes1.Rels["to-many-from-one"],
 						mockTypes2.Rels["to-one-from-many"],
 					},
+				},
+				SortRules: []SortRule{
+					{Name: "str"},
+					{Name: "bool", Desc: true},
+					{Name: "uint8"},
 				},
 			},
 		},
@@ -186,7 +207,7 @@ func TestNewParams(t *testing.T) {
 			},
 		},
 		"sorting rules without id": {
-			url:     `/mocktypes1?sort=str,-int`,
+			url:     `?sort=str,-int`,
 			colType: "mocktypes1",
 			expectedParams: Params{
 				SortRules: []SortRule{
@@ -197,7 +218,6 @@ func TestNewParams(t *testing.T) {
 		},
 		"sorting rules with id": {
 			url: `
-				/mocktypes1
 				?fields[mocktypes1]=
 					bool,int,int16,int32,int64,int8,str,time,
 					to-many,to-many-from-many,to-many-from-one,to-one,
@@ -230,7 +250,6 @@ func TestNewParams(t *testing.T) {
 		},
 		"duplicate fields in sparse fieldset": {
 			url: `
-				/mocktypes1
 				?fields[mocktypes1]=bool,str,uint8
 				&foo=bar
 				&fields[mocktypes1]=some-unknown-field`,
@@ -243,7 +262,6 @@ func TestNewParams(t *testing.T) {
 		},
 		"invalid sort path (to-many)": {
 			url: `
-				/mocktypes1
 				?fields[mocktypes1]=bool,int,int16
 				&sort=str,-int,id,-to-many-from-one.int16ptr`,
 			colType:       "mocktypes1",
@@ -251,7 +269,6 @@ func TestNewParams(t *testing.T) {
 		},
 		"invalid sort path (unknown relationship)": {
 			url: `
-				/mocktypes1
 				?fields[mocktypes1]=bool,int,int16
 				&sort=str,-int,id,-doesnotexist.int16ptr
 			`,
@@ -259,17 +276,17 @@ func TestNewParams(t *testing.T) {
 			expectedError: true,
 		},
 		"unknown sort field": {
-			url:           `/mocktypes1?sort=doesnotexist`,
+			url:           `?sort=doesnotexist`,
 			colType:       "mocktypes1",
 			expectedError: true,
 		},
 		"unknown sort field (deep)": {
-			url:           `/mocktypes1?sort=to-one-from-one.doesnotexist`,
+			url:           `?sort=to-one-from-one.doesnotexist`,
 			colType:       "mocktypes1",
 			expectedError: true,
 		},
 		"fields with duplicates": {
-			url:     `/mocktypes1?fields[mocktypes1]=str,int16,bool,str`,
+			url:     `?fields[mocktypes1]=str,int16,bool,str`,
 			colType: "mocktypes1",
 			expectedParams: Params{
 				Fields: map[string][]string{
@@ -278,7 +295,7 @@ func TestNewParams(t *testing.T) {
 			},
 		},
 		"fields with id": {
-			url:     `/mocktypes1?fields[mocktypes1]=str,id`,
+			url:     `?fields[mocktypes1]=str,id`,
 			colType: "mocktypes1",
 			expectedParams: Params{
 				Fields: map[string][]string{
@@ -287,17 +304,17 @@ func TestNewParams(t *testing.T) {
 			},
 		},
 		"conflicting sort rules": {
-			url:           `/mocktypes1?sort=str,int,-str,int8`,
+			url:           `?sort=str,int,-str,int8`,
 			colType:       "mocktypes1",
 			expectedError: true,
 		},
 		"invalid sort rule": {
-			url:           `/mocktypes1?sort=-`,
+			url:           `?sort=-`,
 			colType:       "mocktypes1",
 			expectedError: true,
 		},
 		"conflicting sort rules relationship path": {
-			url:           `/mocktypes1?sort=to-one-from-one.strptr,-to-one-from-one.strptr`,
+			url:           `?sort=to-one-from-one.strptr,-to-one-from-one.strptr`,
 			colType:       "mocktypes1",
 			expectedError: true,
 		},

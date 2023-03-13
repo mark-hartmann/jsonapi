@@ -104,44 +104,27 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 		}
 	}
 
-	// Sorting
-	// TODO All of the following is just to figure out
-	// if the URL represents a single resource or a
-	// collection. It should be done in a better way.
-	isCol := false
-	if len(su.Fragments) == 1 {
-		isCol = true
-	} else if len(su.Fragments) >= 3 {
-		relName := su.Fragments[len(su.Fragments)-1]
-		typ := schema.GetType(su.Fragments[0])
-		// Checked earlier, assuming should be safe
-		rel := typ.Rels[relName]
-		isCol = !rel.ToOne
+	typ := schema.GetType(resType)
+
+	// Check for conflicting sort fields.
+	set := make(map[string]struct{}, len(su.SortingRules))
+
+	for _, sr := range su.SortingRules {
+		sr = strings.TrimPrefix(sr, "-")
+		if _, ok := set[sr]; ok {
+			return nil, NewErrConflictingSortField(sr)
+		}
+
+		set[sr] = struct{}{}
 	}
 
-	if isCol {
-		typ := schema.GetType(resType)
-
-		// Check for conflicting sort fields.
-		set := make(map[string]struct{}, len(su.SortingRules))
-
-		for _, sr := range su.SortingRules {
-			sr = strings.TrimPrefix(sr, "-")
-			if _, ok := set[sr]; ok {
-				return nil, NewErrConflictingSortField(sr)
-			}
-
-			set[sr] = struct{}{}
+	for _, rule := range su.SortingRules {
+		sr, err := ParseSortRule(schema, typ, rule)
+		if err != nil {
+			return nil, err
 		}
 
-		for _, rule := range su.SortingRules {
-			sr, err := ParseSortRule(schema, typ, rule)
-			if err != nil {
-				return nil, err
-			}
-
-			params.SortRules = append(params.SortRules, sr)
-		}
+		params.SortRules = append(params.SortRules, sr)
 	}
 
 	// Filter
