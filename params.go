@@ -200,13 +200,15 @@ type Params struct {
 	// they belong to.
 	Rels map[string][]Rel
 
-	// Filter
+	// Filter contains all filtering data. JSON:API is agnostic about the filtering strategy
+	// used by a server, so the values must be validated independently.
 	Filter map[string][]string
 
 	// SortRules contains all sorting rules.
 	SortRules []SortRule
 
-	// Pagination
+	// Page contains all pagination data. JSON:API is agnostic about the pagination strategy
+	// used by a server, so the values must be validated independently.
 	Page map[string]string
 
 	// Include contains cleaned up relationship paths.
