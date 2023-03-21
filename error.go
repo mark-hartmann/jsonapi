@@ -107,6 +107,14 @@ func NewErrBadRequest(title, detail string) Error {
 	return e
 }
 
+// NewErrInvalidQueryParameter is returned if the endpoint does not support
+func NewErrInvalidQueryParameter(detail, param string) Error {
+	e := NewErrBadRequest("Invalid query parameter", detail)
+	e.Source["pointer"] = param
+
+	return e
+}
+
 // NewErrMalformedFilterParameter (400) returns the corresponding error.
 func NewErrMalformedFilterParameter(badFilter string) Error {
 	e := NewError()
