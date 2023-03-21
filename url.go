@@ -71,6 +71,21 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 		}
 	}
 
+	// Check if the request has invalid parameters before creating the params object.
+	if !url.IsCol {
+		switch {
+		case len(su.SortingRules) > 0:
+			return nil, NewErrInvalidQueryParameter(
+				"Sorting is only supported on resource collections", "sort")
+		case len(su.Page) > 0:
+			return nil, NewErrInvalidQueryParameter(
+				"Pagination is only supported on resource collections", "page")
+		case len(su.Filter) > 0:
+			return nil, NewErrInvalidQueryParameter(
+				"Filtering is only supported on resource collections", "filter")
+		}
+	}
+
 	// Params
 	var err error
 	url.Params, err = NewParams(schema, su, url.ResType)

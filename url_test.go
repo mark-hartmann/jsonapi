@@ -52,16 +52,17 @@ func TestParseURL(t *testing.T) {
 				IsCol:   true,
 			},
 		},
-		"string value page param": {
-			url: `/mocktypes1/abc123?page[size]=valid`,
-			expectedURL: URL{
-				Fragments: []string{
-					"mocktypes1", "abc123",
-				},
-				Route:   "/mocktypes1/:id",
-				ResType: "mocktypes1",
-				ResID:   "abc123",
-			},
+		"page param (no collection)": {
+			url:           `/mocktypes1/abc123?page[size]=valid`,
+			expectedError: true,
+		},
+		"filter param (no collection)": {
+			url:           `/mocktypes1/abc123?filter=is-foo`,
+			expectedError: true,
+		},
+		"sort param (no collection)": {
+			url:           `/mocktypes1/abc123?sort=-str`,
+			expectedError: true,
 		},
 		"invalid simple url": {
 			url: `/mocktypes1/abc123?page=no-page-param`,
