@@ -50,6 +50,23 @@ func TestSimpleURL(t *testing.T) {
 				Route:     "/type/:id/relationships/rel",
 			},
 		}, {
+			name: "no path with query parameters",
+			url:  `?include=type1&sort=attr1&fields[type1]=attr1,attr2`,
+			expectedURL: SimpleURL{
+				Include: []string{
+					"type1",
+				},
+				SortingRules: []string{
+					"attr1",
+				},
+				Fields: map[string][]string{
+					"type1": {
+						"attr1",
+						"attr2",
+					},
+				},
+			},
+		}, {
 			name: "fields, sort, pagination, include",
 			url: `https://api.example.com/type
 				?fields[type]=attr1,attr2,rel1
