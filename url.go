@@ -16,7 +16,8 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 	url.Route = su.Route
 
 	// Fragments
-	url.Fragments = su.Fragments
+	url.Fragments = make([]string, len(su.Fragments))
+	copy(url.Fragments, su.Fragments)
 
 	// IsCol, ResType, ResID, RelKind, Rel, BelongsToFilter
 	var (
