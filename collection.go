@@ -63,8 +63,8 @@ func UnmarshalCollection(data []byte, schema *Schema) (Collection, error) {
 	return col, nil
 }
 
-// Resources is a slice of objects that implement the Resource interface. They
-// do not necessarily have the same type.
+// Resources is a slice of objects that implements the Collection interface. The resources
+// do not necessarily have to be of the same type.
 type Resources []Resource
 
 // GetType returns a zero Type object because the collection does not represent
@@ -73,12 +73,12 @@ func (r *Resources) GetType() Type {
 	return Type{}
 }
 
-// Len returns the number of elements in r.
+// Len returns the number of elements in the collection.
 func (r *Resources) Len() int {
 	return len(*r)
 }
 
-// At returns the number of elements in r.
+// At returns the resource at position i. If the index is out of bounds, nil is returned.
 func (r *Resources) At(i int) Resource {
 	if i >= 0 && i < r.Len() {
 		return (*r)[i]
@@ -87,7 +87,7 @@ func (r *Resources) At(i int) Resource {
 	return nil
 }
 
-// Add adds a Resource object to r.
+// Add adds a Resource object to the collection.
 func (r *Resources) Add(res Resource) {
 	*r = append(*r, res)
 }
