@@ -6,17 +6,14 @@ import (
 	"strings"
 )
 
-// A SimpleURL represents a URL not validated nor supplemented from a schema.
-//
-// It parses a URL in text format and stores the values as is.
+// A SimpleURL represents a URL not validated nor supplemented from a schema, values
+// are stored as they are found in the request url.
 type SimpleURL struct {
-	// Source string
-
-	// URL
 	Fragments []string // [users, abc123, articles]
 	Route     string   // /users/:id/articles
 
-	// Params
+	// Fields contains all resource fields (attributes and relationships), grouped by
+	// their resource type.
 	Fields       map[string][]string
 	Filter       map[string][]string
 	SortingRules []string
