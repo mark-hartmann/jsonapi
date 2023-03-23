@@ -16,7 +16,8 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 	url.Route = su.Route
 
 	// Fragments
-	url.Fragments = su.Fragments
+	url.Fragments = make([]string, len(su.Fragments))
+	copy(url.Fragments, su.Fragments)
 
 	// IsCol, ResType, ResID, RelKind, Rel, BelongsToFilter
 	var (
@@ -68,6 +69,21 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 			url.RelKind = "related"
 		} else if len(url.Fragments) == 4 {
 			url.RelKind = "self"
+		}
+	}
+
+	// Check if the request has invalid parameters before creating the params object.
+	if !url.IsCol {
+		switch {
+		case len(su.SortingRules) > 0:
+			return nil, NewErrInvalidQueryParameter(
+				"Sorting is only supported on resource collections", "sort")
+		case len(su.Page) > 0:
+			return nil, NewErrInvalidQueryParameter(
+				"Pagination is only supported on resource collections", "page")
+		case len(su.Filter) > 0:
+			return nil, NewErrInvalidQueryParameter(
+				"Filtering is only supported on resource collections", "filter")
 		}
 	}
 

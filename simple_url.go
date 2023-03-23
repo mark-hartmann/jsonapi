@@ -6,17 +6,14 @@ import (
 	"strings"
 )
 
-// A SimpleURL represents a URL not validated nor supplemented from a schema.
-//
-// It parses a URL in text format and stores the values as is.
+// A SimpleURL represents a URL not validated nor supplemented from a schema, values
+// are stored as they are found in the request url.
 type SimpleURL struct {
-	// Source string
-
-	// URL
 	Fragments []string // [users, abc123, articles]
 	Route     string   // /users/:id/articles
 
-	// Params
+	// Fields contains all resource fields (attributes and relationships), grouped by
+	// their resource type.
 	Fields       map[string][]string
 	Filter       map[string][]string
 	SortingRules []string
@@ -28,56 +25,77 @@ type SimpleURL struct {
 
 // NewSimpleURL takes and parses a *url.URL and returns a SimpleURL.
 func NewSimpleURL(u *url.URL) (SimpleURL, error) {
-	sURL := SimpleURL{
-		Fragments: []string{},
-		Route:     "",
-
-		Fields:       map[string][]string{},
-		Filter:       nil,
-		SortingRules: []string{},
-		Include:      []string{},
-		Params:       map[string][]string{},
-	}
+	sURL := SimpleURL{}
 
 	if u == nil {
 		return sURL, errors.New("jsonapi: pointer to url.URL is nil")
 	}
 
-	sURL.Fragments = parseFragments(u.Path)
-	sURL.Route = deduceRoute(sURL.Fragments)
+	fragments := parseFragments(u.Path)
+	if len(fragments) != 0 {
+		sURL.Fragments = fragments
+		sURL.Route = deduceRoute(sURL.Fragments)
+	}
+
+	suPage := map[string]string{}
+	suFields := map[string][]string{}
+	suFilter := map[string][]string{}
+	suParams := map[string][]string{}
+
+	var (
+		suInclude, suSortingRules []string
+	)
 
 	values := u.Query()
 	for name := range values {
 		switch {
-		case strings.HasPrefix(name, "fields[") && strings.HasSuffix(name, "]") && len(name) > 8:
+		case strings.HasPrefix(name, "fields[") && strings.HasSuffix(name, "]") &&
+			len(name) > 8:
 			resType := name[7 : len(name)-1]
 			for _, fields := range values[name] {
-				sURL.Fields[resType] = append(sURL.Fields[resType], parseCommaList(fields)...)
+				suFields[resType] = append(suFields[resType], parseCommaList(fields)...)
 			}
-		case strings.HasPrefix(name, "page[") && strings.HasSuffix(name, "]") && len(name) > 6:
-			if sURL.Page == nil {
-				sURL.Page = map[string]string{}
-			}
-
+		case strings.HasPrefix(name, "page[") && strings.HasSuffix(name, "]") &&
+			len(name) > 6:
 			nme := name[5 : len(name)-1]
-			sURL.Page[nme] = values.Get(name)
+			suPage[nme] = values.Get(name)
 		case name == "filter" || strings.HasPrefix(name, "filter["):
-			if sURL.Filter == nil {
-				sURL.Filter = map[string][]string{}
-			}
-
-			sURL.Filter[name] = append(sURL.Filter[name], values[name]...)
+			suFilter[name] = append(suFilter[name], values[name]...)
 		case name == "sort":
 			for _, rules := range values[name] {
-				sURL.SortingRules = append(sURL.SortingRules, parseCommaList(rules)...)
+				suSortingRules = append(suSortingRules, parseCommaList(rules)...)
 			}
 		case name == "include":
 			for _, include := range values[name] {
-				sURL.Include = append(sURL.Include, parseCommaList(include)...)
+				suInclude = append(suInclude, parseCommaList(include)...)
 			}
 		default:
-			sURL.Params[name] = values[name]
+			suParams[name] = values[name]
 		}
+	}
+
+	if len(suFields) > 0 {
+		sURL.Fields = suFields
+	}
+
+	if len(suFilter) > 0 {
+		sURL.Filter = suFilter
+	}
+
+	if len(suPage) > 0 {
+		sURL.Page = suPage
+	}
+
+	if len(suInclude) > 0 {
+		sURL.Include = suInclude
+	}
+
+	if len(suParams) > 0 {
+		sURL.Params = suParams
+	}
+
+	if len(suSortingRules) > 0 {
+		sURL.SortingRules = suSortingRules
 	}
 
 	return sURL, nil

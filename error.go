@@ -107,6 +107,14 @@ func NewErrBadRequest(title, detail string) Error {
 	return e
 }
 
+// NewErrInvalidQueryParameter is returned if the endpoint does not support
+func NewErrInvalidQueryParameter(detail, param string) Error {
+	e := NewErrBadRequest("Invalid query parameter", detail)
+	e.Source["pointer"] = param
+
+	return e
+}
+
 // NewErrMalformedFilterParameter (400) returns the corresponding error.
 func NewErrMalformedFilterParameter(badFilter string) Error {
 	e := NewError()
@@ -374,21 +382,6 @@ func NewErrUnknownSortRelationship(typ, rel string) Error {
 	e.Source["parameter"] = "sort"
 	e.Meta["type"] = typ
 	e.Meta["unknown-relationship-name"] = rel
-
-	return e
-}
-
-// NewErrInvalidSortRelationship (400) returns the corresponding error.
-func NewErrInvalidSortRelationship(typ, rel string) Error {
-	e := NewError()
-
-	e.Status = strconv.Itoa(http.StatusBadRequest)
-	e.Title = "Invalid relationship type"
-	e.Detail = fmt.Sprintf("Relationship %q of %q is not to-one.", rel, typ)
-	e.Source["parameter"] = "sort"
-	e.Meta["type"] = typ
-	e.Meta["relationship-name"] = rel
-	e.Meta["invalid-relationship-type"] = "to-many"
 
 	return e
 }
