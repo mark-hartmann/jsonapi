@@ -1,7 +1,6 @@
 package jsonapi
 
 import (
-	"io/ioutil"
 	"net/http"
 )
 
@@ -10,11 +9,6 @@ import (
 // schema can be nil, in which case no checks will be done to insure that the
 // request respects a specific schema.
 func NewRequest(r *http.Request, schema *Schema) (*Request, error) {
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	su, err := NewSimpleURL(r.URL)
 	if err != nil {
 		return nil, err
@@ -28,7 +22,7 @@ func NewRequest(r *http.Request, schema *Schema) (*Request, error) {
 	var doc *Document
 
 	if r.Method == http.MethodPost || r.Method == http.MethodPatch {
-		doc, err = UnmarshalDocument(body, schema)
+		doc, err = UnmarshalDocument(r.Body, schema)
 		if err != nil {
 			return nil, err
 		}

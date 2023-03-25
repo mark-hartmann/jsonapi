@@ -3,6 +3,7 @@ package jsonapi
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"sort"
 )
 
@@ -76,7 +77,7 @@ func (d *Document) Include(res Resource) {
 // MarshalDocument marshals a document according to the JSON:API specification.
 //
 // Both doc and url must not be nil.
-func MarshalDocument(doc *Document, url *URL) ([]byte, error) {
+func MarshalDocument(dst io.Writer, doc *Document, url *URL) error {
 	var err error
 
 	// Data
@@ -116,7 +117,7 @@ func MarshalDocument(doc *Document, url *URL) ([]byte, error) {
 	}
 
 	if err != nil {
-		return []byte{}, err
+		return err
 	}
 
 	// Included
@@ -177,13 +178,13 @@ func MarshalDocument(doc *Document, url *URL) ([]byte, error) {
 
 	plMap["jsonapi"] = map[string]string{"version": "1.0"}
 
-	return json.Marshal(plMap)
+	return json.NewEncoder(dst).Encode(plMap)
 }
 
 // UnmarshalDocument reads a payload to build and return a Document object.
 //
 // schema must not be nil.
-func UnmarshalDocument(payload []byte, schema *Schema) (*Document, error) {
+func UnmarshalDocument(r io.Reader, schema *Schema) (*Document, error) {
 	doc := &Document{
 		Included:  []Resource{},
 		Resources: map[string]map[string]struct{}{},
@@ -192,10 +193,10 @@ func UnmarshalDocument(payload []byte, schema *Schema) (*Document, error) {
 		Meta:      map[string]interface{}{},
 	}
 	ske := &payloadSkeleton{}
+	dec := json.NewDecoder(r)
 
 	// Unmarshal
-	err := json.Unmarshal(payload, ske)
-	if err != nil {
+	if err := dec.Decode(ske); err != nil {
 		return nil, err
 	}
 
@@ -233,8 +234,7 @@ func UnmarshalDocument(payload []byte, schema *Schema) (*Document, error) {
 		incs := make([]Identifier, len(ske.Included))
 
 		for i, rawInc := range ske.Included {
-			err = json.Unmarshal(rawInc, &incs[i])
-			if err != nil {
+			if err := json.Unmarshal(rawInc, &incs[i]); err != nil {
 				return nil, err
 			}
 		}

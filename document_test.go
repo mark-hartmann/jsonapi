@@ -132,7 +132,8 @@ func TestMarshalDocumentLinks(t *testing.T) {
 			assert := assert.New(t)
 
 			// Marshaling
-			payload, err := MarshalDocument(test.doc, test.url)
+			payload := &bytes.Buffer{}
+			err := MarshalDocument(payload, test.doc, test.url)
 			assert.NoError(err)
 
 			// Golden file
@@ -142,7 +143,7 @@ func TestMarshalDocumentLinks(t *testing.T) {
 			// Retrieve the expected result from file
 			expected, _ := ioutil.ReadFile(path)
 			assert.NoError(err, name)
-			assert.JSONEq(string(expected), string(payload))
+			assert.JSONEq(string(expected), payload.String())
 		})
 	}
 }
@@ -620,7 +621,8 @@ func TestMarshalDocument(t *testing.T) {
 			}
 
 			// Marshaling
-			payload, err := MarshalDocument(test.doc, url)
+			payload := &bytes.Buffer{}
+			err := MarshalDocument(payload, test.doc, url)
 			assert.NoError(t, err)
 
 			// Golden file
@@ -630,10 +632,10 @@ func TestMarshalDocument(t *testing.T) {
 				// Retrieve the expected result from file
 				expected, _ := ioutil.ReadFile(path)
 				assert.NoError(t, err, test.name)
-				assert.JSONEq(t, string(expected), string(payload))
+				assert.JSONEq(t, string(expected), payload.String())
 			} else {
 				dst := &bytes.Buffer{}
-				err = json.Indent(dst, payload, "", "\t")
+				err = json.Indent(dst, payload.Bytes(), "", "\t")
 				assert.NoError(t, err)
 				// TODO Figure out whether 0600 is okay or not.
 				err = ioutil.WriteFile(path, dst.Bytes(), 0600)
@@ -715,7 +717,8 @@ func TestMarshalInvalidDocuments(t *testing.T) {
 			}
 
 			// Marshaling
-			_, err := MarshalDocument(test.doc, url)
+			w := &bytes.Buffer{}
+			err := MarshalDocument(w, test.doc, url)
 			assert.EqualError(err, test.err)
 		})
 	}
@@ -898,7 +901,8 @@ func TestUnmarshalDocument(t *testing.T) {
 			},
 		}
 
-		payload, err := MarshalDocument(doc, url)
+		payload := &bytes.Buffer{}
+		err := MarshalDocument(payload, doc, url)
 		assert.NoError(err)
 
 		doc2, err := UnmarshalDocument(payload, schema)
@@ -912,7 +916,8 @@ func TestUnmarshalDocument(t *testing.T) {
 			"objptr,objptrarr")
 		doc := &Document{Data: objRes}
 
-		payload, err := MarshalDocument(doc, url)
+		payload := &bytes.Buffer{}
+		err := MarshalDocument(payload, doc, url)
 		assert.NoError(t, err)
 
 		doc2, err := UnmarshalDocument(payload, schema)
@@ -937,7 +942,8 @@ func TestUnmarshalDocument(t *testing.T) {
 			},
 		}
 
-		payload, err := MarshalDocument(doc, url)
+		payload := &bytes.Buffer{}
+		err := MarshalDocument(payload, doc, url)
 		assert.NoError(err)
 
 		doc2, err := UnmarshalDocument(payload, schema)
@@ -978,7 +984,8 @@ func TestUnmarshalDocument(t *testing.T) {
 			}(),
 		}
 
-		payload, err := MarshalDocument(doc, url)
+		payload := &bytes.Buffer{}
+		err := MarshalDocument(payload, doc, url)
 		assert.NoError(err)
 
 		doc2, err := UnmarshalDocument(payload, schema)
@@ -1059,7 +1066,7 @@ func TestUnmarshalDocument(t *testing.T) {
 		}
 
 		for _, test := range tests {
-			doc, err := UnmarshalDocument([]byte(test.payload), schema)
+			doc, err := UnmarshalDocument(strings.NewReader(test.payload), schema)
 			assert.EqualError(err, test.expected)
 			assert.Nil(doc)
 		}
