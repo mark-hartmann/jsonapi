@@ -23,10 +23,10 @@ func ExampleWrapper() {
 	wrap := jsonapi.Wrap(Animal{})
 
 	// The resource can be modified.
-	wrap.SetID("animal1")
+	wrap.Set("id", "animal1")
 	wrap.Set("name", "Gopher")
 
-	// Unlike a SoftResource, its type cannot changed. It is defined
+	// Unlike a SoftResource, its type cannot be changed. It is defined
 	// by the struct definition.
 	//
 	// A Type object is still generated and can be retrieved.

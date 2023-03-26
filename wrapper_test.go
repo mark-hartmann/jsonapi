@@ -70,15 +70,15 @@ func TestWrapStruct(t *testing.T) {
 	wrap1 := Wrap(res1)
 
 	// ID, type, field
-	id, typ := wrap1.IDAndType()
+	id, typ := wrap1.Get("id"), wrap1.GetType().Name
 	assert.Equal(res1.ID, id, "id")
 	assert.Equal("mocktypes1", typ, "type")
 	assert.Equal(res1.Str, wrap1.Get("str"), "str field")
 
 	// Modifying the wrapper does not modify
 	// the original value.
-	wrap1.SetID("another_id")
-	id, _ = wrap1.IDAndType()
+	wrap1.Set("id", "another_id")
+	id = wrap1.Get("id")
 	assert.Equal("another_id", id, "type")
 
 	wrap1.Set("str", "another_string")
@@ -101,15 +101,15 @@ func TestWrapStruct(t *testing.T) {
 	wrap2 := Wrap(res2)
 
 	// ID, type, field
-	id, typ = wrap2.IDAndType()
+	id, typ = wrap2.Get("id"), wrap2.GetType().Name
 	assert.Equal(res2.ID, id, "id")
 	assert.Equal("mocktype6", typ, "type")
 	assert.Equal(res2.Str, wrap2.Get("str"), "str field")
 
 	// Modifying the wrapper does not modify the original value.
-	wrap2.SetID("another_id")
+	wrap2.Set("id", "another_id")
 
-	id, _ = wrap1.IDAndType()
+	id = wrap1.Get("id")
 	assert.Equal("another_id", id, "type")
 
 	wrap2.Set("obj", testObjType{Prop1: "xyz"})
@@ -147,11 +147,11 @@ func TestWrapper(t *testing.T) {
 	wrap1 := Wrap(res1)
 
 	// ID and type
-	id, typ := wrap1.IDAndType()
+	id, typ := wrap1.Get("id"), wrap1.GetType().Name
 	assert.Equal(res1.ID, id, "id")
 	assert.Equal("mocktypes1", typ, "type")
 
-	wrap1.SetID("another-id")
+	wrap1.Set("id", "another-id")
 	assert.Equal(res1.ID, "another-id", "set id")
 
 	// Get attributes
@@ -228,7 +228,7 @@ func TestWrapper(t *testing.T) {
 	wrap2 := Wrap(res2)
 
 	// ID and type
-	id, typ = wrap2.IDAndType()
+	id, typ = wrap2.Get("id"), wrap2.GetType().Name
 	assert.Equal(res2.ID, id, "id 2")
 	assert.Equal("mocktypes2", typ, "type 2")
 

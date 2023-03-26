@@ -74,11 +74,6 @@ func Wrap(v interface{}) *Wrapper {
 	return w
 }
 
-// IDAndType returns the ID and the type of the Wrapper.
-func (w *Wrapper) IDAndType() (string, string) {
-	return IDAndType(w.val.Interface())
-}
-
 // Attrs returns the attributes of the Wrapper.
 func (w *Wrapper) Attrs() map[string]Attr {
 	return w.typ.Attrs
@@ -117,12 +112,6 @@ func (w *Wrapper) New() Resource {
 	return Wrap(newVal.Interface())
 }
 
-// GetID returns the wrapped resource's ID.
-func (w *Wrapper) GetID() string {
-	id, _ := IDAndType(w.val.Interface())
-	return id
-}
-
 // GetType returns the wrapped resource's type.
 func (w *Wrapper) GetType() Type {
 	return w.typ
@@ -130,25 +119,11 @@ func (w *Wrapper) GetType() Type {
 
 // Get returns the value associated to the attribute named after key.
 func (w *Wrapper) Get(key string) interface{} {
-	if key == "id" {
-		return w.GetID()
-	}
-
 	return w.getField(key)
-}
-
-// SetID sets the ID of the wrapped resource.
-func (w *Wrapper) SetID(id string) {
-	w.val.FieldByName("ID").SetString(id)
 }
 
 // Set sets the value associated to the attribute named after key.
 func (w *Wrapper) Set(key string, val interface{}) {
-	if key == "id" {
-		id, _ := val.(string)
-		w.SetID(id)
-	}
-
 	w.setField(key, val)
 }
 
@@ -197,7 +172,7 @@ func (w *Wrapper) getField(key string) interface{} {
 		sf := w.val.Type().Field(i)
 
 		if key == sf.Tag.Get("json") && sf.Tag.Get("api") != "" {
-			// If a key does not exist in the attribute map, it's an relationship and does not have
+			// If a key does not exist in the attribute map, it's a relationship and does not have
 			// a "zero value".
 			if attr, ok := w.typ.Attrs[key]; ok && isNil(field.Interface()) {
 				zv, _ := GetZeroValue(attr.Type, attr.Array, attr.Nullable)
