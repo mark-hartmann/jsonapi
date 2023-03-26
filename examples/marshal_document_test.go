@@ -66,11 +66,12 @@ func ExampleMarshalDocument() {
 	// compliant payload and uses the given URL to add links
 	// and know which fields to include in the result (through
 	// the fields[...] query parameters).
-	payload, _ := jsonapi.MarshalDocument(doc, url)
+	payload := &bytes.Buffer{}
+	jsonapi.MarshalDocument(payload, doc, url)
 
 	// Beautify the output for clarity.
 	out := &bytes.Buffer{}
-	json.Indent(out, payload, "", "\t")
+	json.Indent(out, payload.Bytes(), "", "\t")
 
 	// Print the result.
 	fmt.Println(string(out.Bytes()))

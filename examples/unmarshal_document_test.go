@@ -2,6 +2,7 @@ package examples_test
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/mark-hartmann/jsonapi"
@@ -47,7 +48,7 @@ func ExampleUnmarshalDocument() {
 
 	// UnmarhsalDocument unmarshals a payload using a schema for some
 	// validation and returns a document.
-	doc, err := jsonapi.UnmarshalDocument([]byte(payload), schema)
+	doc, err := jsonapi.UnmarshalDocument(strings.NewReader(payload), schema)
 	if err != nil {
 		panic(err)
 	}
