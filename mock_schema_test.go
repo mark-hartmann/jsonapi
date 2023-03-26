@@ -257,7 +257,7 @@ type mockType5 struct {
 }
 
 type mockType6 struct {
-	ID string `json:"ID" api:"mocktype6"`
+	ID string `json:"id" api:"mocktype6"`
 
 	Str           string         `json:"str" api:"attr"`
 	StrPtr        *string        `json:"strPtr" api:"attr"`
