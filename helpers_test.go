@@ -77,36 +77,6 @@ func TestBuildType(t *testing.T) {
 	assert.Error(err)
 }
 
-func TestIDAndType(t *testing.T) {
-	assert := assert.New(t)
-
-	mt := mocktype{
-		ID: "abc123",
-	}
-	id, typ := IDAndType(mt)
-	assert.Equal("abc123", id)
-	assert.Equal("mocktype", typ)
-
-	id, typ = IDAndType(&mt)
-	assert.Equal("abc123", id)
-	assert.Equal("mocktype", typ)
-
-	// Resource
-	id, typ = IDAndType(Wrap(&mt))
-	assert.Equal("abc123", id)
-	assert.Equal("mocktype", typ)
-
-	// Missing ID field
-	id, typ = IDAndType(missingID{})
-	assert.Equal("", id)
-	assert.Equal("", typ)
-
-	// Not a struct
-	id, typ = IDAndType("not a struct")
-	assert.Equal("", id)
-	assert.Equal("", typ)
-}
-
 type emptyIDAPItag struct {
 	ID string `json:"id"`
 }
@@ -125,8 +95,6 @@ type invalidReType struct {
 	ID  string `json:"id" api:"typename"`
 	Rel int    `json:"rel" api:"rel,target,reverse"`
 }
-
-type missingID struct{}
 
 func TestReduceRels(t *testing.T) {
 	tests := map[string]struct {

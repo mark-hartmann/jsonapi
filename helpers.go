@@ -133,41 +133,9 @@ func MustBuildType(v interface{}) Type {
 	return typ
 }
 
-// IDAndType returns the ID and the type of the resource represented by v.
-//
-// Two empty strings are returned if v is not recognized as a resource.
-// CheckType can be used to check the validity of a struct.
-func IDAndType(v interface{}) (string, string) {
-	if res, ok := v.(Resource); ok {
-		return res.Get("id").(string), res.GetType().Name
-	}
-
-	val := reflect.ValueOf(v)
-
-	// Allows pointers to structs
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
-	}
-
-	if val.Kind() == reflect.Struct {
-		idF := val.FieldByName("ID")
-
-		if !idF.IsValid() {
-			return "", ""
-		}
-
-		idSF, _ := val.Type().FieldByName("ID")
-
-		if idF.Kind() == reflect.String {
-			return idF.String(), idSF.Tag.Get("api")
-		}
-	}
-
-	return "", ""
-}
-
 func getTypeInfo(val reflect.Value) (string, map[string]Attr, map[string]Rel) {
-	_, typeName := IDAndType(val.Interface())
+	idSF, _ := val.Type().FieldByName("ID")
+	typeName := idSF.Tag.Get("api")
 
 	attrs := map[string]Attr{}
 
