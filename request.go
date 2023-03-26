@@ -4,10 +4,7 @@ import (
 	"net/http"
 )
 
-// NewRequest builds and returns a *Request based on r and schema.
-//
-// schema can be nil, in which case no checks will be done to insure that the
-// request respects a specific schema.
+// NewRequest builds a *Request based on a *http.Request and validated by a *Schema.
 func NewRequest(r *http.Request, schema *Schema) (*Request, error) {
 	su, err := NewSimpleURL(r.URL)
 	if err != nil {
