@@ -1,6 +1,7 @@
 package jsonapi
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 )
@@ -40,7 +41,12 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 
 				var ok bool
 				if incRel, ok = typ.Rels[word]; !ok {
-					return nil, NewErrInvalidRelationshipPath(incRel.ToType, word)
+					return nil, &srcError{src: "include", error: &UnknownFieldError{
+						Type:    typ.Name,
+						Field:   word,
+						asRel:   true,
+						relPath: relPath(incs[i]),
+					}}
 				}
 
 				params.Include[i][j] = incRel
@@ -55,12 +61,15 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 
 		typ := schema.GetType(typeName)
 		if typeName != resType && typ.Name == "" {
-			return nil, NewErrUnknownTypeInURL(typeName)
+			return nil, &srcError{src: "fields", error: &UnknownTypeError{Type: typeName}}
 		}
 
 		// Check if the sparse fieldset contains any fields that does not exist on the type.
 		if field := findFirstDifference(fields, typ.Fields()); field != "" && field != "id" {
-			return nil, NewErrUnknownFieldInURL(field)
+			return nil, &srcError{src: "fields", error: &UnknownFieldError{
+				Type:  typ.Name,
+				Field: field,
+			}}
 		}
 
 		if len(params.Fields) == 0 {
@@ -110,18 +119,28 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 	set := make(map[string]struct{}, len(su.SortingRules))
 
 	for _, sr := range su.SortingRules {
-		sr = strings.TrimPrefix(sr, "-")
-		if _, ok := set[sr]; ok {
-			return nil, NewErrConflictingSortField(sr)
+		nsr := strings.TrimPrefix(sr, "-")
+		if _, ok := set[nsr]; ok {
+			c := sr
+			if strings.HasPrefix(c, "-") {
+				c = sr[1:]
+			}
+
+			return nil, &IllegalParameterError{Param: "sort", value: sr, conflictValue: c}
 		}
 
-		set[sr] = struct{}{}
+		set[nsr] = struct{}{}
 	}
 
 	for _, rule := range su.SortingRules {
 		sr, err := ParseSortRule(schema, typ, rule)
 		if err != nil {
-			return nil, err
+			// ParseSortRule does not annotate the error with an error source because
+			// it's just a helper function without referring to a document.
+			return nil, &srcError{
+				src:   "sort",
+				error: fmt.Errorf("jsonapi: failed to parse sort rule: %w", err),
+			}
 		}
 
 		params.SortRules = append(params.SortRules, sr)

@@ -3,6 +3,7 @@ package jsonapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"sort"
 )
@@ -181,6 +182,12 @@ func MarshalDocument(dst io.Writer, doc *Document, url *URL) error {
 	return json.NewEncoder(dst).Encode(plMap)
 }
 
+var (
+	errMissingPrimaryMember = errors.New("jsonapi: missing primary member")
+	errCoexistingMembers    = errors.New(`jsonapi: "data" and "errors" must not coexist`)
+	errMemberDataType       = errors.New("jsonapi: invalid member data type")
+)
+
 // UnmarshalDocument reads a payload to build and return a Document object.
 //
 // schema must not be nil.
@@ -197,7 +204,19 @@ func UnmarshalDocument(r io.Reader, schema *Schema) (*Document, error) {
 
 	// Unmarshal
 	if err := dec.Decode(ske); err != nil {
-		return nil, err
+		return nil, payloadErr(err)
+	}
+
+	// SPEC 5.1
+	// A document MUST contain at least one of the following three members.
+	if ske.Data == nil && ske.Errors == nil && ske.Meta == nil {
+		return nil, payloadErr(errMissingPrimaryMember)
+	}
+
+	// SPEC 5.1
+	// data and errors must not coexist.
+	if ske.Data != nil && ske.Errors != nil {
+		return nil, payloadErr(errCoexistingMembers)
 	}
 
 	// Data
@@ -208,45 +227,43 @@ func UnmarshalDocument(r io.Reader, schema *Schema) (*Document, error) {
 			// Resource
 			res, err := UnmarshalResource(ske.Data, schema)
 			if err != nil {
-				return nil, err
+				return nil, &srcError{
+					ptr:   true,
+					src:   "/data",
+					error: fmt.Errorf("jsonapi: failed to unmarshal resource: %w", err),
+				}
 			}
 
 			doc.Data = res
 		case ske.Data[0] == '[':
 			col, err := UnmarshalCollection(ske.Data, schema)
 			if err != nil {
-				return nil, err
+				return nil, &srcError{
+					ptr:   true,
+					src:   "/data",
+					error: fmt.Errorf("jsonapi: failed to unmarshal collection: %w", err),
+				}
 			}
 
 			doc.Data = col
 		case string(ske.Data) == "null":
 			doc.Data = nil
 		default:
-			// TODO Not exactly the right error
-			return nil, NewErrMissingDataMember()
+			return nil, &srcError{ptr: true, src: "/data", error: payloadErr(errMemberDataType)}
 		}
 	case len(ske.Errors) > 0:
 		doc.Errors = ske.Errors
 	}
 
 	// Included
-	if len(ske.Included) > 0 {
-		incs := make([]Identifier, len(ske.Included))
-
-		for i, rawInc := range ske.Included {
-			if err := json.Unmarshal(rawInc, &incs[i]); err != nil {
-				return nil, err
-			}
+	for i, raw := range ske.Included {
+		res, err := UnmarshalResource(raw, schema)
+		if err != nil {
+			return nil, fmt.Errorf("jsonapi: failed to unmarshal included resource at %d: %w",
+				i, &srcError{src: fmt.Sprintf("/included/%d", i), ptr: true, error: err})
 		}
 
-		for i := range incs {
-			res, err := UnmarshalResource(ske.Included[i], schema)
-			if err != nil {
-				return nil, err
-			}
-
-			doc.Included = append(doc.Included, res)
-		}
+		doc.Included = append(doc.Included, res)
 	}
 
 	// Meta

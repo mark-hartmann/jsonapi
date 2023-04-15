@@ -8,39 +8,111 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseURL(t *testing.T) {
+func TestNewURL(t *testing.T) {
 	// Schema
 	schema := newMockSchema()
 
+	t.Run("errors", func(t *testing.T) {
+		invalidTests := map[string]struct {
+			url string
+			err string
+		}{
+			"empty": {
+				url: ``,
+				err: `jsonapi: empty path`,
+			},
+			"empty path": {
+				url: `https://example.com`,
+				err: `jsonapi: empty path`,
+			},
+			"type not found": {
+				url: "/mocktypes99",
+				err: `jsonapi: resource type "mocktypes99" does not exist`,
+			},
+			"relationship not found": {
+				url: "/mocktypes1/abc/relnotfound",
+				err: `jsonapi: field "relnotfound" does not exist in resource type "mocktypes1"`,
+			},
+			"bad params": {
+				url: `/mocktypes1?fields[invalid]=attr1,attr2`,
+				err: "" +
+					"jsonapi: failed to create jsonapi.Params: " +
+					`jsonapi: resource type "invalid" does not exist`,
+			},
+			"invalid raw url": {
+				url: "%z",
+				err: `jsonapi: failed to parse url.URL: parse "%z": invalid URL escape "%z"`,
+			},
+			"page param (no collection)": {
+				url: `/mocktypes1/abc123?page[size]=valid`,
+				err: `jsonapi: illegal query parameter "page"`,
+			},
+			"filter param (no collection)": {
+				url: `/mocktypes1/abc123?filter=is-foo`,
+				err: `jsonapi: illegal query parameter "filter"`,
+			},
+			"sort param (no collection)": {
+				url: `/mocktypes1/abc123?sort=-str`,
+				err: `jsonapi: illegal query parameter "sort"`,
+			},
+			"invalid url string": {
+				url: `1http://foo.com`,
+				err: "jsonapi: failed to parse url.URL: " +
+					`parse "1http://foo.com": first path segment in URL cannot contain colon`,
+			},
+		}
+
+		for name, test := range invalidTests {
+			t.Run(name, func(t *testing.T) {
+				_, err := NewURLFromRaw(schema, makeOneLineNoSpaces(test.url))
+				assert.Error(t, err)
+				assert.EqualError(t, err, test.err)
+			})
+		}
+
+		t.Run("unknown type in url", func(t *testing.T) {
+			_, err := NewURLFromRaw(schema, makeOneLineNoSpaces("/mocktypes99"))
+			assert.Error(t, err)
+
+			var unknownTypeErr *UnknownTypeError
+			assert.ErrorAs(t, err, &unknownTypeErr)
+			assert.Equal(t, "mocktypes99", unknownTypeErr.Type)
+		})
+
+		t.Run("unknown rel in url", func(t *testing.T) {
+			_, err := NewURLFromRaw(schema, makeOneLineNoSpaces("/mocktypes1/abc/relnotfound"))
+			assert.Error(t, err)
+
+			var unknownFieldErr *UnknownFieldError
+			assert.ErrorAs(t, err, &unknownFieldErr)
+			assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
+			assert.Equal(t, "relnotfound", unknownFieldErr.Field)
+			assert.False(t, unknownFieldErr.IsUnknownAttr())
+			assert.False(t, unknownFieldErr.InRelPath())
+			assert.Equal(t, "", unknownFieldErr.RelPath())
+		})
+
+		t.Run("collection param on single resource", func(t *testing.T) {
+			_, err := NewURLFromRaw(schema, makeOneLineNoSpaces("/mocktypes1/abc?sort=int8"))
+			assert.Error(t, err)
+
+			var illegalParameterErr *IllegalParameterError
+			assert.ErrorAs(t, err, &illegalParameterErr)
+
+			src, isPtr := illegalParameterErr.Source()
+			assert.Equal(t, "sort", src)
+			assert.False(t, isPtr)
+
+			v, v2 := illegalParameterErr.ConflictingValues()
+			assert.Equal(t, "", v)
+			assert.Equal(t, "", v2)
+		})
+	})
+
 	tests := map[string]struct {
-		url           string
-		expectedURL   URL
-		expectedError bool
+		url         string
+		expectedURL URL
 	}{
-		"empty": {
-			url:           ``,
-			expectedError: true,
-		},
-		"empty path": {
-			url:           `https://example.com`,
-			expectedError: true,
-		},
-		"type not found": {
-			url:           "/mocktypes99",
-			expectedError: true,
-		},
-		"relationship not found": {
-			url:           "/mocktypes1/abc/relnotfound",
-			expectedError: true,
-		},
-		"bad params": {
-			url:           `/mocktypes1?fields[invalid]=attr1,attr2`,
-			expectedError: true,
-		},
-		"invalid raw url": {
-			url:           "%z",
-			expectedError: true,
-		},
 		"collection name only": {
 			url: `mocktypes1`,
 			expectedURL: URL{
@@ -51,18 +123,6 @@ func TestParseURL(t *testing.T) {
 				ResType: "mocktypes1",
 				IsCol:   true,
 			},
-		},
-		"page param (no collection)": {
-			url:           `/mocktypes1/abc123?page[size]=valid`,
-			expectedError: true,
-		},
-		"filter param (no collection)": {
-			url:           `/mocktypes1/abc123?filter=is-foo`,
-			expectedError: true,
-		},
-		"sort param (no collection)": {
-			url:           `/mocktypes1/abc123?sort=-str`,
-			expectedError: true,
 		},
 		"invalid simple url": {
 			url: `/mocktypes1/abc123?page=no-page-param`,
@@ -205,14 +265,11 @@ func TestParseURL(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			u, err := NewURLFromRaw(schema, makeOneLineNoSpaces(test.url))
+			assert.NoError(t, err)
 
-			if test.expectedError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				u.Params = nil
-				assert.Equal(t, test.expectedURL, *u)
-			}
+			// Set u.Params nil because we only validate the jsonapi.URL itself.
+			u.Params = nil
+			assert.Equal(t, test.expectedURL, *u)
 		})
 	}
 }

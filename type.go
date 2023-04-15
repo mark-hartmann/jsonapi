@@ -309,7 +309,7 @@ func ParseSortRule(schema *Schema, typ Type, rule string) (SortRule, error) {
 	sr := SortRule{}
 
 	if rule == "" {
-		return SortRule{}, NewErrUnknownSortField(typ.Name, "")
+		return sr, fmt.Errorf("jsonapi: empty sort rule")
 	}
 
 	if rule[0] == '-' {
@@ -322,8 +322,24 @@ func ParseSortRule(schema *Schema, typ Type, rule string) (SortRule, error) {
 
 	for i := 0; i < len(parts)-1; i++ {
 		rel, ok := typ.Rels[parts[i]]
-		if !ok || !rel.ToOne {
-			return sr, NewErrUnknownSortRelationship(typ.Name, parts[i])
+		if !ok {
+			return sr, &UnknownFieldError{
+				Type:    typ.Name,
+				Field:   parts[i],
+				asRel:   true,
+				relPath: relPath(rule),
+			}
+		}
+
+		if !rel.ToOne {
+			return sr, &InvalidFieldError{
+				Type:      typ.Name,
+				Field:     parts[i],
+				asRel:     true,
+				isToOne:   rel.ToOne,
+				wantToOne: true,
+				relPath:   relPath(rule),
+			}
 		}
 
 		path = append(path, rel)
@@ -332,7 +348,11 @@ func ParseSortRule(schema *Schema, typ Type, rule string) (SortRule, error) {
 
 	sr.Name = parts[len(parts)-1]
 	if _, ok := typ.Attrs[sr.Name]; !ok && sr.Name != "id" {
-		return sr, NewErrUnknownSortField(typ.Name, sr.Name)
+		return sr, &UnknownFieldError{
+			Type:    typ.Name,
+			Field:   sr.Name,
+			relPath: relPath(rule),
+		}
 	}
 
 	// By reducing the relationship path, we may be able to eliminate unnecessary

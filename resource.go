@@ -234,8 +234,7 @@ func UnmarshalResource(data []byte, schema *Schema) (Resource, error) {
 	err := json.Unmarshal(data, &rske)
 
 	if err != nil {
-		return nil, NewErrBadRequest("Invalid JSON",
-			"The provided JSON body could not be read.")
+		return nil, payloadErr(err)
 	}
 
 	typ := schema.GetType(rske.Type)
@@ -246,14 +245,29 @@ func UnmarshalResource(data []byte, schema *Schema) (Resource, error) {
 	for a, v := range rske.Attributes {
 		attr, ok := typ.Attrs[a]
 		if !ok {
-			return nil, NewErrUnknownFieldInBody(typ.Name, a)
+			return nil, &srcError{ptr: true, src: "/attributes", error: &UnknownFieldError{
+				Type:  typ.Name,
+				Field: a,
+			}}
 		}
 
 		var val interface{}
 
 		if val, err = UnmarshalToType(v, attr); err != nil {
 			name, _ := GetAttrTypeName(attr.Type, attr.Array, attr.Nullable)
-			return nil, NewErrInvalidFieldValueInBody(attr.Name, string(data), name)
+
+			return nil, &srcError{
+				src: "/attributes/" + attr.Name,
+				ptr: true,
+				error: &InvalidFieldValueError{
+					Type:      typ.Name,
+					Field:     attr.Name,
+					FieldType: name,
+					Value:     string(v),
+					asRel:     false,
+					err:       err,
+				},
+			}
 		}
 
 		res.Set(attr.Name, val)
@@ -278,14 +292,18 @@ func UnmarshalResource(data []byte, schema *Schema) (Resource, error) {
 			}
 
 			if err != nil {
-				return nil, NewErrInvalidFieldValueInBody(
-					rel.FromName,
-					string(v.Data),
-					typ.Name,
-				)
+				return nil, &srcError{
+					ptr:   true,
+					src:   "/relationships/" + rel.FromName,
+					error: payloadErr(err),
+				}
 			}
 		} else {
-			return nil, NewErrUnknownFieldInBody(typ.Name, r)
+			return nil, &srcError{src: "/relationships", ptr: true, error: &UnknownFieldError{
+				Type:  typ.Name,
+				Field: r,
+				asRel: true,
+			}}
 		}
 	}
 
@@ -313,10 +331,7 @@ func UnmarshalPartialResource(data []byte, schema *Schema) (*SoftResource, error
 	err := json.Unmarshal(data, &rske)
 
 	if err != nil {
-		return nil, NewErrBadRequest(
-			"Invalid JSON",
-			"The provided JSON body could not be read.",
-		)
+		return nil, payloadErr(err)
 	}
 
 	typ := schema.GetType(rske.Type)
@@ -331,14 +346,27 @@ func UnmarshalPartialResource(data []byte, schema *Schema) (*SoftResource, error
 	for a, v := range rske.Attributes {
 		attr, ok := typ.Attrs[a]
 		if !ok {
-			return nil, NewErrUnknownFieldInBody(typ.Name, a)
+			return nil, &srcError{ptr: true, src: "/attributes", error: &UnknownFieldError{
+				Type:  typ.Name,
+				Field: a,
+			}}
 		}
 
 		var val interface{}
 
 		if val, err = UnmarshalToType(v, attr); err != nil {
 			name, _ := GetAttrTypeName(attr.Type, attr.Array, attr.Nullable)
-			return nil, NewErrInvalidFieldValueInBody(attr.Name, string(v), name)
+			return nil, &srcError{
+				ptr: true,
+				src: "/attributes/" + attr.Name,
+				error: &InvalidFieldValueError{
+					Type:      typ.Name,
+					Field:     attr.Name,
+					FieldType: name,
+					Value:     string(v),
+					err:       err,
+				},
+			}
 		}
 
 		_ = newType.AddAttr(attr)
@@ -366,14 +394,18 @@ func UnmarshalPartialResource(data []byte, schema *Schema) (*SoftResource, error
 			}
 
 			if err != nil {
-				return nil, NewErrInvalidFieldValueInBody(
-					rel.FromName,
-					string(v.Data),
-					typ.Name,
-				)
+				return nil, &srcError{
+					ptr:   true,
+					src:   "/relationships/" + rel.FromName,
+					error: payloadErr(err),
+				}
 			}
 		} else {
-			return nil, NewErrUnknownFieldInBody(typ.Name, r)
+			return nil, &srcError{src: "/relationships", ptr: true, error: &UnknownFieldError{
+				Type:  typ.Name,
+				Field: r,
+				asRel: true,
+			}}
 		}
 	}
 

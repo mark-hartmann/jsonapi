@@ -2,10 +2,139 @@ package jsonapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 )
+
+var ErrInvalidPayload = errors.New("jsonapi: invalid document")
+
+// UnknownTypeError is returned if a type is not known.
+type UnknownTypeError struct {
+	Type string
+}
+
+func (e *UnknownTypeError) Error() string {
+	return fmt.Sprintf("jsonapi: resource type %q does not exist", e.Type)
+}
+
+type relPath string
+
+// InRelPath returns true if the error occurred while parsing a relationship path.
+func (e relPath) InRelPath() bool {
+	return e != ""
+}
+
+// RelPath returns the relationship path that caused this error. An empty string is
+// returned if the error was not caused by an invalid relationship path.
+func (e relPath) RelPath() string {
+	return string(e)
+}
+
+// UnknownFieldError is returned if an attribute or relationship is not known for a given
+// resource type.
+type UnknownFieldError struct {
+	// Type is the name of the resource type the field was not found in.
+	Type  string
+	Field string
+
+	// asRel is true if the field is a relationship.
+	asRel bool
+	relPath
+}
+
+func (e *UnknownFieldError) Error() string {
+	return fmt.Sprintf("jsonapi: field %q does not exist in resource type %q",
+		e.Field, e.Type)
+}
+
+// IsUnknownAttr returns true if the error was caused by an unknown attribute.
+func (e *UnknownFieldError) IsUnknownAttr() bool {
+	return !e.asRel
+}
+
+// InvalidFieldError is returned if an attribute or relationship is invalid.
+type InvalidFieldError struct {
+	Type  string
+	Field string
+
+	asRel     bool
+	wantToOne bool
+	isToOne   bool
+	relPath
+}
+
+func (e *InvalidFieldError) Error() string {
+	return fmt.Sprintf("jsonapi: field %q of type %q is invalid", e.Field, e.Type)
+}
+
+// IsInvalidAttr returns true if the error was caused by an unknown attribute.
+func (e *InvalidFieldError) IsInvalidAttr() bool {
+	return !e.asRel
+}
+
+// InvalidRelType returns true if the error was caused by an invalid relationship
+// type, e.g. expected to-one but got to-many.
+func (e *InvalidFieldError) InvalidRelType() bool {
+	return e.isToOne != e.wantToOne
+}
+
+// InvalidFieldValueError is returned if a value is to be assigned to an attribute or
+// relationship, but the field types do not match.
+type InvalidFieldValueError struct {
+	Type      string
+	Field     string
+	FieldType string
+	Value     string
+
+	asRel bool
+
+	err error
+}
+
+func (e *InvalidFieldValueError) Error() string {
+	msg := fmt.Sprintf("jsonapi: invalid value %q for field %q", e.Value, e.Field)
+	if e.err != nil {
+		msg += ": " + e.err.Error()
+	}
+
+	return msg
+}
+
+func (e *InvalidFieldValueError) Unwrap() error {
+	return e.err
+}
+
+func (e *InvalidFieldValueError) IsInvalidAttr() bool {
+	return !e.asRel
+}
+
+// IllegalParameterError is returned when a query parameter is used in an illegal
+// context. That is, if a collection parameter is used for a single resource, if
+// parameter values are conflicting or if a parameter is not supported.
+type IllegalParameterError struct {
+	Param string
+
+	value         string
+	conflictValue string
+
+	isSupported bool
+	isResource  bool
+}
+
+func (e *IllegalParameterError) Error() string {
+	return fmt.Sprintf("jsonapi: illegal query parameter %q", e.Param)
+}
+
+func (e *IllegalParameterError) Source() (string, bool) {
+	return e.Param, false
+}
+
+// ConflictingValues returns the conflicting parameter values.
+func (e *IllegalParameterError) ConflictingValues() (string, string) {
+	return e.value, e.conflictValue
+}
 
 // An Error represents an error object from the JSON:API specification.
 type Error struct {
@@ -498,4 +627,85 @@ func NewErrNotImplemented() Error {
 	e.Title = "Not Implemented"
 
 	return e
+}
+
+type markedError struct {
+	err, mark error
+}
+
+func (e *markedError) Error() string {
+	return e.err.Error()
+}
+
+func (e *markedError) Unwrap() error {
+	return e.err
+}
+
+func (e *markedError) Is(target error) bool {
+	if target == e.mark {
+		return true
+	}
+	return errors.Is(e.err, target)
+}
+
+// srcError decorates an existing error with a source.
+type srcError struct {
+	ptr bool
+	src string
+	error
+}
+
+func (e *srcError) Unwrap() error {
+	return e.error
+}
+
+// Source returns the error source and a boolean that is true if the source is a
+// json pointer.
+func (e *srcError) Source() (string, bool) {
+	if e.ptr {
+		// todo: panic if !isPtr?
+		if src, isPtr, ok := errSrc(e.error); ok && isPtr {
+			return e.src + src, isPtr
+		}
+
+		return e.src, true
+	}
+
+	return e.src, false
+}
+
+// fragmentError marks an existing error as caused by an invalid url path.
+type fragmentError struct {
+	error
+}
+
+func (e *fragmentError) Unwrap() error {
+	return e.error
+}
+
+func (e *fragmentError) IsFragmentError() bool {
+	return true
+}
+
+func (e *fragmentError) HTTPStatus() int {
+	// This marker is really only used if a type or relation does not exist.
+	return http.StatusNotFound
+}
+
+// errSrc returns the source of the error if applicable.
+func errSrc(err error) (src string, isPtr bool, ok bool) {
+	var se interface{ Source() (string, bool) }
+	if ok = errors.As(err, &se); ok {
+		src, isPtr = se.Source()
+	}
+
+	return
+}
+
+// payloadErr marks any error with ErrInvalidPayload.
+func payloadErr(err error) error {
+	return &markedError{
+		err:  err,
+		mark: ErrInvalidPayload,
+	}
 }

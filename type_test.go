@@ -356,6 +356,41 @@ func TestParseSortRule(t *testing.T) {
 			assert.Equal(t, test.res, rule, test.raw)
 		}
 	}
+
+	rule := "-to-one-from-one.unknown-relationship.some-prop"
+	_, err := ParseSortRule(schema, schema.GetType("mocktypes1"), rule)
+
+	var ufErr *UnknownFieldError
+
+	assert.ErrorAs(t, err, &ufErr)
+	assert.Equal(t, "mocktypes2", ufErr.Type)
+	assert.Equal(t, "unknown-relationship", ufErr.Field)
+	assert.False(t, ufErr.IsUnknownAttr())
+	assert.True(t, ufErr.InRelPath())
+	assert.Equal(t, rule[1:], ufErr.RelPath())
+
+	rule = "to-one-from-one.uint16"
+	_, err = ParseSortRule(schema, schema.GetType("mocktypes1"), rule)
+
+	assert.ErrorAs(t, err, &ufErr)
+	assert.Equal(t, "mocktypes2", ufErr.Type)
+	assert.Equal(t, "uint16", ufErr.Field)
+	assert.True(t, ufErr.IsUnknownAttr())
+	assert.True(t, ufErr.InRelPath())
+	assert.Equal(t, rule, ufErr.RelPath())
+
+	rule = "-to-many.int32ptr"
+	_, err = ParseSortRule(schema, schema.GetType("mocktypes1"), rule)
+
+	var ifErr *InvalidFieldError
+
+	assert.ErrorAs(t, err, &ifErr)
+	assert.Equal(t, "mocktypes1", ifErr.Type)
+	assert.Equal(t, "to-many", ifErr.Field)
+	assert.False(t, ifErr.IsInvalidAttr())
+	assert.True(t, ifErr.InvalidRelType())
+	assert.True(t, ifErr.InRelPath())
+	assert.Equal(t, rule[1:], ifErr.RelPath())
 }
 
 func TestGetAttrType(t *testing.T) {

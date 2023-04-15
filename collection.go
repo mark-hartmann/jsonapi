@@ -1,6 +1,9 @@
 package jsonapi
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // A Collection defines the interface of a structure that can manage a set of
 // ordered resources of the same type.
@@ -46,7 +49,7 @@ func UnmarshalCollection(data []byte, schema *Schema) (Collection, error) {
 
 	err := json.Unmarshal(data, &cske)
 	if err != nil {
-		return nil, err
+		return nil, payloadErr(err)
 	}
 
 	col := &Resources{}
@@ -54,7 +57,8 @@ func UnmarshalCollection(data []byte, schema *Schema) (Collection, error) {
 	for i := range cske {
 		res, err := UnmarshalResource(cske[i], schema)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("jsonapi: failed to unmarshal resource at %d: %w",
+				i, &srcError{src: fmt.Sprintf("/%d", i), ptr: true, error: err})
 		}
 
 		col.Add(res)

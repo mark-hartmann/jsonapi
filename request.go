@@ -1,6 +1,7 @@
 package jsonapi
 
 import (
+	"fmt"
 	"net/http"
 )
 
@@ -8,12 +9,12 @@ import (
 func NewRequest(r *http.Request, schema *Schema) (*Request, error) {
 	su, err := NewSimpleURL(r.URL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("jsonapi: failed to create jsonapi.SimpleURL: %w", err)
 	}
 
 	url, err := NewURL(schema, su)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("jsonapi: failed to create jsonapi.URL: %w", err)
 	}
 
 	var doc *Document
@@ -21,7 +22,7 @@ func NewRequest(r *http.Request, schema *Schema) (*Request, error) {
 	if r.Method == http.MethodPost || r.Method == http.MethodPatch {
 		doc, err = UnmarshalDocument(r.Body, schema)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("jsonapi: failed to unmarshal request body: %w", err)
 		}
 	}
 

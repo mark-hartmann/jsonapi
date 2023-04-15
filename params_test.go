@@ -9,6 +9,64 @@ import (
 	. "github.com/mark-hartmann/jsonapi"
 )
 
+func TestNewParams_Invalid(t *testing.T) {
+	schema := newMockSchema()
+
+	t.Run("unknown type in sparse fieldset", func(t *testing.T) {
+		_, err := NewParams(schema,
+			newSimpleUrl("?include=to-many-from-one.to-one-from-many.unknown-rel"),
+			"mocktypes1")
+
+		var unknownFieldErr *UnknownFieldError
+		assert.ErrorAs(t, err, &unknownFieldErr)
+		assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
+		assert.Equal(t, "unknown-rel", unknownFieldErr.Field)
+		assert.False(t, unknownFieldErr.IsUnknownAttr())
+		assert.Equal(t, "to-many-from-one.to-one-from-many.unknown-rel",
+			unknownFieldErr.RelPath())
+	})
+
+	t.Run("unknown type in sparse fieldset", func(t *testing.T) {
+		_, err := NewParams(schema, newSimpleUrl("?fields[unknown]"), "mocktypes1")
+
+		var unknownTypeErr *UnknownTypeError
+		assert.ErrorAs(t, err, &unknownTypeErr)
+		assert.Equal(t, "unknown", unknownTypeErr.Type)
+
+	})
+
+	t.Run("unknown field in sparse fieldset", func(t *testing.T) {
+		_, err := NewParams(schema, newSimpleUrl("?fields[mocktypes1]=int8,unknown-field"),
+			"mocktypes1")
+
+		var unknownFieldErr *UnknownFieldError
+		assert.ErrorAs(t, err, &unknownFieldErr)
+		assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
+		assert.Equal(t, "unknown-field", unknownFieldErr.Field)
+		assert.True(t, unknownFieldErr.IsUnknownAttr())
+		assert.Equal(t, "", unknownFieldErr.RelPath())
+	})
+
+	t.Run("conflicting sort rules", func(t *testing.T) {
+		_, err := NewParams(schema, newSimpleUrl("?sort=int8,-int8"), "mocktypes1")
+
+		var illegalParameterErr *IllegalParameterError
+		assert.ErrorAs(t, err, &illegalParameterErr)
+		assert.Equal(t, "sort", illegalParameterErr.Param)
+
+		value, conflict := illegalParameterErr.ConflictingValues()
+		assert.Equal(t, "-int8", value)
+		assert.Equal(t, "int8", conflict)
+	})
+}
+
+func newSimpleUrl(u string) SimpleURL {
+	ur, _ := url.Parse(makeOneLineNoSpaces(u))
+	su, _ := NewSimpleURL(ur)
+
+	return su
+}
+
 func TestNewParams(t *testing.T) {
 	// Schema
 	schema := newMockSchema()
@@ -257,6 +315,12 @@ func TestNewParams(t *testing.T) {
 		},
 		"inclusion of unknown relationship": {
 			url:           `?include=some-unknown-relationship`,
+			colType:       "mocktypes1",
+			expectedError: true,
+		},
+		"inclusion of unknown relationship path node": {
+			url: `
+				?include=to-many-from-one.to-one-from-many.unknown-rel.to-many-from-many`,
 			colType:       "mocktypes1",
 			expectedError: true,
 		},

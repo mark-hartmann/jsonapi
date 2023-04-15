@@ -88,10 +88,20 @@ func TestUnmarshalPartialResource(t *testing.T) {
 		assert.Equal([]int{}, res.Get("intarr"))
 		assert.Equal([]int8{-32, -16, 0, 16, 32, 64, 127}, res.Get("int8arr"))
 	})
+}
 
-	t.Run("partial resource (invalid attribute)", func(t *testing.T) {
-		assert := assert.New(t)
+func TestUnmarshalPartialResource_Invalid(t *testing.T) {
+	// Setup
+	typ, _ := BuildType(mocktype{})
+	typ.NewFunc = func() Resource {
+		return Wrap(&mocktype{})
+	}
+	typ4, err := BuildType(mockType4{})
+	assert.NoError(t, err)
 
+	schema := &Schema{Types: []Type{typ, typ4}}
+
+	t.Run("invalid attribute", func(t *testing.T) {
 		payload := `{
 			"id": "abc123",
 			"type": "mocktype",
@@ -101,19 +111,25 @@ func TestUnmarshalPartialResource(t *testing.T) {
 		}`
 
 		_, err := UnmarshalPartialResource([]byte(payload), schema)
-		assert.EqualError(err,
-			"400 Bad Request: The field value is invalid for the expected type.",
-		)
+		assert.EqualError(t, err, `jsonapi: invalid value "\"not an int\"" for field "int": `+
+			`strconv.Atoi: parsing "\"not an int\"": invalid syntax`)
 
-		jErr := err.(Error)
-		assert.Equal("int", jErr.Meta["field"])
-		assert.Equal("\"not an int\"", jErr.Meta["bad-value"])
-		assert.Equal("int", jErr.Meta["type"])
+		var invalidFieldValueErr *InvalidFieldValueError
+		assert.ErrorAs(t, err, &invalidFieldValueErr)
+		assert.Equal(t, "mocktype", invalidFieldValueErr.Type)
+		assert.Equal(t, "int", invalidFieldValueErr.Field)
+		assert.Equal(t, "int", invalidFieldValueErr.FieldType)
+		assert.Equal(t, `"not an int"`, invalidFieldValueErr.Value)
+
+		var sourceErr srcError
+		assert.ErrorAs(t, err, &sourceErr)
+
+		src, isPtr := sourceErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/attributes/int", src)
 	})
 
-	t.Run("partial resource (unknown attribute)", func(t *testing.T) {
-		assert := assert.New(t)
-
+	t.Run("unknown attribute", func(t *testing.T) {
 		payload := `{
 			"id": "abc123",
 			"type": "mocktype",
@@ -123,40 +139,50 @@ func TestUnmarshalPartialResource(t *testing.T) {
 		}`
 
 		_, err := UnmarshalPartialResource([]byte(payload), schema)
-		assert.EqualError(
-			err,
-			`400 Bad Request: "unknown" is not a known field.`,
-		)
+		assert.EqualError(t, err, `jsonapi: field "unknown" does not exist in resource `+
+			`type "mocktype"`)
+
+		var unknownFieldErr *UnknownFieldError
+		assert.ErrorAs(t, err, &unknownFieldErr)
+		assert.Equal(t, "mocktype", unknownFieldErr.Type)
+		assert.Equal(t, "unknown", unknownFieldErr.Field)
+		assert.True(t, unknownFieldErr.IsUnknownAttr())
+		assert.False(t, unknownFieldErr.InRelPath())
+		assert.Equal(t, "", unknownFieldErr.RelPath())
+
+		var sourceErr srcError
+		assert.ErrorAs(t, err, &sourceErr)
+
+		src, isPtr := sourceErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/attributes", src)
 	})
 
-	t.Run("partial resource (invalid relationship)", func(t *testing.T) {
-		assert := assert.New(t)
-
+	t.Run("invalid relationship", func(t *testing.T) {
 		payload := `{
 			"id": "abc123",
 			"type": "mocktype",
 			"relationships": {
 				"to-1": {
-					"data": [
-						{
-							"type": "mocktype",
-							"data": "def"
-						}
-					]
+					"data": 123
 				}
 			}
 		}`
 
 		_, err := UnmarshalPartialResource([]byte(payload), schema)
-		assert.EqualError(
-			err,
-			"400 Bad Request: The field value is invalid for the expected type.",
-		)
+		assert.EqualError(t, err, "json: cannot unmarshal number into Go value of type "+
+			"jsonapi.Identifier")
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+
+		var sourceErr srcError
+		assert.ErrorAs(t, err, &sourceErr)
+
+		src, isPtr := sourceErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/relationships/to-1", src)
 	})
 
-	t.Run("partial resource (unknown relationship)", func(t *testing.T) {
-		assert := assert.New(t)
-
+	t.Run("unknown relationship", func(t *testing.T) {
 		payload := `{
 			"id": "abc123",
 			"type": "mocktype",
@@ -171,22 +197,31 @@ func TestUnmarshalPartialResource(t *testing.T) {
 		}`
 
 		_, err := UnmarshalPartialResource([]byte(payload), schema)
-		assert.EqualError(
-			err,
-			`400 Bad Request: "unknown" is not a known field.`,
-		)
+		assert.EqualError(t, err, `jsonapi: field "unknown" does not exist in resource `+
+			`type "mocktype"`)
+
+		var unknownFieldErr *UnknownFieldError
+		assert.ErrorAs(t, err, &unknownFieldErr)
+		assert.Equal(t, "mocktype", unknownFieldErr.Type)
+		assert.Equal(t, "unknown", unknownFieldErr.Field)
+		assert.False(t, unknownFieldErr.IsUnknownAttr())
+		assert.False(t, unknownFieldErr.InRelPath())
+		assert.Equal(t, "", unknownFieldErr.RelPath())
+
+		var sourceErr srcError
+		assert.ErrorAs(t, err, &sourceErr)
+
+		src, isPtr := sourceErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/relationships", src)
 	})
 
-	t.Run("partial resource (invalid)", func(t *testing.T) {
-		assert := assert.New(t)
-
+	t.Run("invalid payload", func(t *testing.T) {
 		payload := `{invalid}`
 
 		_, err := UnmarshalPartialResource([]byte(payload), schema)
-		assert.EqualError(
-			err,
-			"400 Bad Request: The provided JSON body could not be read.",
-		)
+		assert.EqualError(t, err, "invalid character 'i' looking for beginning of object "+
+			"key string")
 	})
 }
 
