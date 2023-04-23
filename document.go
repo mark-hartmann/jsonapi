@@ -186,6 +186,7 @@ var (
 	errMissingPrimaryMember = errors.New("jsonapi: missing primary member")
 	errCoexistingMembers    = errors.New(`jsonapi: "data" and "errors" must not coexist`)
 	errMemberDataType       = errors.New("jsonapi: invalid member data type")
+	errInvalidIncluded      = errors.New("jsonapi: invalid inclusions without primary data")
 )
 
 // UnmarshalDocument reads a payload to build and return a Document object.
@@ -217,6 +218,10 @@ func UnmarshalDocument(r io.Reader, schema *Schema) (*Document, error) {
 	// data and errors must not coexist.
 	if ske.Data != nil && ske.Errors != nil {
 		return nil, payloadErr(errCoexistingMembers)
+	}
+
+	if ske.Data == nil && ske.Included != nil {
+		return nil, payloadErr(errInvalidIncluded)
 	}
 
 	// Data

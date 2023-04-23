@@ -1046,8 +1046,8 @@ func TestUnmarshalDocument_Invalid(t *testing.T) {
 		payload := `{"meta": {}, "included":[{"id":"some-id"}]}`
 
 		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
-		// todo: must return err / ErrInvalidPayload
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidPayload)
 	})
 
 	t.Run("invalid id data type", func(t *testing.T) {
