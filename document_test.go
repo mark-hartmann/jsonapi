@@ -996,7 +996,7 @@ func TestUnmarshalDocument(t *testing.T) {
 
 func TestUnmarshalDocument_Invalid(t *testing.T) {
 	schema := newMockSchema()
-	schema.AddType(Type{
+	_ = schema.AddType(Type{
 		Name: "objtest",
 		Attrs: map[string]Attr{
 			"obj": {Name: "obj", Type: AttrTypeTestObject},

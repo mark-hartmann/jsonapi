@@ -31,11 +31,13 @@ func TestNewRequest(t *testing.T) {
 			schema:        schema,
 			expectedError: "",
 		}, {
-			name:          "bad url",
-			method:        "GET",
-			url:           "/invalid",
-			schema:        schema,
-			expectedError: `jsonapi: failed to create jsonapi.URL: jsonapi: resource type "invalid" does not exist`,
+			name:   "bad url",
+			method: "GET",
+			url:    "/invalid",
+			schema: schema,
+			expectedError: "" +
+				"jsonapi: failed to create jsonapi.URL: " +
+				`jsonapi: resource type "invalid" does not exist`,
 		},
 	}
 

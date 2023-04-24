@@ -14,7 +14,7 @@ func TestNewParams_Invalid(t *testing.T) {
 
 	t.Run("unknown type in sparse fieldset", func(t *testing.T) {
 		_, err := NewParams(schema,
-			newSimpleUrl("?include=to-many-from-one.to-one-from-many.unknown-rel"),
+			newSimpleURL("?include=to-many-from-one.to-one-from-many.unknown-rel"),
 			"mocktypes1")
 
 		var unknownFieldErr *UnknownFieldError
@@ -27,16 +27,15 @@ func TestNewParams_Invalid(t *testing.T) {
 	})
 
 	t.Run("unknown type in sparse fieldset", func(t *testing.T) {
-		_, err := NewParams(schema, newSimpleUrl("?fields[unknown]"), "mocktypes1")
+		_, err := NewParams(schema, newSimpleURL("?fields[unknown]"), "mocktypes1")
 
 		var unknownTypeErr *UnknownTypeError
 		assert.ErrorAs(t, err, &unknownTypeErr)
 		assert.Equal(t, "unknown", unknownTypeErr.Type)
-
 	})
 
 	t.Run("unknown field in sparse fieldset", func(t *testing.T) {
-		_, err := NewParams(schema, newSimpleUrl("?fields[mocktypes1]=int8,unknown-field"),
+		_, err := NewParams(schema, newSimpleURL("?fields[mocktypes1]=int8,unknown-field"),
 			"mocktypes1")
 
 		var unknownFieldErr *UnknownFieldError
@@ -48,7 +47,7 @@ func TestNewParams_Invalid(t *testing.T) {
 	})
 
 	t.Run("conflicting sort rules", func(t *testing.T) {
-		_, err := NewParams(schema, newSimpleUrl("?sort=int8,-int8"), "mocktypes1")
+		_, err := NewParams(schema, newSimpleURL("?sort=int8,-int8"), "mocktypes1")
 
 		var illegalParameterErr *IllegalParameterError
 		assert.ErrorAs(t, err, &illegalParameterErr)
@@ -60,7 +59,7 @@ func TestNewParams_Invalid(t *testing.T) {
 	})
 }
 
-func newSimpleUrl(u string) SimpleURL {
+func newSimpleURL(u string) SimpleURL {
 	ur, _ := url.Parse(makeOneLineNoSpaces(u))
 	su, _ := NewSimpleURL(ur)
 

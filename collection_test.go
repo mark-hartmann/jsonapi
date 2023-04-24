@@ -29,7 +29,6 @@ func TestResources(t *testing.T) {
 }
 
 func TestUnmarshalCollection(t *testing.T) {
-
 	// Invalid payload
 	payload := `{"no:valid"}`
 

@@ -356,6 +356,7 @@ func UnmarshalPartialResource(data []byte, schema *Schema) (*SoftResource, error
 
 		if val, err = UnmarshalToType(v, attr); err != nil {
 			name, _ := GetAttrTypeName(attr.Type, attr.Array, attr.Nullable)
+
 			return nil, &srcError{
 				ptr: true,
 				src: "/attributes/" + attr.Name,

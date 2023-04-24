@@ -640,6 +640,7 @@ func (e *markedError) Is(target error) bool {
 	if target == e.mark {
 		return true
 	}
+
 	return errors.Is(e.err, target)
 }
 
