@@ -1114,7 +1114,8 @@ func TestUnmarshalDocument_Invalid(t *testing.T) {
 		assert.ErrorAs(t, err, &unknownFieldErr)
 		assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
 		assert.Equal(t, "nonexistent", unknownFieldErr.Field)
-		assert.True(t, unknownFieldErr.IsUnknownAttr())
+		assert.True(t, unknownFieldErr.IsAttr())
+		assert.False(t, unknownFieldErr.InPath())
 		assert.Equal(t, "", unknownFieldErr.RelPath())
 
 		var srcErr srcError
@@ -1140,7 +1141,7 @@ func TestUnmarshalDocument_Invalid(t *testing.T) {
 		assert.Equal(t, "int8", InvalidFieldValueErr.Field)
 		assert.Equal(t, "int8", InvalidFieldValueErr.FieldType)
 		assert.Equal(t, `"abc"`, InvalidFieldValueErr.Value)
-		assert.True(t, InvalidFieldValueErr.IsInvalidAttr())
+		assert.True(t, InvalidFieldValueErr.IsAttr())
 
 		var srcErr srcError
 		assert.ErrorAs(t, err, &srcErr)
@@ -1174,7 +1175,7 @@ func TestUnmarshalDocument_Invalid(t *testing.T) {
 		assert.Equal(t, "obj", InvalidFieldValueErr.Field)
 		assert.Equal(t, "testObject", InvalidFieldValueErr.FieldType)
 		assert.Equal(t, `123`, InvalidFieldValueErr.Value)
-		assert.True(t, InvalidFieldValueErr.IsInvalidAttr())
+		assert.True(t, InvalidFieldValueErr.IsAttr())
 
 		var srcErr srcError
 		assert.ErrorAs(t, err, &srcErr)
@@ -1233,7 +1234,8 @@ func TestUnmarshalDocument_Invalid(t *testing.T) {
 		assert.ErrorAs(t, err, &unknownFieldErr)
 		assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
 		assert.Equal(t, "wrong", unknownFieldErr.Field)
-		assert.False(t, unknownFieldErr.IsUnknownAttr())
+		assert.False(t, unknownFieldErr.IsAttr())
+		assert.False(t, unknownFieldErr.InPath())
 		assert.Equal(t, "", unknownFieldErr.RelPath())
 
 		var srcErr srcError

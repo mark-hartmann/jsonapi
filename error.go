@@ -8,23 +8,21 @@ import (
 	"strconv"
 )
 
-var ErrInvalidPayload = errors.New("jsonapi: invalid document")
+var ErrInvalidPayload = errors.New("jsonapi: invalid document payload")
 
-// UnknownTypeError is returned if a type is not known.
+// UnknownTypeError is returned if a type is not known to the schema.
 type UnknownTypeError struct {
-	Type string
+	Type   string
+	inPath bool
 }
 
 func (e *UnknownTypeError) Error() string {
 	return fmt.Sprintf("jsonapi: resource type %q does not exist", e.Type)
 }
 
-type relPath string
-
-// RelPath returns the relationship path that caused this error. An empty string is
-// returned if the error was not caused by an invalid relationship path.
-func (e relPath) RelPath() string {
-	return string(e)
+// InPath is true if the url pointed to a type that does not exist inside the schema.
+func (e *UnknownTypeError) InPath() bool {
+	return e.inPath
 }
 
 // UnknownFieldError is returned if an attribute or relationship is not known for a given
@@ -33,6 +31,8 @@ type UnknownFieldError struct {
 	// Type is the name of the resource type the field was not found in.
 	Type  string
 	Field string
+
+	inPath bool
 
 	// asRel is true if the field is a relationship.
 	asRel bool
@@ -44,9 +44,15 @@ func (e *UnknownFieldError) Error() string {
 		e.Field, e.Type)
 }
 
-// IsUnknownAttr returns true if the error was caused by an unknown attribute.
-func (e *UnknownFieldError) IsUnknownAttr() bool {
+// IsAttr returns true if the error was caused by an unknown attribute. Otherwise, it was
+// an unknown relationship.
+func (e *UnknownFieldError) IsAttr() bool {
 	return !e.asRel
+}
+
+// InPath is true if the url pointed to a type that does not exist inside the schema.
+func (e *UnknownFieldError) InPath() bool {
+	return e.inPath
 }
 
 // InvalidFieldError is returned if an attribute or relationship is invalid.
@@ -64,14 +70,15 @@ func (e *InvalidFieldError) Error() string {
 	return fmt.Sprintf("jsonapi: field %q of type %q is invalid", e.Field, e.Type)
 }
 
-// IsInvalidAttr returns true if the error was caused by an unknown attribute.
-func (e *InvalidFieldError) IsInvalidAttr() bool {
+// IsAttr returns true if the error was caused by an invalid attribute. Otherwise, it
+// is an invalid relationship.
+func (e *InvalidFieldError) IsAttr() bool {
 	return !e.asRel
 }
 
-// InvalidRelType returns true if the error was caused by an invalid relationship
+// IsInvalidRelType returns true if the error was caused by an invalid relationship
 // type, e.g. expected to-one but got to-many.
-func (e *InvalidFieldError) InvalidRelType() bool {
+func (e *InvalidFieldError) IsInvalidRelType() bool {
 	return e.isToOne != e.wantToOne
 }
 
@@ -101,21 +108,18 @@ func (e *InvalidFieldValueError) Unwrap() error {
 	return e.err
 }
 
-func (e *InvalidFieldValueError) IsInvalidAttr() bool {
+// IsAttr returns true if the error was caused by an invalid attribute value. false means
+// it was an invalid relationship value.
+func (e *InvalidFieldValueError) IsAttr() bool {
 	return !e.asRel
 }
 
 // IllegalParameterError is returned when a query parameter is used in an illegal
-// context. That is, if a collection parameter is used for a single resource, if
-// parameter values are conflicting or if a parameter is not supported.
+// context. That is, if a collection parameter is used for a single resource or
+// if a parameter is not supported.
 type IllegalParameterError struct {
-	Param string
-
-	value         string
-	conflictValue string
-
-	isSupported bool
-	isResource  bool
+	Param      string
+	isResource bool
 }
 
 func (e *IllegalParameterError) Error() string {
@@ -126,8 +130,32 @@ func (e *IllegalParameterError) Source() (string, bool) {
 	return e.Param, false
 }
 
-// ConflictingValues returns the conflicting parameter values.
-func (e *IllegalParameterError) ConflictingValues() (string, string) {
+// IsResource returns true if the error was caused by using collection parameters (e.g.
+// sort or filter) on a single resource endpoint.
+func (e *IllegalParameterError) IsResource() bool {
+	return e.isResource
+}
+
+// ConflictingValueError is returned when two values are mutually exclusive, e.g. if the
+// same sort field is used for ascending and descending order.
+type ConflictingValueError struct {
+	param         string
+	value         string
+	conflictValue string
+}
+
+func (e *ConflictingValueError) Error() string {
+	return fmt.Sprintf("jsonapi: conflicting parameter values: %q, %q",
+		e.value, e.conflictValue)
+}
+
+func (e *ConflictingValueError) Source() (string, bool) {
+	return e.param, false
+}
+
+// Values returns the conflicting parameter values. If the error was not caused
+// by conflicting parameter values, both strings are empty.
+func (e *ConflictingValueError) Values() (string, string) {
 	return e.value, e.conflictValue
 }
 
@@ -624,6 +652,14 @@ func NewErrNotImplemented() Error {
 	return e
 }
 
+type relPath string
+
+// RelPath returns the relationship path that caused this error. An empty string is
+// returned if the error was not caused by an invalid relationship path.
+func (e relPath) RelPath() string {
+	return string(e)
+}
+
 type markedError struct {
 	err, mark error
 }
@@ -670,22 +706,17 @@ func (e *srcError) Source() (string, bool) {
 	return e.src, false
 }
 
-// fragmentError marks an existing error as caused by an invalid url path.
-type fragmentError struct {
+// pathError marks an existing error as caused by an invalid url path.
+type pathError struct {
 	error
 }
 
-func (e *fragmentError) Unwrap() error {
+func (e *pathError) Unwrap() error {
 	return e.error
 }
 
-func (e *fragmentError) IsFragmentError() bool {
+func (e *pathError) InPath() bool {
 	return true
-}
-
-func (e *fragmentError) HTTPStatus() int {
-	// This marker is really only used if a type or relation does not exist.
-	return http.StatusNotFound
 }
 
 // errSrc returns the source of the error if applicable.
@@ -705,3 +736,11 @@ func payloadErr(err error) error {
 		mark: ErrInvalidPayload,
 	}
 }
+
+type pathErr interface {
+	InPath() bool
+}
+
+var _ pathErr = (*pathError)(nil)
+var _ pathErr = (*UnknownTypeError)(nil)
+var _ pathErr = (*UnknownFieldError)(nil)

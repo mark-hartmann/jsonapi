@@ -26,13 +26,12 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 	)
 
 	if len(url.Fragments) == 0 {
-		// todo: turn fragmentError into ErrInvalidURL
-		return nil, &fragmentError{fmt.Errorf("jsonapi: empty path")}
+		return nil, &pathError{fmt.Errorf("jsonapi: empty path")}
 	}
 
 	if len(url.Fragments) >= 1 {
 		if typ = schema.GetType(url.Fragments[0]); typ.Name == "" {
-			return nil, &fragmentError{&UnknownTypeError{Type: url.Fragments[0]}}
+			return nil, &UnknownTypeError{Type: url.Fragments[0], inPath: true}
 		}
 
 		if len(url.Fragments) == 1 {
@@ -51,11 +50,12 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 		relName := url.Fragments[len(url.Fragments)-1]
 		if url.Rel, ok = typ.Rels[relName]; !ok {
 			// No Parameter/Pointer because it's part of the url path.
-			return nil, &fragmentError{&UnknownFieldError{
-				Type:  typ.Name,
-				Field: relName,
-				asRel: true,
-			}}
+			return nil, &UnknownFieldError{
+				Type:   typ.Name,
+				Field:  relName,
+				asRel:  true,
+				inPath: true,
+			}
 		}
 
 		url.IsCol = !url.Rel.ToOne

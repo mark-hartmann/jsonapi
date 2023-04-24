@@ -126,7 +126,7 @@ func NewParams(schema *Schema, su SimpleURL, resType string) (*Params, error) {
 				c = sr[1:]
 			}
 
-			return nil, &IllegalParameterError{Param: "sort", value: sr, conflictValue: c}
+			return nil, &ConflictingValueError{param: "sort", value: sr, conflictValue: c}
 		}
 
 		set[nsr] = struct{}{}

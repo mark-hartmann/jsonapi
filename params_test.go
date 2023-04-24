@@ -21,7 +21,8 @@ func TestNewParams_Invalid(t *testing.T) {
 		assert.ErrorAs(t, err, &unknownFieldErr)
 		assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
 		assert.Equal(t, "unknown-rel", unknownFieldErr.Field)
-		assert.False(t, unknownFieldErr.IsUnknownAttr())
+		assert.False(t, unknownFieldErr.IsAttr())
+		assert.False(t, unknownFieldErr.InPath())
 		assert.Equal(t, "to-many-from-one.to-one-from-many.unknown-rel",
 			unknownFieldErr.RelPath())
 	})
@@ -32,6 +33,7 @@ func TestNewParams_Invalid(t *testing.T) {
 		var unknownTypeErr *UnknownTypeError
 		assert.ErrorAs(t, err, &unknownTypeErr)
 		assert.Equal(t, "unknown", unknownTypeErr.Type)
+		assert.False(t, unknownTypeErr.InPath())
 	})
 
 	t.Run("unknown field in sparse fieldset", func(t *testing.T) {
@@ -42,18 +44,26 @@ func TestNewParams_Invalid(t *testing.T) {
 		assert.ErrorAs(t, err, &unknownFieldErr)
 		assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
 		assert.Equal(t, "unknown-field", unknownFieldErr.Field)
-		assert.True(t, unknownFieldErr.IsUnknownAttr())
+		assert.True(t, unknownFieldErr.IsAttr())
+		assert.False(t, unknownFieldErr.InPath())
 		assert.Equal(t, "", unknownFieldErr.RelPath())
 	})
 
 	t.Run("conflicting sort rules", func(t *testing.T) {
 		_, err := NewParams(schema, newSimpleURL("?sort=int8,-int8"), "mocktypes1")
+		assert.EqualError(t, err, `jsonapi: conflicting parameter values: "-int8", "int8"`)
 
-		var illegalParameterErr *IllegalParameterError
-		assert.ErrorAs(t, err, &illegalParameterErr)
-		assert.Equal(t, "sort", illegalParameterErr.Param)
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
 
-		value, conflict := illegalParameterErr.ConflictingValues()
+		src, isPtr := srcErr.Source()
+		assert.Equal(t, "sort", src)
+		assert.False(t, isPtr)
+
+		var conflictingValueErr *ConflictingValueError
+		assert.ErrorAs(t, err, &conflictingValueErr)
+
+		value, conflict := conflictingValueErr.Values()
 		assert.Equal(t, "-int8", value)
 		assert.Equal(t, "int8", conflict)
 	})

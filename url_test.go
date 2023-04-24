@@ -77,6 +77,7 @@ func TestNewURL(t *testing.T) {
 			var unknownTypeErr *UnknownTypeError
 			assert.ErrorAs(t, err, &unknownTypeErr)
 			assert.Equal(t, "mocktypes99", unknownTypeErr.Type)
+			assert.True(t, unknownTypeErr.InPath())
 		})
 
 		t.Run("unknown rel in url", func(t *testing.T) {
@@ -87,7 +88,8 @@ func TestNewURL(t *testing.T) {
 			assert.ErrorAs(t, err, &unknownFieldErr)
 			assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
 			assert.Equal(t, "relnotfound", unknownFieldErr.Field)
-			assert.False(t, unknownFieldErr.IsUnknownAttr())
+			assert.False(t, unknownFieldErr.IsAttr())
+			assert.True(t, unknownFieldErr.InPath())
 			assert.Equal(t, "", unknownFieldErr.RelPath())
 		})
 
@@ -97,14 +99,11 @@ func TestNewURL(t *testing.T) {
 
 			var illegalParameterErr *IllegalParameterError
 			assert.ErrorAs(t, err, &illegalParameterErr)
+			assert.True(t, illegalParameterErr.IsResource())
 
 			src, isPtr := illegalParameterErr.Source()
 			assert.Equal(t, "sort", src)
 			assert.False(t, isPtr)
-
-			v, v2 := illegalParameterErr.ConflictingValues()
-			assert.Equal(t, "", v)
-			assert.Equal(t, "", v2)
 		})
 	})
 

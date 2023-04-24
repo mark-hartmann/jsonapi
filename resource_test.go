@@ -146,7 +146,8 @@ func TestUnmarshalPartialResource_Invalid(t *testing.T) {
 		assert.ErrorAs(t, err, &unknownFieldErr)
 		assert.Equal(t, "mocktype", unknownFieldErr.Type)
 		assert.Equal(t, "unknown", unknownFieldErr.Field)
-		assert.True(t, unknownFieldErr.IsUnknownAttr())
+		assert.True(t, unknownFieldErr.IsAttr())
+		assert.False(t, unknownFieldErr.InPath())
 		assert.Equal(t, "", unknownFieldErr.RelPath())
 
 		var sourceErr srcError
@@ -203,7 +204,8 @@ func TestUnmarshalPartialResource_Invalid(t *testing.T) {
 		assert.ErrorAs(t, err, &unknownFieldErr)
 		assert.Equal(t, "mocktype", unknownFieldErr.Type)
 		assert.Equal(t, "unknown", unknownFieldErr.Field)
-		assert.False(t, unknownFieldErr.IsUnknownAttr())
+		assert.False(t, unknownFieldErr.IsAttr())
+		assert.False(t, unknownFieldErr.InPath())
 		assert.Equal(t, "", unknownFieldErr.RelPath())
 
 		var sourceErr srcError
