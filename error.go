@@ -21,11 +21,6 @@ func (e *UnknownTypeError) Error() string {
 
 type relPath string
 
-// InRelPath returns true if the error occurred while parsing a relationship path.
-func (e relPath) InRelPath() bool {
-	return e != ""
-}
-
 // RelPath returns the relationship path that caused this error. An empty string is
 // returned if the error was not caused by an invalid relationship path.
 func (e relPath) RelPath() string {

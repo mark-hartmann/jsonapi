@@ -88,7 +88,6 @@ func TestNewURL(t *testing.T) {
 			assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
 			assert.Equal(t, "relnotfound", unknownFieldErr.Field)
 			assert.False(t, unknownFieldErr.IsUnknownAttr())
-			assert.False(t, unknownFieldErr.InRelPath())
 			assert.Equal(t, "", unknownFieldErr.RelPath())
 		})
 

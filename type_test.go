@@ -366,7 +366,6 @@ func TestParseSortRule(t *testing.T) {
 	assert.Equal(t, "mocktypes2", ufErr.Type)
 	assert.Equal(t, "unknown-relationship", ufErr.Field)
 	assert.False(t, ufErr.IsUnknownAttr())
-	assert.True(t, ufErr.InRelPath())
 	assert.Equal(t, rule[1:], ufErr.RelPath())
 
 	rule = "to-one-from-one.uint16"
@@ -376,7 +375,6 @@ func TestParseSortRule(t *testing.T) {
 	assert.Equal(t, "mocktypes2", ufErr.Type)
 	assert.Equal(t, "uint16", ufErr.Field)
 	assert.True(t, ufErr.IsUnknownAttr())
-	assert.True(t, ufErr.InRelPath())
 	assert.Equal(t, rule, ufErr.RelPath())
 
 	rule = "-to-many.int32ptr"
@@ -389,7 +387,6 @@ func TestParseSortRule(t *testing.T) {
 	assert.Equal(t, "to-many", ifErr.Field)
 	assert.False(t, ifErr.IsInvalidAttr())
 	assert.True(t, ifErr.InvalidRelType())
-	assert.True(t, ifErr.InRelPath())
 	assert.Equal(t, rule[1:], ifErr.RelPath())
 }
 
