@@ -70,6 +70,16 @@ func TestNewURL(t *testing.T) {
 			})
 		}
 
+		t.Run("empty url", func(t *testing.T) {
+			_, err := NewURLFromRaw(schema, "")
+			assert.Error(t, err)
+			assert.EqualError(t, err, "jsonapi: empty path")
+
+			var pErr interface{ InPath() bool }
+			assert.ErrorAs(t, err, &pErr)
+			assert.True(t, pErr.InPath())
+		})
+
 		t.Run("unknown type in url", func(t *testing.T) {
 			_, err := NewURLFromRaw(schema, makeOneLineNoSpaces("/mocktypes99"))
 			assert.Error(t, err)

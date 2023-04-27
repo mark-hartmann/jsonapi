@@ -8,6 +8,9 @@ import (
 	"strconv"
 )
 
+// ErrInvalidPayload is returned if the payload could not be parsed because it is either
+// invalid json or some document members are of the wrong type, e.g. /data as string
+// instead of object, array or null.
 var ErrInvalidPayload = errors.New("jsonapi: invalid document payload")
 
 // UnknownTypeError is returned if a type is not known to the schema.
@@ -184,7 +187,7 @@ func NewError() Error {
 
 // Error returns the string representation of the error.
 //
-// If the error does note contain a valid error status code, it returns an empty
+// If the error does not contain a valid error status code, it returns an empty
 // string.
 func (e Error) Error() string {
 	statusCode, _ := strconv.Atoi(e.Status)
@@ -442,7 +445,7 @@ func (e *pathError) InPath() bool {
 
 // errSrc returns the source of the error if applicable.
 func errSrc(err error) (src string, isPtr bool, ok bool) {
-	var se interface{ Source() (string, bool) }
+	var se srcErr
 	if ok = errors.As(err, &se); ok {
 		src, isPtr = se.Source()
 	}
@@ -461,6 +464,14 @@ func payloadErr(err error) error {
 type pathErr interface {
 	InPath() bool
 }
+
+type srcErr interface {
+	Source() (string, bool)
+}
+
+var _ srcErr = (*srcError)(nil)
+var _ srcErr = (*ConflictingValueError)(nil)
+var _ srcErr = (*IllegalParameterError)(nil)
 
 var _ pathErr = (*pathError)(nil)
 var _ pathErr = (*UnknownTypeError)(nil)
