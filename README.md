@@ -15,7 +15,7 @@
   </a>
   <br>
   <a href="https://github.com/mark-hartmann/jsonapi/blob/master/go.mod">
-    <img src="https://img.shields.io/badge/go%20version-1.13%2B-%2300acd7">
+    <img src="https://img.shields.io/badge/go%20version-1.16%2B-%2300acd7">
   </a>
   <a href="https://github.com/mark-hartmann/jsonapi/tags">
     <img src="https://img.shields.io/github/v/tag/mark-hartmann/jsonapi?include_prereleases&sort=semver">
