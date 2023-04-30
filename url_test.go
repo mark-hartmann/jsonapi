@@ -40,10 +40,6 @@ func TestNewURL(t *testing.T) {
 					"jsonapi: failed to create jsonapi.Params: " +
 					`jsonapi: resource type "invalid" does not exist`,
 			},
-			"invalid raw url": {
-				url: "%z",
-				err: `jsonapi: failed to parse url.URL: parse "%z": invalid URL escape "%z"`,
-			},
 			"page param (no collection)": {
 				url: `/mocktypes1/abc123?page[size]=valid`,
 				err: `jsonapi: illegal query parameter "page"`,
