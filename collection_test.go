@@ -29,13 +29,10 @@ func TestResources(t *testing.T) {
 }
 
 func TestUnmarshalCollection(t *testing.T) {
-	assert := assert.New(t)
-
 	// Invalid payload
 	payload := `{"no:valid"}`
 
-	col, err := UnmarshalCollection([]byte(payload), nil)
-
-	assert.Error(err)
-	assert.Nil(col)
+	_, err := UnmarshalCollection([]byte(payload), nil)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidPayload)
 }

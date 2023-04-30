@@ -26,12 +26,12 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 	)
 
 	if len(url.Fragments) == 0 {
-		return nil, NewErrBadRequest("Empty path", "There is no path.")
+		return nil, &pathError{fmt.Errorf("jsonapi: empty path")}
 	}
 
 	if len(url.Fragments) >= 1 {
 		if typ = schema.GetType(url.Fragments[0]); typ.Name == "" {
-			return nil, NewErrUnknownTypeInURL(url.Fragments[0])
+			return nil, &UnknownTypeError{Type: url.Fragments[0], inPath: true}
 		}
 
 		if len(url.Fragments) == 1 {
@@ -49,11 +49,13 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 	if len(url.Fragments) >= 3 {
 		relName := url.Fragments[len(url.Fragments)-1]
 		if url.Rel, ok = typ.Rels[relName]; !ok {
-			return nil, NewErrUnknownRelationshipInPath(
-				typ.Name,
-				relName,
-				su.Path(),
-			)
+			// No Parameter/Pointer because it's part of the url path.
+			return nil, &UnknownFieldError{
+				Type:   typ.Name,
+				Field:  relName,
+				asRel:  true,
+				inPath: true,
+			}
 		}
 
 		url.IsCol = !url.Rel.ToOne
@@ -76,23 +78,17 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 	if !url.IsCol {
 		switch {
 		case len(su.SortingRules) > 0:
-			return nil, NewErrInvalidQueryParameter(
-				"Sorting is only supported on resource collections", "sort")
+			return nil, &IllegalParameterError{Param: "sort", isResource: true}
 		case len(su.Page) > 0:
-			return nil, NewErrInvalidQueryParameter(
-				"Pagination is only supported on resource collections", "page")
+			return nil, &IllegalParameterError{Param: "page", isResource: true}
 		case len(su.Filter) > 0:
-			return nil, NewErrInvalidQueryParameter(
-				"Filtering is only supported on resource collections", "filter")
+			return nil, &IllegalParameterError{Param: "filter", isResource: true}
 		}
 	}
 
-	// Params
 	var err error
-	url.Params, err = NewParams(schema, su, url.ResType)
-
-	if err != nil {
-		return nil, err
+	if url.Params, err = NewParams(schema, su, url.ResType); err != nil {
+		return nil, fmt.Errorf("jsonapi: failed to create jsonapi.Params: %w", err)
 	}
 
 	return url, nil
@@ -103,9 +99,10 @@ func NewURL(schema *Schema, su SimpleURL) (*URL, error) {
 func NewURLFromRaw(schema *Schema, rawurl string) (*URL, error) {
 	u, err := url.Parse(rawurl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("jsonapi: failed to parse url.URL: %w", err)
 	}
 
+	// u is a valid errJSONPtr, error can be ignored.
 	su, _ := NewSimpleURL(u)
 
 	return NewURL(schema, su)

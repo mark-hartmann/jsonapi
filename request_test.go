@@ -31,11 +31,13 @@ func TestNewRequest(t *testing.T) {
 			schema:        schema,
 			expectedError: "",
 		}, {
-			name:          "bad url",
-			method:        "GET",
-			url:           "/invalid",
-			schema:        schema,
-			expectedError: `400 Bad Request: "invalid" is not a known type.`,
+			name:   "bad url",
+			method: "GET",
+			url:    "/invalid",
+			schema: schema,
+			expectedError: "" +
+				"jsonapi: failed to create jsonapi.URL: " +
+				`jsonapi: resource type "invalid" does not exist`,
 		},
 	}
 
@@ -58,7 +60,9 @@ func TestNewRequest(t *testing.T) {
 	req := httptest.NewRequest("GET", "/mocktypes1", body)
 	req.URL = nil
 	doc, err := NewRequest(req, schema)
-	assert.EqualError(err, "jsonapi: pointer to url.URL is nil")
+	assert.EqualError(err, ""+
+		"jsonapi: failed to create jsonapi.SimpleURL: "+
+		"jsonapi: pointer to url.URL is nil")
 	assert.Nil(doc)
 }
 
@@ -72,7 +76,7 @@ func TestNewRequestInvalidBody(t *testing.T) {
 	req := httptest.NewRequest("POST", "/mocktypes1", badReader{})
 
 	doc, err := NewRequest(req, schema)
-	assert.EqualError(err, "bad reader")
+	assert.EqualError(err, "jsonapi: failed to unmarshal request body: bad reader")
 	assert.Nil(doc)
 
 	// Invalid body
@@ -80,9 +84,9 @@ func TestNewRequestInvalidBody(t *testing.T) {
 	req = httptest.NewRequest("POST", "/mocktypes1", body)
 
 	doc, err = NewRequest(req, schema)
-	assert.EqualError(
-		err,
-		"invalid character 'i' looking for beginning of object key string",
+	assert.EqualError(err, ""+
+		"jsonapi: failed to unmarshal request body: invalid character 'i' looking for "+
+		"beginning of object key string",
 	)
 	assert.Nil(doc)
 }

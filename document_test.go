@@ -992,84 +992,275 @@ func TestUnmarshalDocument(t *testing.T) {
 		assert.NoError(err)
 		assert.Equal(doc.Data, doc2.Data)
 	})
+}
 
-	t.Run("invalid payloads (Unmarshal)", func(t *testing.T) {
-		assert := assert.New(t)
+func TestUnmarshalDocument_Invalid(t *testing.T) {
+	schema := newMockSchema()
+	_ = schema.AddType(Type{
+		Name: "objtest",
+		Attrs: map[string]Attr{
+			"obj": {Name: "obj", Type: AttrTypeTestObject},
+		},
+	})
 
-		tests := []struct {
-			payload  string
-			expected string
-		}{
-			{
-				payload:  `invalid payload`,
-				expected: "invalid character 'i' looking for beginning of value",
-			}, {
-				payload:  `{"data":"invaliddata"}`,
-				expected: "400 Bad Request: Missing data top-level member in payload.",
-			}, {
-				payload:  `{"data":{"id":true}}`,
-				expected: "400 Bad Request: The provided JSON body could not be read.",
-			}, {
-				payload:  `{"data":[{"id":true}]}`,
-				expected: "400 Bad Request: The provided JSON body could not be read.",
-			}, {
-				payload: `{"data":null,"included":[{"id":true}]}`,
-				expected: "json: " +
-					"cannot unmarshal bool into Go struct field Identifier.id of type string",
-			}, {
-				payload:  `{"data":null,"included":[{"attributes":true}]}`,
-				expected: "400 Bad Request: The provided JSON body could not be read.",
-			}, {
-				payload:  `{"data":{"id":"1","type":"mocktype","attributes":{"nonexistent":1}}}`,
-				expected: "400 Bad Request: \"nonexistent\" is not a known field.",
-			}, {
-				payload:  `{"data":{"id":"1","type":"mocktype","attributes":{"int8":"abc"}}}`,
-				expected: "400 Bad Request: The field value is invalid for the expected type.",
-			}, {
-				payload: `{
-					"data": {
-						"id": "1",
-						"type": "mocktype",
-						"relationships": {
-							"to-x": {
-								"data": "wrong"
-							}
-						}
-					}
-				}`,
-				expected: "400 Bad Request: The field value is invalid for the expected type.",
-			}, {
-				payload: `{
-					"data": {
-						"id": "1",
-						"type": "objtest",
-						"attributes": {
-							"obj": 123
-						}
-					}
-				}`,
-				expected: "400 Bad Request: The field value is invalid for the expected type.",
-			}, {
-				payload: `{
-					"data": {
-						"id": "1",
-						"type": "mocktype",
-						"relationships": {
-							"wrong": {
-								"data": "wrong"
-							}
-						}
-					}
-				}`,
-				expected: "400 Bad Request: \"wrong\" is not a known field.",
-			},
+	t.Run("invalid payload", func(t *testing.T) {
+		payload := `invalid payload`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, "invalid character 'i' looking for beginning of value")
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+	})
+
+	t.Run("invalid data member type", func(t *testing.T) {
+		payload := `{"data":"invaliddata"}`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, "jsonapi: invalid member data type")
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
+
+		src, isPtr := srcErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/data", src)
+	})
+
+	t.Run("missing primary data member", func(t *testing.T) {
+		payload := `{"datum":[]}`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, "jsonapi: missing primary member")
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+	})
+
+	t.Run("data and error primary data members", func(t *testing.T) {
+		payload := `{"data":[], "errors":[]}`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, `jsonapi: "data" and "errors" must not coexist`)
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+	})
+
+	t.Run("included without data", func(t *testing.T) {
+		payload := `{"meta": {}, "included":[{"id":"some-id"}]}`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+	})
+
+	t.Run("invalid id data type", func(t *testing.T) {
+		payload := `{"data":{"id":true}}`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, "jsonapi: failed to unmarshal resource: json: cannot "+
+			"unmarshal bool into Go struct field resourceSkeleton.id of type string")
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
+
+		src, isPtr := srcErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/data", src)
+	})
+
+	t.Run("invalid id data type collection", func(t *testing.T) {
+		payload := `{"data":[{"id":true}]}`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, ""+
+			"jsonapi: failed to unmarshal collection: "+
+			"jsonapi: failed to unmarshal resource at 0: "+
+			"json: cannot unmarshal bool into Go struct field resourceSkeleton.id of type string")
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
+
+		src, isPtr := srcErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/data/0", src)
+	})
+
+	t.Run("data is null and attributes wrong type", func(t *testing.T) {
+		payload := `{"data":null,"included":[{"attributes":true}]}`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, ""+
+			"jsonapi: failed to unmarshal included resource at 0: "+
+			"json: cannot unmarshal bool into Go struct field resourceSkeleton.attributes of "+
+			"type map[string]json.RawMessage")
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
+
+		src, isPtr := srcErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/included/0", src)
+	})
+
+	t.Run("unknown attribute for resource type", func(t *testing.T) {
+		payload := `{"data":{"id":"1","type":"mocktypes1","attributes":{"nonexistent":1}}}`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, ""+
+			"jsonapi: failed to unmarshal resource: "+
+			`jsonapi: field "nonexistent" does not exist in resource type "mocktypes1"`)
+
+		var unknownFieldErr *UnknownFieldError
+		assert.ErrorAs(t, err, &unknownFieldErr)
+		assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
+		assert.Equal(t, "nonexistent", unknownFieldErr.Field)
+		assert.True(t, unknownFieldErr.IsAttr())
+		assert.False(t, unknownFieldErr.InPath())
+		assert.Equal(t, "", unknownFieldErr.RelPath())
+
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
+
+		src, isPtr := srcErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/data/attributes", src)
+	})
+
+	t.Run("invalid attribute type", func(t *testing.T) {
+		payload := `{"data":{"id":"1","type":"mocktypes1","attributes":{"int8":"abc"}}}`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, ""+
+			"jsonapi: failed to unmarshal resource: "+
+			`jsonapi: invalid value "\"abc\"" for field "int8": `+
+			`strconv.Atoi: parsing "\"abc\"": invalid syntax`)
+
+		var InvalidFieldValueErr *InvalidFieldValueError
+		assert.ErrorAs(t, err, &InvalidFieldValueErr)
+		assert.Equal(t, "mocktypes1", InvalidFieldValueErr.Type)
+		assert.Equal(t, "int8", InvalidFieldValueErr.Field)
+		assert.Equal(t, "int8", InvalidFieldValueErr.FieldType)
+		assert.Equal(t, `"abc"`, InvalidFieldValueErr.Value)
+		assert.True(t, InvalidFieldValueErr.IsAttr())
+
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
+
+		src, isPtr := srcErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/data/attributes/int8", src)
+	})
+
+	t.Run("invalid custom attribute type", func(t *testing.T) {
+		payload := `
+{
+	"data": {
+		"id": "1",
+		"type": "objtest",
+		"attributes": {
+			"obj": 123
 		}
+	}
+}`
 
-		for _, test := range tests {
-			doc, err := UnmarshalDocument(strings.NewReader(test.payload), schema)
-			assert.EqualError(err, test.expected)
-			assert.Nil(doc)
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, ""+
+			"jsonapi: failed to unmarshal resource: "+
+			`jsonapi: invalid value "123" for field "obj": `+
+			`json: cannot unmarshal number into Go value of type jsonapi_test.testObjType`)
+
+		var InvalidFieldValueErr *InvalidFieldValueError
+		assert.ErrorAs(t, err, &InvalidFieldValueErr)
+		assert.Equal(t, "objtest", InvalidFieldValueErr.Type)
+		assert.Equal(t, "obj", InvalidFieldValueErr.Field)
+		assert.Equal(t, "testObject", InvalidFieldValueErr.FieldType)
+		assert.Equal(t, `123`, InvalidFieldValueErr.Value)
+		assert.True(t, InvalidFieldValueErr.IsAttr())
+
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
+
+		src, isPtr := srcErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/data/attributes/obj", src)
+	})
+
+	t.Run("invalid relationship data type", func(t *testing.T) {
+		payload := `
+{
+	"data": {
+	"id": "1",
+		"type": "mocktypes1",
+		"relationships": {
+			"to-many-from-one": {
+				"data": "wrong"
+			}
 		}
+	}
+}`
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, ""+
+			"jsonapi: failed to unmarshal resource: "+
+			"json: cannot unmarshal string into Go value of type jsonapi.Identifiers")
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
+
+		src, isPtr := srcErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/data/relationships/to-many-from-one", src)
+	})
+
+	t.Run("unknown relationship", func(t *testing.T) {
+		payload := `
+{
+	"data": {
+		"id": "1",
+		"type": "mocktypes1",
+		"relationships": {
+			"wrong": {
+				"data": {"id": "foo", "type": "some-type"}
+			}
+		}
+	}
+}`
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, ""+
+			"jsonapi: failed to unmarshal resource: "+
+			`jsonapi: field "wrong" does not exist in resource type "mocktypes1"`)
+
+		var unknownFieldErr *UnknownFieldError
+		assert.ErrorAs(t, err, &unknownFieldErr)
+		assert.Equal(t, "mocktypes1", unknownFieldErr.Type)
+		assert.Equal(t, "wrong", unknownFieldErr.Field)
+		assert.False(t, unknownFieldErr.IsAttr())
+		assert.False(t, unknownFieldErr.InPath())
+		assert.Equal(t, "", unknownFieldErr.RelPath())
+
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
+
+		src, isPtr := srcErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/data/relationships", src)
+	})
+
+	t.Run("invalid included identifier", func(t *testing.T) {
+		payload := `{"data":null,"included":[{"id":true}]}`
+
+		_, err := UnmarshalDocument(strings.NewReader(payload), schema)
+		assert.EqualError(t, err, ""+
+			"jsonapi: failed to unmarshal included resource at 0: "+
+			"json: cannot unmarshal bool into Go struct field resourceSkeleton.id of type string")
+		assert.ErrorIs(t, err, ErrInvalidPayload)
+
+		var srcErr srcError
+		assert.ErrorAs(t, err, &srcErr)
+
+		src, isPtr := srcErr.Source()
+		assert.True(t, isPtr)
+		assert.Equal(t, "/included/0", src)
 	})
 }
 

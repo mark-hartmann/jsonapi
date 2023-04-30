@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+type srcError interface {
+	error
+	Source() (string, bool)
+}
+
 func makeOneLineNoSpaces(str string) string {
 	str = strings.ReplaceAll(str, "\t", "")
 	str = strings.ReplaceAll(str, "\n", "")
