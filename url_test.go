@@ -1,6 +1,7 @@
 package jsonapi_test
 
 import (
+	"strings"
 	"testing"
 
 	. "github.com/mark-hartmann/jsonapi"
@@ -55,11 +56,6 @@ func TestNewURL(t *testing.T) {
 				url: `/mocktypes1/abc123?sort=-str`,
 				err: `jsonapi: illegal query parameter "sort"`,
 			},
-			"invalid url string": {
-				url: `1http://foo.com`,
-				err: "jsonapi: failed to parse url.URL: " +
-					`parse "1http://foo.com": first path segment in URL cannot contain colon`,
-			},
 		}
 
 		for name, test := range invalidTests {
@@ -69,6 +65,19 @@ func TestNewURL(t *testing.T) {
 				assert.EqualError(t, err, test.err)
 			})
 		}
+
+		t.Run("invalid url string", func(t *testing.T) {
+			_, err := NewURLFromRaw(schema, "1http://foo.com")
+			assert.Error(t, err)
+
+			// Since go 1.14, the Error function uses the fmt package instead of basic
+			// string concatenations, quoting the url we tried to parse. Since this
+			// library support go 1.13, we, for now, simply check the prefix.
+			//
+			// todo: Replace with appropriate assertions after the supported go version
+			//       is updated (#16)
+			assert.True(t, strings.HasPrefix(err.Error(), "jsonapi: failed to parse url.URL"))
+		})
 
 		t.Run("empty url", func(t *testing.T) {
 			_, err := NewURLFromRaw(schema, "")
